@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/tommoulard/fail2ban/files"
+	"github.com/tommoulard/fail2ban/ipChecking"
 )
 
 // IPViewed struct
@@ -72,8 +73,8 @@ func CreateConfig() *Config {
 type Fail2Ban struct {
 	next      http.Handler
 	name      string
-	whitelist []string
-	blacklist []string
+	whitelist []ipChecking.Ip
+	blacklist []ipChecking.Ip
 	rules     rules
 }
 
@@ -92,14 +93,32 @@ func importIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	whitelist, err := importIP(config.whitelist)
+	iplist, err := importIP(config.whitelist)
 	if err != nil {
 		return nil, err
 	}
+	whitelist := []ipChecking.Ip{}
+	for _, v := range iplist {
+		ip, err := ipChecking.BuildIp(v)
+		if err != nil {
+			Logger.Printf("Error: %s not valid", v)
+			continue
+		}
+		whitelist = append(whitelist, ip)
+	}
 
-	blacklist, err := importIP(config.blacklist)
+	iplist, err = importIP(config.blacklist)
 	if err != nil {
 		return nil, err
+	}
+	blacklist := []ipChecking.Ip{}
+	for _, v := range iplist {
+		ip, err := ipChecking.BuildIp(v)
+		if err != nil {
+			Logger.Printf("Error: %s not valid", v)
+			continue
+		}
+		blacklist = append(blacklist, ip)
 	}
 
 	return &Fail2Ban{
@@ -117,14 +136,14 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	remoteIP := req.RemoteAddr
 	// Whitelist
 	for _, ip := range u.whitelist {
-		if ip.compare(remoteIP) {
+		if ip.CheckIpInSubnet(remoteIP) {
 			u.next.ServeHTTP(rw, req)
 			return
 		}
 	}
 	// Blacklist
 	for _, ip := range u.blacklist {
-		if ip.compare(remoteIP) {
+		if ip.CheckIpInSubnet(remoteIP) {
 			Logger.Println(remoteIP + " is in the Blacklist")
 			rw.WriteHeader(http.StatusForbidden)
 			return
