@@ -23,10 +23,10 @@ type rules struct{
 	protocol			string		`yaml:"protocol"`  			//maybe int (tcp:0, udp:1)
 	chain 				string		`yaml:"chain"`				//maybe useless because handle by traefik chain
 	port 				[2]int		`yaml:"port"`				//i dont know if yaml can take this
-	fail2ban_agent 		string		`yaml:"fail2ban_agent"`		
+	fail2banAgent 		string		`yaml:"fail2ban_agent"`		
 	banaction 			string		`yaml:"banaction_allports"`	//maybe useless because we are the firewall ?
-	banaction_allports 	string		`yaml:"banaction_allports"` //same as above
-	action_abuseipdb 	string		`yaml:"action_abuseipdb"`	
+	banactionAllports 	string		`yaml:"banaction_allports"` //same as above
+	actionAbuseipdb 	string		`yaml:"action_abuseipdb"`	
 	action 				string		`yaml:"action"`				//maybe change for []string
 }
 
