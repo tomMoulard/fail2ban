@@ -2,6 +2,8 @@ package fail2ban
 
 import (
 	"context"
+	"fmt"
+
 	"log"
 	"net/http"
 	"strings"
@@ -17,10 +19,10 @@ var (
 )
 
 // struct fail2ban config
-type rules struct {
+type Rule struct {
 	ignorecommand     string `yaml:"igonecommand"`
-	bantime           int64  `yaml:"bantime"`  //exprimate in second
-	findtime          int64  `yaml:"findtime"` //exprimate in second
+	bantime           string `yaml:"bantime"`  //exprimate in second
+	findtime          string `yaml:"findtime"` //exprimate in second
 	maxretry          int    `yaml:"maxretry"`
 	backend           string `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
 	usedns            string `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
@@ -50,11 +52,18 @@ type List struct {
 type Config struct {
 	blacklist List
 	whitelist List
+	Rules     Rule
 }
 
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
-	return &Config{}
+	return &Config{
+		Rules: Rule{
+			bantime:  "300",
+			findtime: "120",
+			enabled:  true,
+		},
+	}
 }
 
 // Fail2Ban holds the necessary components of a Traefik plugin
@@ -85,8 +94,17 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	whitelist, err := ImportIP(config.whitelist)
 
+
+	if config.Rules.bantime == "" || config.Rules.findtime == "" {
+		return nil, fmt.Errorf("Can't use empty bantime or fintime")
+	}
+
+	if config.Rules.port[0] < 0 || config.Rules.port[1] < config.Rules.port[0] {
+		return nil, fmt.Errorf("Your port configuration is bad, please change that")
+	}
+
+	whitelist, err := ImportIP(config.whitelist)
 	if err != nil {
 		return nil, err
 	}
