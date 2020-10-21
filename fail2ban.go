@@ -2,6 +2,7 @@ package fail2ban
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -47,7 +48,11 @@ type Config struct {
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
 	return &Config{
-		Rules: Rule{},
+		Rules: Rule{
+			bantime:  "300",
+			findtime: "120",
+			enabled:  true,
+		},
 	}
 }
 
@@ -72,14 +77,16 @@ func importIP(list List) ([]string, error) {
 	return rlist, nil
 }
 
-/* func checkConf(r Rule) error {
-	if r.bantime == "" {
-
-	}
-} */
-
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+
+	if config.Rules.bantime == "" || config.Rules.findtime == "" {
+		return nil, fmt.Errorf("Can't use empty bantime or fintime")
+	}
+
+	if config.Rules.port[0] < 0 || config.Rules.port[1] < config.Rules.port[0] {
+		return nil, fmt.Errorf("Your port configuration is bad, please change that")
+	}
 
 	whitelist, err := importIP(config.whitelist)
 	if err != nil {
