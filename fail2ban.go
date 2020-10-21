@@ -2,6 +2,8 @@ package fail2ban
 
 import (
 	"context"
+	"fmt"
+
 	"log"
 	"net/http"
 	"os"
@@ -66,7 +68,13 @@ type Config struct {
 
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
-	return &Config{}
+	return &Config{
+		Rules: Rule{
+			bantime:  "300",
+			findtime: "120",
+			enabled:  true,
+		},
+	}
 }
 
 // Fail2Ban holds the necessary components of a Traefik plugin
@@ -98,7 +106,15 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	iplist, err := ImportIP(config.whitelist)
+	if config.rules.bantime == "" || config.rules.findtime == "" {
+		return nil, fmt.Errorf("Can't use empty bantime or fintime")
+	}
+
+	if config.rules.port[0] < 0 || config.rules.port[1] < config.rules.port[0] {
+		return nil, fmt.Errorf("Your port configuration is bad, please change that")
+	}
+
+ 	iplist, err := ImportIP(config.whitelist)
 	if err != nil {
 		return nil, err
 	}
