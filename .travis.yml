@@ -1,0 +1,38 @@
+language: go
+
+notifications:
+  email:
+    on_success: never
+    on_failure: change
+
+cache:
+  directories:
+    - $GOPATH/pkg/mod
+
+jobs:
+  fast_finish: true
+  include:
+    - go: 1.15.x
+      env: STABLE=true
+    - go: 1.x
+    - go: tip
+  allow_failures:
+    - go: tip
+
+before_install:
+  # Install linters
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
+  - golangci-lint --version
+  - curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b $GOPATH/bin ${YAEGI_VERSION}
+
+install:
+  - go mod tidy
+  - git diff --exit-code go.mod
+  # - git diff --exit-code go.sum
+  - go mod download
+  - go mod vendor
+  # - git diff --exit-code ./vendor/
+  - make fmt
+  - git diff --exit-code
+
+script: make lint test
