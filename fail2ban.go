@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/tommoulard/fail2ban/files"
-	"github.com/tommoulard/fail2ban/ipChecking"
+	"github.com/tommoulard/fail2ban/ipchecking"
 )
 
 // IPViewed struct
@@ -55,7 +55,7 @@ type Rules struct {
 
 // List struct
 type List struct {
-	Ip    []string
+	IP    []string
 	Files []string
 }
 
@@ -81,11 +81,12 @@ func CreateConfig() *Config {
 type Fail2Ban struct {
 	next      http.Handler
 	name      string
-	whitelist []ipChecking.Ip
-	blacklist []ipChecking.Ip
+	whitelist []ipchecking.IP
+	blacklist []ipchecking.IP
 	rules     Rules
 }
 
+// ImportIP extract all ip from config sources
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
 	for _, ip := range list.Files {
@@ -99,7 +100,7 @@ func ImportIP(list List) ([]string, error) {
 	if len(rlist) > 1 {
 		rlist = rlist[:len(rlist)-1]
 	}
-	rlist = append(rlist, list.Ip...)
+	rlist = append(rlist, list.IP...)
 
 	return rlist, nil
 }
@@ -114,9 +115,9 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	if err != nil {
 		return nil, err
 	}
-	whitelist := []ipChecking.Ip{}
+	whitelist := []ipchecking.IP{}
 	for _, v := range iplist {
-		ip, err := ipChecking.BuildIp(v)
+		ip, err := ipchecking.BuildIP(v)
 		if err != nil {
 			Logger.Printf("Error: %s not valid", v)
 			continue
@@ -128,9 +129,9 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	if err != nil {
 		return nil, err
 	}
-	blacklist := []ipChecking.Ip{}
+	blacklist := []ipchecking.IP{}
 	for _, v := range iplist {
-		ip, err := ipChecking.BuildIp(v)
+		ip, err := ipchecking.BuildIP(v)
 		if err != nil {
 			Logger.Printf("Error: %s not valid", v)
 			continue
@@ -153,14 +154,14 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	remoteIP := req.RemoteAddr
 	// Whitelist
 	for _, ip := range u.whitelist {
-		if ip.CheckIpInSubnet(remoteIP) {
+		if ip.CheckIPInSubnet(remoteIP) {
 			u.next.ServeHTTP(rw, req)
 			return
 		}
 	}
 	// Blacklist
 	for _, ip := range u.blacklist {
-		if ip.CheckIpInSubnet(remoteIP) {
+		if ip.CheckIPInSubnet(remoteIP) {
 			Logger.Println(remoteIP + " is in the Blacklist")
 			rw.WriteHeader(http.StatusForbidden)
 			return

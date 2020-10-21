@@ -1,86 +1,86 @@
-package ipChecking_test
+package ipchecking_test
 
 import (
 	"testing"
 
-	ipChecking "github.com/tommoulard/fail2ban/ipChecking"
+	ipchecking "github.com/tommoulard/fail2ban/ipchecking"
 )
 
-func TestIpChecking(t *testing.T) {
+func TestIPChecking(t *testing.T) {
 	tests := []struct {
 		name     string
-		stringIp string
-		testedIp ipChecking.Ip
+		stringIP string
+		testedIP ipchecking.IP
 		res      bool
 	}{
 		{
 			name:     "[IP] Valid IP",
-			stringIp: "127.0.0.1",
-			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 1,
+			stringIP: "127.0.0.1",
+			testedIP: ipchecking.IP{
+				IP:   (127 << 24) + 1,
 				Cidr: 0xFFFFFFFF,
 			},
 			res: true,
 		},
 		{
 			name:     "[IP] Invalid IP value",
-			stringIp: "25666.0.0.1",
-			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 1,
+			stringIP: "25666.0.0.1",
+			testedIP: ipchecking.IP{
+				IP:   (127 << 24) + 1,
 				Cidr: 0xFFFFFFFF,
 			},
 			res: false,
 		},
 		{
 			name:     "[IP] Invalid CIDR form",
-			stringIp: "127.0.0.1/22/34",
-			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 256,
+			stringIP: "127.0.0.1/22/34",
+			testedIP: ipchecking.IP{
+				IP:   (127 << 24) + 256,
 				Cidr: 0xFFFFFF00,
 			},
 			res: false,
 		},
 		{
 			name:     "[IP] No match",
-			stringIp: "127.0.0.1",
-			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 1,
+			stringIP: "127.0.0.1",
+			testedIP: ipchecking.IP{
+				IP:   (127 << 24) + 1,
 				Cidr: 0xFFFFFFFF,
 			},
 			res: true,
 		},
 		{
 			name:     "[IP] Match",
-			stringIp: "127.0.0.1",
-			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 2,
+			stringIP: "127.0.0.1",
+			testedIP: ipchecking.IP{
+				IP:   (127 << 24) + 2,
 				Cidr: 0xFFFFFFFF,
 			},
 			res: false,
 		},
 		{
 			name:     "[CIDR] Invalid CIDR ",
-			stringIp: "127.0.0.1/55",
-			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 256,
+			stringIP: "127.0.0.1/55",
+			testedIP: ipchecking.IP{
+				IP:   (127 << 24) + 256,
 				Cidr: 0xFFFFFF00,
 			},
 			res: false,
 		},
 		{
 			name:     "[CIDR] No Match",
-			stringIp: "127.0.0.1",
-			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 256,
+			stringIP: "127.0.0.1",
+			testedIP: ipchecking.IP{
+				IP:   (127 << 24) + 256,
 				Cidr: 0xFFFFFF00,
 			},
 			res: false,
 		},
 		{
 			name:     "[CIDR] Match",
-			stringIp: "127.0.0.1",
-			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 2,
+			stringIP: "127.0.0.1",
+			testedIP: ipchecking.IP{
+				IP:   (127 << 24) + 2,
 				Cidr: 0xFFFFFF00,
 			},
 			res: true,
@@ -89,7 +89,7 @@ func TestIpChecking(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := tt.testedIp.CheckIpInSubnet(tt.stringIp)
+			r := tt.testedIP.CheckIPInSubnet(tt.stringIP)
 			if r != tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, r)
 			}
