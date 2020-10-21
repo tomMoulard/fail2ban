@@ -51,9 +51,5 @@ func (i Ip) CheckIpInSubnet(ip string) bool {
 	if err != nil {
 		return false
 	}
-	fmt.Println(i.Cidr)
-	fmt.Println(i.Ip)
-	fmt.Println(checkIp.Ip)
-
 	return i.Ip&i.Cidr == checkIp.Ip&i.Cidr
 }

@@ -35,7 +35,7 @@ func TestIpChecking(t *testing.T) {
 			name:     "[CIDR] No Match",
 			stringIp: "127.0.0.1",
 			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 16 + 1,
+				Ip:   (127 << 24) + 256,
 				Cidr: 0xFFFFFF00,
 			},
 			res: false,
@@ -44,7 +44,7 @@ func TestIpChecking(t *testing.T) {
 			name:     "[CIDR] Match",
 			stringIp: "127.0.0.1",
 			testedIp: ipChecking.Ip{
-				Ip:   (127 << 24) + 1,
+				Ip:   (127 << 24) + 2,
 				Cidr: 0xFFFFFF00,
 			},
 			res: true,
