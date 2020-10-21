@@ -11,8 +11,8 @@ import (
 // struct fail2ban config
 type Rule struct {
 	ignorecommand     string `yaml:"igonecommand"`
-	bantime           int64  `yaml:"bantime"`  //exprimate in second
-	findtime          int64  `yaml:"findtime"` //exprimate in second
+	bantime           string `yaml:"bantime"`  //exprimate in second
+	findtime          string `yaml:"findtime"` //exprimate in second
 	maxretry          int    `yaml:"maxretry"`
 	backend           string `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
 	usedns            string `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
@@ -72,8 +72,15 @@ func importIP(list List) ([]string, error) {
 	return rlist, nil
 }
 
+/* func checkConf(r Rule) error {
+	if r.bantime == "" {
+
+	}
+} */
+
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+
 	whitelist, err := importIP(config.whitelist)
 	if err != nil {
 		return nil, err
