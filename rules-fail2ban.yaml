@@ -33,7 +33,7 @@ http:
               - "file4.txt"
             IP:
                 - "::1"
-              - "127.0.0.1"
+                - "127.0.0.1"
           Rules:
               ignorecommand: "" 
               bantime: "300"     
