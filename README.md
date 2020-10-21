@@ -1,6 +1,6 @@
-# Header transformation plugin for traefik
+# Fail2ban plugin for traefik
 
-[![Build Status](https://travis-ci.com/tomMoulard/htransformation.svg?branch=main)](https://travis-ci.com/tomMoulard/htransformation)
+[![Build Status](https://travis-ci.com/tomMoulard/fail2ban.svg?branch=main)](https://travis-ci.com/tomMoulard/fail2ban)
 
 This plugin allow to change on the fly header's value of a request.
 
@@ -12,8 +12,8 @@ pilot:
 
 experimental:
   devPlugin:
-    goPath: /home/tm/go
-    moduleName: github.com/tommoulard/htransformation
+    goPath: /home/${USER}/go
+    moduleName: github.com/tommoulard/fail2ban
 
 entryPoints:
   http:
@@ -35,3 +35,4 @@ providers:
 $ docker run -d --network host containous/whoami -port 5000
 # traefik --config-file traefik.yml
 ```
+
