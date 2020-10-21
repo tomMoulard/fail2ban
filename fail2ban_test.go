@@ -12,7 +12,7 @@ func TestDummy(t *testing.T) {
 	t.Log(cfg)
 }
 
-func TestImportIp(t *testing.T) {
+func TestImportIP(t *testing.T) {
 	tests := []struct {
 		name    string
 		list    plug.List
@@ -22,7 +22,7 @@ func TestImportIp(t *testing.T) {
 		{
 			name: "empty list",
 			list: plug.List{
-				Ip:    []string{},
+				IP:    []string{},
 				Files: []string{},
 			},
 			strWant: []string{},
@@ -32,7 +32,7 @@ func TestImportIp(t *testing.T) {
 		{
 			name: "simple import",
 			list: plug.List{
-				Ip:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
+				IP:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
 				Files: []string{"tests/test-ipfile.txt"},
 			},
 			strWant: []string{"192.168.0.0", "255.0.0.0", "42.42.42.42", "13.38.70.00", "192.168.0.0", "0.0.0.0", "255.255.255.255"},
@@ -42,7 +42,7 @@ func TestImportIp(t *testing.T) {
 		{
 			name: "import only file",
 			list: plug.List{
-				Ip:    []string{},
+				IP:    []string{},
 				Files: []string{"tests/test-ipfile.txt"},
 			},
 			strWant: []string{"192.168.0.0", "255.0.0.0", "42.42.42.42", "13.38.70.00"},
@@ -52,7 +52,7 @@ func TestImportIp(t *testing.T) {
 		{
 			name: "import only ip",
 			list: plug.List{
-				Ip:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
+				IP:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
 				Files: []string{},
 			},
 			strWant: []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
@@ -62,7 +62,7 @@ func TestImportIp(t *testing.T) {
 		{
 			name: "import no file",
 			list: plug.List{
-				Ip:    []string{},
+				IP:    []string{},
 				Files: []string{"tests/idontexist.txt"},
 			},
 			strWant: []string{},
