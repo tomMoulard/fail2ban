@@ -29,7 +29,7 @@ var (
 )
 
 // Rules struct fail2ban config
-type rules struct {
+type Rules struct {
 	ignorecommand     string        `yaml:"igonecommand"`
 	bantime           time.Duration `yaml:"bantime"`  //exprimate in second
 	findtime          time.Duration `yaml:"findtime"` //exprimate in second
@@ -63,16 +63,16 @@ type List struct {
 type Config struct {
 	blacklist List
 	whitelist List
-	rules     rules
+	rules     Rules
 }
 
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
 	return &Config{
-		Rules: Rule{
-			bantime:  "300",
-			findtime: "120",
-			enabled:  true,
+		rules: Rules{
+			// bantime:  "300",
+			// findtime: "120",
+			enabled: true,
 		},
 	}
 }
@@ -83,7 +83,7 @@ type Fail2Ban struct {
 	name      string
 	whitelist []ipChecking.Ip
 	blacklist []ipChecking.Ip
-	rules     rules
+	rules     Rules
 }
 
 func ImportIP(list List) ([]string, error) {
@@ -106,15 +106,11 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	if config.rules.bantime == "" || config.rules.findtime == "" {
-		return nil, fmt.Errorf("Can't use empty bantime or fintime")
-	}
-
 	if config.rules.port[0] < 0 || config.rules.port[1] < config.rules.port[0] {
 		return nil, fmt.Errorf("Your port configuration is bad, please change that")
 	}
 
- 	iplist, err := ImportIP(config.whitelist)
+	iplist, err := ImportIP(config.whitelist)
 	if err != nil {
 		return nil, err
 	}
