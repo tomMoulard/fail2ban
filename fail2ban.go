@@ -2,7 +2,14 @@ package fail2ban
 
 import (
 	"context"
+	"log"
 	"net/http"
+	"os"
+)
+
+// Logger TestLogger
+var (
+	Logger = log.New(os.Stdout, "Test", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
 // struct fail2ban config
@@ -55,6 +62,22 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 // Iterate over every headers to match the ones specified in the config and
 // return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rw.Write([]byte("cdjscl,dcle,c\n"))
+	remoteIP := req.RemoteAddr
+	// Whitelist
+	for _, ip := range u.Whitelist {
+		if ip.compare(remoteIP) {
+			u.next.ServeHTTP(rw, req)
+			return
+		}
+	}
+	// Blacklist
+	for _, ip := range u.Blacklist {
+		if ip.compare(remoteIP) {
+			Logger.Println(remoteIP + " is in the Blacklist")
+			rw.WriteHeader(http.StatusForbidden)
+			return
+		}
+	}
+
 	u.next.ServeHTTP(rw, req)
 }
