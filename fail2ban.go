@@ -55,7 +55,6 @@ type rules struct {
 type List struct {
 	Ip    []string
 	Files []string
-
 }
 
 // Config struct
@@ -89,10 +88,10 @@ func ImportIP(list List) ([]string, error) {
 		}
 		rlist = append(rlist, strings.Split(content, "\n")...)
 	}
-    if len(rlist) > 1 {
-        rlist = rlist[:len(rlist)-1]
-    }
-    rlist = append(rlist, list.Ip...)
+	if len(rlist) > 1 {
+		rlist = rlist[:len(rlist)-1]
+	}
+	rlist = append(rlist, list.Ip...)
 
 	return rlist, nil
 }
