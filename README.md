@@ -27,7 +27,7 @@ api:
 
 providers:
   file:
-    filename: rules-htransformation.yaml
+    filename: rules-fail2ban.yaml
 ```
 
 ## How to dev
@@ -36,3 +36,7 @@ $ docker run -d --network host containous/whoami -port 5000
 # traefik --config-file traefik.yml
 ```
 
+# Roadmap
+ - [ ] Blacklist (from file)
+ - [ ] Whitelist (from file)
+ - [ ] Fail2ban
