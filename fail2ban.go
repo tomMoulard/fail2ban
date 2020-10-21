@@ -53,8 +53,9 @@ type rules struct {
 
 // List struct
 type List struct {
-	ip    []string
-	files []string
+	Ip    []string
+	Files []string
+
 }
 
 // Config struct
@@ -78,22 +79,27 @@ type Fail2Ban struct {
 	rules     rules
 }
 
-func importIP(list List) ([]string, error) {
+func ImportIP(list List) ([]string, error) {
 	var rlist []string
-	for _, ip := range list.files {
+	for _, ip := range list.Files {
+
 		content, err := files.GetFileContent(ip)
 		if err != nil {
 			return nil, err
 		}
 		rlist = append(rlist, strings.Split(content, "\n")...)
 	}
-	rlist = append(rlist, list.ip...)
+    if len(rlist) > 1 {
+        rlist = rlist[:len(rlist)-1]
+    }
+    rlist = append(rlist, list.Ip...)
+
 	return rlist, nil
 }
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	iplist, err := importIP(config.whitelist)
+	iplist, err := ImportIP(config.whitelist)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +113,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		whitelist = append(whitelist, ip)
 	}
 
-	iplist, err = importIP(config.blacklist)
+	iplist, err = ImportIP(config.blacklist)
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +181,5 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
 		}
 	}
-
 	u.next.ServeHTTP(rw, req)
 }

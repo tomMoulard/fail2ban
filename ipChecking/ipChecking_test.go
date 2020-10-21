@@ -14,6 +14,33 @@ func TestIpChecking(t *testing.T) {
 		res      bool
 	}{
 		{
+			name:     "[IP] Valid IP",
+			stringIp: "127.0.0.1",
+			testedIp: ipChecking.Ip{
+				Ip:   (127 << 24) + 1,
+				Cidr: 0xFFFFFFFF,
+			},
+			res: true,
+		},
+		{
+			name:     "[IP] Invalid IP value",
+			stringIp: "25666.0.0.1",
+			testedIp: ipChecking.Ip{
+				Ip:   (127 << 24) + 1,
+				Cidr: 0xFFFFFFFF,
+			},
+			res: false,
+		},
+		{
+			name:     "[IP] Invalid CIDR form",
+			stringIp: "127.0.0.1/22/34",
+			testedIp: ipChecking.Ip{
+				Ip:   (127 << 24) + 256,
+				Cidr: 0xFFFFFF00,
+			},
+			res: false,
+		},
+		{
 			name:     "[IP] No match",
 			stringIp: "127.0.0.1",
 			testedIp: ipChecking.Ip{
@@ -28,6 +55,15 @@ func TestIpChecking(t *testing.T) {
 			testedIp: ipChecking.Ip{
 				Ip:   (127 << 24) + 2,
 				Cidr: 0xFFFFFFFF,
+			},
+			res: false,
+		},
+		{
+			name:     "[CIDR] Invalid CIDR ",
+			stringIp: "127.0.0.1/55",
+			testedIp: ipChecking.Ip{
+				Ip:   (127 << 24) + 256,
+				Cidr: 0xFFFFFF00,
 			},
 			res: false,
 		},
