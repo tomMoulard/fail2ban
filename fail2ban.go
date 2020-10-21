@@ -65,6 +65,9 @@ func ImportIP(list List) ([]string, error) {
 		}
 		rlist = append(rlist, strings.Split(content, "\n")...)
 	}
+    if len(rlist) > 1 {
+        rlist = rlist[:len(rlist)-1]
+    }
     rlist = append(rlist, list.Ip...)
 	return rlist, nil
 }
