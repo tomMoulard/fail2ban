@@ -1,4 +1,4 @@
-package htransformation
+package fail2ban
 
 import (
 	"context"
@@ -55,5 +55,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 // Iterate over every headers to match the ones specified in the config and
 // return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	rw.Write([]byte("cdjscl,dcle,c\n"))
 	u.next.ServeHTTP(rw, req)
 }

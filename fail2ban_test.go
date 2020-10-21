@@ -1,4 +1,4 @@
-package htransformation_test
+package fail2ban_test
 
 import (
 	"testing"

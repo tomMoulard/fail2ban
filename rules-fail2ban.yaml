@@ -4,7 +4,7 @@ http:
   routers:
     my-router:
       middlewares:
-        - htransformation
+        - fail2ban
       entrypoints:
         - http
       service: service-whoami
@@ -17,7 +17,7 @@ http:
           - url: http://localhost:5000
         passHostHeader: false
   middlewares:
-    htransformation:
+    fail2ban:
       plugin:
         dev:
           Whitelist:
