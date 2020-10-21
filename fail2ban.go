@@ -30,27 +30,27 @@ var (
 
 // Rules struct fail2ban config
 type Rules struct {
-	ignorecommand     string        `yaml:"igonecommand"`
-	bantime           time.Duration `yaml:"bantime"`  //exprimate in second
-	findtime          time.Duration `yaml:"findtime"` //exprimate in second
-	maxretry          int           `yaml:"maxretry"`
-	backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
-	usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
-	logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
-	enabled           bool          `yaml:"enabled"`     //enable or disable the jail
-	mode              string        `yaml:"mode"`        //same than usedns
-	filter            string        `yaml:"filter"`      //= %(name)s[mode=%(mode)s] maybe change for a []string
-	destemail         string        `yaml:"destemail"`
-	sender            string        `yaml:"sender"`
-	mta               string        `yaml:"mta"`      //same than usedns
-	protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
-	chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
-	port              [2]int        `yaml:"port"`
-	fail2banAgent     string        `yaml:"fail2ban_agent"`
-	banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
-	banactionAllports string        `yaml:"banaction_allports"` //same as above
-	actionAbuseipdb   string        `yaml:"action_abuseipdb"`
-	action            string        `yaml:"action"` //maybe change for []string
+	// ignorecommand     string        `yaml:"igonecommand"`
+	bantime  string `yaml:"bantime"`  //exprimate in second
+	findtime string `yaml:"findtime"` //exprimate in second
+	maxretry int    `yaml:"maxretry"`
+	// backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
+	// usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
+	// logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
+	enabled bool `yaml:"enabled"` //enable or disable the jail
+	// mode              string        `yaml:"mode"`        //same than usedns
+	// filter            string        `yaml:"filter"`      //= %(name)s[mode=%(mode)s] maybe change for a []string
+	// destemail         string        `yaml:"destemail"`
+	// sender            string        `yaml:"sender"`
+	// mta               string        `yaml:"mta"`      //same than usedns
+	// protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
+	// chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
+	port [2]int `yaml:"port"`
+	// fail2banAgent     string        `yaml:"fail2ban_agent"`
+	// banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
+	// banactionAllports string        `yaml:"banaction_allports"` //same as above
+	// actionAbuseipdb   string        `yaml:"action_abuseipdb"`
+	// action            string        `yaml:"action"` //maybe change for []string
 }
 
 // List struct
@@ -70,11 +70,25 @@ type Config struct {
 func CreateConfig() *Config {
 	return &Config{
 		rules: Rules{
-			// bantime:  "300",
-			// findtime: "120",
-			enabled: true,
+			bantime:  "300s",
+			findtime: "120s",
+			enabled:  true,
 		},
 	}
+}
+
+// RulesTransformed transformed Rules struct
+type RulesTransformed struct {
+	bantime  time.Duration
+	findtime time.Duration
+	maxretry int
+	enabled  bool
+	port     [2]int
+}
+
+// TransformRule morph a Rules object into a RulesTransformed
+func TransformRule(r Rules) (RulesTransformed, error) {
+	return RulesTransformed{}, nil
 }
 
 // Fail2Ban holds the necessary components of a Traefik plugin
@@ -83,7 +97,7 @@ type Fail2Ban struct {
 	name      string
 	whitelist []ipchecking.IP
 	blacklist []ipchecking.IP
-	rules     Rules
+	rules     RulesTransformed
 }
 
 // ImportIP extract all ip from config sources
@@ -139,12 +153,17 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		blacklist = append(blacklist, ip)
 	}
 
+	rules, err := TransformRule(config.rules)
+	if err != nil {
+		return nil, fmt.Errorf("Error when Transforming rules: %+v", err)
+	}
+
 	return &Fail2Ban{
 		next:      next,
 		name:      name,
 		whitelist: whitelist,
 		blacklist: blacklist,
-		rules:     config.rules,
+		rules:     rules,
 	}, nil
 }
 

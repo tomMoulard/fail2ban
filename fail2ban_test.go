@@ -12,6 +12,34 @@ func TestDummy(t *testing.T) {
 	t.Log(cfg)
 }
 
+func TestTransformRules(t *testing.T) {
+	tests := []struct {
+		name   string
+		send   plug.Rules
+		expect plug.RulesTransformed
+		err    error
+	}{
+		{
+			name:   "dummy",
+			send:   plug.Rules{},
+			expect: plug.RulesTransformed{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, e := plug.TransformRule(tt.send)
+			if e != nil && e.Error() != tt.err.Error() {
+				t.Errorf("TransformRule_err: wanted '%s' got '%s'",
+					tt.err, e)
+			}
+			// if tt.expect.bantime == got.bantime {
+			// t.Errorf("TransformRule: wanted '%+v' got '%+v'",
+			// tt.expect, got)
+			// }
+		})
+	}
+}
+
 func TestImportIP(t *testing.T) {
 	tests := []struct {
 		name    string
