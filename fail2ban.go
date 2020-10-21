@@ -3,6 +3,9 @@ package fail2ban
 import (
 	"context"
 	"net/http"
+	"strings"
+
+	"github.com/tommoulard/fail2ban/files"
 )
 
 // struct fail2ban config
@@ -30,8 +33,15 @@ type rules struct {
 	action            string `yaml:"action"` //maybe change for []string
 }
 
-// Config holds configuration to be passed to the plugin
-type Config struct{}
+type List struct {
+	ip    []string
+	files []string
+}
+
+type Config struct {
+	blacklist List
+	whitelist List
+}
 
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
@@ -40,15 +50,42 @@ func CreateConfig() *Config {
 
 // Fail2Ban holds the necessary components of a Traefik plugin
 type Fail2Ban struct {
-	next http.Handler
-	name string
+	next      http.Handler
+	name      string
+	whitelist []string
+	blacklist []string
+}
+
+func importIP(list List) ([]string, error) {
+	var rlist []string
+	for _, ip := range list.files {
+		content, err := files.GetFileContent(ip)
+		if err != nil {
+			return nil, err
+		}
+		rlist = append(rlist, strings.Split(content, "\n")...)
+	}
+	rlist = append(rlist, list.ip...)
+	return rlist, nil
 }
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+	whitelist, err := importIP(config.whitelist)
+	if err != nil {
+		return nil, err
+	}
+
+	blacklist, err := importIP(config.blacklist)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Fail2Ban{
-		next: next,
-		name: name,
+		next:      next,
+		name:      name,
+		whitelist: whitelist,
+		blacklist: blacklist,
 	}, nil
 }
 
