@@ -9,7 +9,7 @@ import (
 )
 
 // struct fail2ban config
-type rules struct {
+type Rule struct {
 	ignorecommand     string `yaml:"igonecommand"`
 	bantime           int64  `yaml:"bantime"`  //exprimate in second
 	findtime          int64  `yaml:"findtime"` //exprimate in second
@@ -41,11 +41,14 @@ type List struct {
 type Config struct {
 	blacklist List
 	whitelist List
+	Rules     Rule
 }
 
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
-	return &Config{}
+	return &Config{
+		Rules: Rule{},
+	}
 }
 
 // Fail2Ban holds the necessary components of a Traefik plugin

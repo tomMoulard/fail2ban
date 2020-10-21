@@ -34,3 +34,28 @@ http:
             IP:
                 - "::1"
                 - "127.0.0.1"
+            Rules:
+                ignorecommand: "" 
+                bantime: 300     
+                findtime: 120      
+                maxretry: 3
+                backend: ""
+                usedns: ""
+                logencoding: "UTF-8" 
+                enabled: true     
+                mode: ""            
+                filter: ""           
+                destemail: ""       
+                sender: ""           
+                mta: ""             
+                protocol: ""         
+                chain: ""          
+                port:
+                  - 0
+                  - 10000             
+                fail2banAgent: ""    
+                banaction: ""
+                banactionAllports: ""
+                actionAbuseipdb: ""  
+                action: ""  
+              }
