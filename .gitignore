@@ -13,3 +13,10 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+traefik.yml
+traefik.yaml
+
+plugins-storage
+
+# Vim trash files
+*.swp
