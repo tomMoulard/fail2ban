@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/eiko-team/eiko/misc/files"
+	"github.com/tommoulard/fail2ban/files"
 )
 
 func TestGetFileContent(t *testing.T) {
