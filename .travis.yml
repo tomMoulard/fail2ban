@@ -35,4 +35,4 @@ install:
   - make fmt
   - git diff --exit-code
 
-script: make lint test
+script: make lint test-v

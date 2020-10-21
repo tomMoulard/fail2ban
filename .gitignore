@@ -20,3 +20,5 @@ plugins-storage
 
 # Vim trash files
 *.swp
+test.html
+coverage.txt

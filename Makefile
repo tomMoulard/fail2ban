@@ -8,12 +8,20 @@ default: fmt lint test
 
 lint:
 	golangci-lint run
+	golint ./...
 
 fmt:
 	gofmt -l -w $(SRC)
 
-test:
+test-v:
 	go test -v -cover ./...
+
+test:
+	go test -cover ./...
+
+cover:
+	go test $(ARGS) -tags mock -covermode=count -cover -coverprofile=coverage.txt ./...
+	go tool cover -html=coverage.txt -o test.html
 
 yaegi_test:
 	yaegi test .
@@ -22,4 +30,5 @@ vendor:
 	go mod vendor
 
 clean:
-	rm -rf ./vendor
+	$(RM) -rf ./vendor
+	$(RM) -r coverage.txt test.html
