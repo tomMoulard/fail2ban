@@ -4,8 +4,9 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 	"strings"
+	"os"
+
 
 	"github.com/tommoulard/fail2ban/files"
 )
@@ -41,8 +42,9 @@ type rules struct {
 }
 
 type List struct {
-	ip    []string
-	files []string
+	Ip    []string
+	Files []string
+
 }
 
 type Config struct {
@@ -63,27 +65,34 @@ type Fail2Ban struct {
 	blacklist []string
 }
 
-func importIP(list List) ([]string, error) {
+func ImportIP(list List) ([]string, error) {
 	var rlist []string
-	for _, ip := range list.files {
+	for _, ip := range list.Files {
+
 		content, err := files.GetFileContent(ip)
 		if err != nil {
 			return nil, err
 		}
 		rlist = append(rlist, strings.Split(content, "\n")...)
 	}
-	rlist = append(rlist, list.ip...)
+    if len(rlist) > 1 {
+        rlist = rlist[:len(rlist)-1]
+    }
+    rlist = append(rlist, list.Ip...)
+
 	return rlist, nil
 }
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	whitelist, err := importIP(config.whitelist)
+	whitelist, err := ImportIP(config.whitelist)
+
 	if err != nil {
 		return nil, err
 	}
 
-	blacklist, err := importIP(config.blacklist)
+	blacklist, err := ImportIP(config.blacklist)
+
 	if err != nil {
 		return nil, err
 	}
@@ -99,22 +108,5 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 // Iterate over every headers to match the ones specified in the config and
 // return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	remoteIP := req.RemoteAddr
-	// Whitelist
-	for _, ip := range u.Whitelist {
-		if ip.compare(remoteIP) {
-			u.next.ServeHTTP(rw, req)
-			return
-		}
-	}
-	// Blacklist
-	for _, ip := range u.Blacklist {
-		if ip.compare(remoteIP) {
-			Logger.Println(remoteIP + " is in the Blacklist")
-			rw.WriteHeader(http.StatusForbidden)
-			return
-		}
-	}
-
 	u.next.ServeHTTP(rw, req)
 }
