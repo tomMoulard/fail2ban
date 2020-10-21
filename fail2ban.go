@@ -22,9 +22,9 @@ type rules struct {
 	mta               string `yaml:"mta"`      //same than usedns
 	protocol          string `yaml:"protocol"` //maybe int (tcp:0, udp:1)
 	chain             string `yaml:"chain"`    //maybe useless because handle by traefik chain
-	port              [2]int `yaml:"port"`     //i dont know if yaml can take this
+	port              [2]int `yaml:"port"`
 	fail2banAgent     string `yaml:"fail2ban_agent"`
-	banaction         string `yaml:"banaction_allports"` //maybe useless because we are the firewall ?
+	banaction         string `yaml:"banaction"`          //maybe useless because we are the firewall ?
 	banactionAllports string `yaml:"banaction_allports"` //same as above
 	actionAbuseipdb   string `yaml:"action_abuseipdb"`
 	action            string `yaml:"action"` //maybe change for []string
