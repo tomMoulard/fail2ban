@@ -7,6 +7,7 @@ import (
 	"strings"
 	"os"
 
+
 	"github.com/tommoulard/fail2ban/files"
 )
 
@@ -43,6 +44,7 @@ type rules struct {
 type List struct {
 	Ip    []string
 	Files []string
+
 }
 
 type Config struct {
@@ -66,6 +68,7 @@ type Fail2Ban struct {
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
 	for _, ip := range list.Files {
+
 		content, err := files.GetFileContent(ip)
 		if err != nil {
 			return nil, err
@@ -76,17 +79,20 @@ func ImportIP(list List) ([]string, error) {
         rlist = rlist[:len(rlist)-1]
     }
     rlist = append(rlist, list.Ip...)
+
 	return rlist, nil
 }
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	whitelist, err := ImportIP(config.whitelist)
+
 	if err != nil {
 		return nil, err
 	}
 
 	blacklist, err := ImportIP(config.blacklist)
+
 	if err != nil {
 		return nil, err
 	}
