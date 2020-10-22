@@ -125,15 +125,14 @@ type Fail2Ban struct {
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
 	for _, ip := range list.Files {
-
 		content, err := files.GetFileContent(ip)
 		if err != nil {
 			return nil, err
 		}
 		rlist = append(rlist, strings.Split(content, "\n")...)
-	}
-	if len(rlist) > 1 {
-		rlist = rlist[:len(rlist)-1]
+		if len(rlist) > 1 {
+			rlist = rlist[:len(rlist)-1]
+		}
 	}
 	rlist = append(rlist, list.IP...)
 

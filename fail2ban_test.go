@@ -78,6 +78,16 @@ func TestImportIP(t *testing.T) {
 		},
 
 		{
+			name: "import two file",
+			list: plug.List{
+				IP:    []string{},
+				Files: []string{"tests/test-ipfile.txt", "tests/test-ipfile.txt"},
+			},
+			strWant: []string{"192.168.0.0", "255.0.0.0", "42.42.42.42", "13.38.70.00", "192.168.0.0", "255.0.0.0", "42.42.42.42", "13.38.70.00"},
+			err:     nil,
+		},
+
+		{
 			name: "import only ip",
 			list: plug.List{
 				IP:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
