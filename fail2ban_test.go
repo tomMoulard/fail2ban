@@ -21,14 +21,14 @@ func TestTransformRules(t *testing.T) {
 	}{
 		{
 			name:   "dummy",
-			send:   plug.Rules{},
+			send:   plug.CreateRules(),
 			expect: plug.RulesTransformed{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, e := plug.TransformRule(tt.send)
-			if e != nil && e.Error() != tt.err.Error() {
+			if e != nil && (tt.err == nil || e.Error() != tt.err.Error()) {
 				t.Errorf("TransformRule_err: wanted '%s' got '%s'",
 					tt.err, e)
 			}
