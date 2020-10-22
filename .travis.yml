@@ -43,10 +43,4 @@ jobs:
     - make fmt
     - git diff --exit-code
   
-  script: 
-    - make lint test-v
-    - docker run -d --rm --network host alpine curl --interface 127.0.0.2 http://localhost:whoami/
-    - docker run -d --rm --network host alpine curl --interface 127.0.0.2 http://localhost:whoami/
-    - docker run -d --rm --network host alpine curl --interface 127.0.0.2 http://localhost:whoami/
-    - docker run -d --rm --network host alpine curl --interface 127.0.0.3 http://localhost:whoami/
-
+  script: make lint test-v
