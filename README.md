@@ -50,9 +50,10 @@ Where:
  - `findtime`: is the time slot used to count requests (if there is too many
 requests with the same ip in this slot of time, the ip goes into ban). You can
 use 'smart' strings: "4h", "2m", "1s", ...
- - `bantime`: correspond to the amount of time the IP is in Ban mode
+ - `bantime`: correspond to the amount of time the IP is in Ban mode.
  - `maxretry`: number of request before Ban mode.
- - `enabled`: allow to enable or disable the plugin
+ - `enabled`: allow to enable or disable the plugin (must be set to `true` to
+enable the plugin).
 
 #### Schema
 First request, IP is added to the Pool, and the `findtime` timer is started:
