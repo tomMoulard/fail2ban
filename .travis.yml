@@ -27,6 +27,9 @@ before_install:
   - golangci-lint --version
   - curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b $GOPATH/bin ${YAEGI_VERSION}
   - go get -u golang.org/x/lint/golint
+  # traefik part
+  - curl -sfL https://github.com/traefik/traefik/releases/download/v2.3.2/traefik-v2.3.2.src.tar.gz
+  - tar -zxvf traefik_${traefik_version}_linux_${arch}.tar.gz
   # docker part
   - docker run -d --rm --network host containous/whoami -port 5000 --name service-whoami
   - docker ps -a
@@ -41,7 +44,10 @@ install:
   - make fmt
   - git diff --exit-code
 
-script: make lint test-v
+before_script:
+  - make lint test-v
+
+script: ./traefik --help
 
 after_script:
   - docker run -ti --rm --network host --name test alpine apk add curl && curl localhost/whoami
