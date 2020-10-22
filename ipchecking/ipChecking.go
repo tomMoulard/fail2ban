@@ -38,6 +38,8 @@ func BuildIP(ip string) (IP, error) {
 		if len(tmpSubnet) == 2 {
 			if tmpInt, err = strconv.ParseUint(tmpSubnet[1], 10, 32); err == nil && tmpInt <= 255 {
 				res.Cidr = 0xFFFFFFFF << uint32(tmpInt)
+			} else {
+				return IP{}, err
 			}
 		} else {
 			res.Cidr = 0xFFFFFFFF
