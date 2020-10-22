@@ -24,7 +24,7 @@ type IPViewed struct {
 
 // Logger TestLogger
 var (
-	Logger   = log.New(os.Stdout, "Test", log.Ldate|log.Ltime|log.Lshortfile)
+	Logger   = log.New(os.Stdout, "Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
 	ipViewed = map[string]IPViewed{}
 )
 
@@ -66,14 +66,19 @@ type Config struct {
 	rules     Rules
 }
 
+// CreateRules create default rules
+func CreateRules() Rules {
+	return Rules{
+		bantime:  "300s",
+		findtime: "120s",
+		enabled:  false,
+	}
+}
+
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
 	return &Config{
-		rules: Rules{
-			bantime:  "300s",
-			findtime: "120s",
-			enabled:  true,
-		},
+		rules: CreateRules(),
 	}
 }
 
@@ -88,7 +93,23 @@ type RulesTransformed struct {
 
 // TransformRule morph a Rules object into a RulesTransformed
 func TransformRule(r Rules) (RulesTransformed, error) {
-	return RulesTransformed{}, nil
+	bantime, err := time.ParseDuration(r.bantime)
+	if err != nil {
+		return RulesTransformed{}, err
+	}
+
+	findtime, err := time.ParseDuration(r.bantime)
+	if err != nil {
+		return RulesTransformed{}, err
+	}
+
+	return RulesTransformed{
+		bantime:  bantime,
+		findtime: findtime,
+		maxretry: r.maxretry,
+		enabled:  r.enabled,
+		port:     r.port,
+	}, nil
 }
 
 // Fail2Ban holds the necessary components of a Traefik plugin
@@ -170,6 +191,10 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 // Iterate over every headers to match the ones specified in the config and
 // return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	if !u.rules.enabled {
+		u.next.ServeHTTP(rw, req)
+		return
+	}
 	remoteIP := req.RemoteAddr
 	// Whitelist
 	for _, ip := range u.whitelist {
