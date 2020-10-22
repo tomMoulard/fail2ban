@@ -27,6 +27,9 @@ before_install:
   - golangci-lint --version
   - curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b $GOPATH/bin ${YAEGI_VERSION}
   - go get -u golang.org/x/lint/golint
+  # docker part
+  - docker run -d --network host containous/whoami -port 5000 --name service-whoami
+  - docker ps -a
 
 install:
   - go mod tidy
