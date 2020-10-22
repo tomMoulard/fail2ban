@@ -7,8 +7,6 @@ summary: 'Blacklist (or whitelist) IP depending on some conditions'
 
 testData:
   whitelist:
-    files:
-        - "tests/test-ipfile.txt"
     ip:
         - "::1"
         - "127.0.0.1"
