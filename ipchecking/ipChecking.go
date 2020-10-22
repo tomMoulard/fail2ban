@@ -1,6 +1,7 @@
 package ipchecking
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -51,7 +52,7 @@ func BuildIP(ip string) (IP, error) {
 		tempIP := net.ParseIP(ip)
 		if tempIP == nil {
 			Logger.Printf("%s is not a valid IP or IP/Net", ip)
-			return res, err
+			return res, fmt.Errorf("%s is not a valid IP or IP/Net", ip)
 		}
 		if isIPv4(ip) {
 			ip = ip + "/32"

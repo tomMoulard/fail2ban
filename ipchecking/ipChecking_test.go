@@ -156,13 +156,13 @@ func TestIPtoString(t *testing.T) {
 	}{
 		{
 			name:     "[IP] Valid IP string",
-			testedIP: "127.0.0.1",
+			testedIP: "127.0.0.1/32",
 			stringIp: ip,
 			res:      true,
 		},
 		{
 			name:     "[IP] Invalid IP string",
-			testedIP: "127.0.0.2",
+			testedIP: "127.0.0.2/32",
 			stringIp: ip,
 			res:      false,
 		},
