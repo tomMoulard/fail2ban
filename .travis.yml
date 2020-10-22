@@ -29,8 +29,8 @@ before_install:
   - go get -u golang.org/x/lint/golint
   # docker part
   - docker network create test
-  - docker run -d --rm --name traefik --network test -p 8080:8080 -p 80:80 -v ${PWD}/:/etc/traefik/ -v ${PWD}/tests/traefik_test.yaml:/etc/traefik/traefik.yaml traefik
-  - docker run -d --rm --network test containous/whoami --name service-whoami
+  - docker run -d --rm --name traefik --net-alias traefik --network test -p 8080:8080 -p 80:80 -v ${PWD}/:/etc/traefik/ -v ${PWD}/tests/traefik_test.yaml:/etc/traefik/traefik.yaml traefik
+  - docker run -d --rm --network test --net-alias service-whoami containous/whoami --name service-whoami
   - docker ps -a
 
 install:
