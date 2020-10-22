@@ -2,7 +2,8 @@
 
 [![Build Status](https://travis-ci.com/tomMoulard/fail2ban.svg?branch=main)](https://travis-ci.com/tomMoulard/fail2ban)
 
-This plugin allow to change on the fly header's value of a request.
+This plugin is a small implementation of a fail2ban instance as a widdleware
+plugin for Traefik.
 
 ## Configuration
 ### Whitelist
@@ -18,6 +19,7 @@ testData:
 ```
 
 Where you can use some IP in an array of files or directly in the config.
+
 ### Blacklist
 Like whitelist, you can blacklist some IP using this:
 ```yml
