@@ -40,6 +40,7 @@ func BuildIP(ip string) (IP, error) {
 				if tmpInt > 32 {
 					return IP{}, fmt.Errorf("Invalid CIDR value: %d", tmpInt)
 				}
+
 				return IP{}, err
 			}
 		} else {
