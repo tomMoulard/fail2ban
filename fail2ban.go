@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -71,7 +72,7 @@ func CreateRules() Rules {
 	return Rules{
 		bantime:  "300s",
 		findtime: "120s",
-		enabled:  false,
+		enabled:  true,
 	}
 }
 
@@ -191,6 +192,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 // Iterate over every headers to match the ones specified in the config and
 // return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	req.Header.Set("Time", strconv.FormatInt(time.Now().Unix(), 10))
 	if !u.rules.enabled {
 		u.next.ServeHTTP(rw, req)
 		return
@@ -213,7 +215,6 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 	//Fail2Ban
 	ip := ipViewed[remoteIP]
-
 	if reflect.DeepEqual(ip, IPViewed{}) {
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
 	} else {
