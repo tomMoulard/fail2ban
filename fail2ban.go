@@ -186,8 +186,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, fmt.Errorf("Error when Transforming rules: %+v", err)
 	}
 
-	Logger.Printf("%+v", config)
-
 	return &Fail2Ban{
 		next:      next,
 		name:      name,

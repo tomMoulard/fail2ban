@@ -21,19 +21,11 @@ http:
       plugin:
         dev:
           whitelist:
-            files:
-              - "file1.txt"
-              - "file2.txt"
             ip:
-                - "::1"
-                - "127.0.0.1"
+                - "127.0.0.2"
           blacklist:
-            files:
-              - "file3.txt"
-              - "file4.txt"
             ip:
-                - "::1"
-                - "127.0.0.1"
+                - "127.0.0.3"
           rules:
             ignorecommand: ""
             bantime: "3h"
@@ -50,7 +42,7 @@ http:
             mta: ""
             protocol: ""
             chain: ""
-            port: "0:10000"
+            ports: "0:8000"
             fail2banAgent: ""
             banaction: ""
             banactionAllports: ""
