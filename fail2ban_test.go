@@ -82,7 +82,7 @@ func TestImportIP(t *testing.T) {
 
 		{
 			name: "import two file",
-			list: plug.List{
+			list: List{
 				IP:    []string{},
 				Files: []string{"tests/test-ipfile.txt", "tests/test-ipfile.txt"},
 			},

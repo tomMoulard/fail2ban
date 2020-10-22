@@ -75,15 +75,16 @@ func BuildIP(ip string) (IP, error) {
 	return res, nil
 }
 
+// ToString convert IP struct to string
 func (ip IP) ToString() string {
 	return ip.String
 }
 
 // CheckIPInSubnet Check is the IP Is the same or in the same subnet
-func (i IP) CheckIPInSubnet(ip string) bool {
-	checkIP, err := BuildIP(ip)
+func (ip IP) CheckIPInSubnet(i string) bool {
+	checkIP, err := BuildIP(i)
 	if err != nil {
 		return false
 	}
-	return i.IP>>(32-i.Cidr) == checkIP.IP>>(32-i.Cidr)
+	return ip.IP>>(32-ip.Cidr) == checkIP.IP>>(32-ip.Cidr)
 }

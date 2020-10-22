@@ -129,7 +129,6 @@ func TestIPChecking(t *testing.T) {
 	}
 }
 
-
 func TestStrToIP(t *testing.T) {
 	tests := []struct {
 		name string
