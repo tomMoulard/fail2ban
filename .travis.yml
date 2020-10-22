@@ -45,3 +45,5 @@ script: make lint test-v
 
 after_script:
   - docker run -ti --rm --network host --name test alpine apk add curl && curl localhost/whoami
+  - curl localhost:5000
+  - curl localhost/whoami
