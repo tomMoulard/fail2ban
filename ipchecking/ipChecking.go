@@ -3,8 +3,8 @@ package ipchecking
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -15,9 +15,7 @@ var (
 
 // IP struct that holds an IP Addr
 type IP struct {
-	IP     uint32
-	Cidr   uint32
-	String string
+	Net *net.IPNet
 }
 
 // StrToIP convert ip string array to ip struct array
@@ -34,57 +32,43 @@ func StrToIP(iplist []string) ([]IP, error) {
 	return rlist, nil
 }
 
+func isIPv4(ip string) bool {
+	return strings.Contains(ip, ".")
+}
+
 // BuildIP Parse a string to extract the IP
 func BuildIP(ip string) (IP, error) {
 	var res IP
-	var tmpInt uint64
 	var err error
 
 	tmpSubnet := strings.Split(ip, "/")
-	tmpIP := strings.Split(tmpSubnet[0], ".")
-
-	if len(tmpSubnet) <= 2 && len(tmpIP) == 4 {
-		for i := 24; i >= 0; i -= 8 {
-			if tmpInt, err = strconv.ParseUint(tmpIP[3-i/8], 10, 32); err == nil && tmpInt <= 255 {
-				res.IP += (uint32(tmpInt) << i)
-			} else {
-				if tmpInt > 255 {
-					err = fmt.Errorf("Invalid IP field: %d", tmpInt)
-				}
-				return IP{}, err
-			}
+	if len(tmpSubnet) == 1 {
+		tempIP := net.ParseIP(ip)
+		if tempIP == nil {
+			Logger.Printf("%s is not a valid IP or IP/Net", ip)
+			return res, fmt.Errorf("%s is not a valid IP or IP/Net", ip)
 		}
-		if len(tmpSubnet) == 2 {
-			if tmpInt, err = strconv.ParseUint(tmpSubnet[1], 10, 32); err == nil && tmpInt <= 32 {
-				res.Cidr = uint32(tmpInt)
-			} else {
-				if tmpInt > 32 {
-					return IP{}, fmt.Errorf("Invalid CIDR value: %d", tmpInt)
-				}
-
-				return IP{}, err
-			}
+		if isIPv4(ip) {
+			ip = ip + "/32"
 		} else {
-			res.Cidr = 32
+			ip = ip + "/128"
 		}
-	} else {
-		err = fmt.Errorf("The string is not an IP not a Subnet")
-		return IP{}, err
 	}
-	res.String = ip
+	_, ipNet, err := net.ParseCIDR(ip)
+	if err != nil {
+		Logger.Printf("%e", err)
+		return res, err
+	}
+	res.Net = ipNet
 	return res, nil
 }
 
 // ToString convert IP struct to string
 func (ip IP) ToString() string {
-	return ip.String
+	return ip.Net.String()
 }
 
 // CheckIPInSubnet Check is the IP Is the same or in the same subnet
 func (ip IP) CheckIPInSubnet(i string) bool {
-	checkIP, err := BuildIP(i)
-	if err != nil {
-		return false
-	}
-	return ip.IP>>(32-ip.Cidr) == checkIP.IP>>(32-ip.Cidr)
+	return ip.Net.Contains(net.ParseIP(i))
 }
