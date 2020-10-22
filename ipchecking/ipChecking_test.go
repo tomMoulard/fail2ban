@@ -96,3 +96,38 @@ func TestIPChecking(t *testing.T) {
 		})
 	}
 }
+
+func TestIPtoString(t *testing.T) {
+	ip, err := ipchecking.BuildIP("127.0.0.1")
+	if err != nil {
+		t.Errorf("Error in IP building: %s, with err %v", "127.0.0.1", err)
+	}
+	tests := []struct {
+		name     string
+		testedIP string
+		stringIp ipchecking.IP
+		res      bool
+	}{
+		{
+			name:     "[IP] Valid IP string",
+			testedIP: "127.0.0.1",
+			stringIp: ip,
+			res:      true,
+		},
+		{
+			name:     "[IP] Invalid IP string",
+			testedIP: "127.0.0.2",
+			stringIp: ip,
+			res:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := tt.stringIp.ToString()
+			if (r == tt.testedIP) != tt.res {
+				t.Errorf("wanted '%v' got '%v'", tt.res, r == tt.testedIP)
+			}
+		})
+	}
+}
