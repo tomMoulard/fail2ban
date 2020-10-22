@@ -3,8 +3,8 @@ package fail2ban
 import (
 	"context"
 	"fmt"
-
 	"log"
+	"strconv"
 	"net/http"
 	"os"
 	"reflect"
@@ -45,7 +45,7 @@ type Rules struct {
 	// Mta               string        `yaml:"mta"`      //same than usedns
 	// Protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
 	// Chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
-	Port [2]int `yaml:"port"`
+	Ports string `yaml:"ports"`
 	// Fail2banAgent     string        `yaml:"fail2ban_agent"`
 	// Banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
 	// BanactionAllports string        `yaml:"banaction_allports"` //same as above
@@ -83,7 +83,7 @@ type RulesTransformed struct {
 	findtime time.Duration
 	maxretry int
 	enabled  bool
-	port     [2]int
+	ports    [2]int
 }
 
 // TransformRule morph a Rules object into a RulesTransformed
@@ -98,12 +98,28 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		return RulesTransformed{}, err
 	}
 
+	ports := strings.Split(r.Ports, ":")
+	if len(ports) != 3 {
+		return RulesTransformed{},
+			fmt.Errorf(`Could not parse Ports, bad format (hint: use something like "80:443" to filter all ports from 80 to 443)`)
+	}
+
+	portStart, err := strconv.Atoi(ports[0])
+	if err != nil {
+		return RulesTransformed{}, err
+	}
+
+	portEnd, err := strconv.Atoi(ports[1])
+	if err != nil {
+		return RulesTransformed{}, err
+	}
+
 	return RulesTransformed{
 		bantime:  bantime,
 		findtime: findtime,
 		maxretry: r.Maxretry,
 		enabled:  r.Enabled,
-		port:     r.Port,
+		ports:    [2]int{portStart, portEnd},
 	}, nil
 }
 
@@ -137,10 +153,6 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	if config.Rules.Port[0] < 0 || config.Rules.Port[1] < config.Rules.Port[0] {
-		return nil, fmt.Errorf("Your port configuration is bad, please change that")
-	}
-
 	iplist, err := ImportIP(config.Whitelist)
 	if err != nil {
 		return nil, err

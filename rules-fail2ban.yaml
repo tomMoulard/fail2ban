@@ -50,9 +50,7 @@ http:
             mta: ""
             protocol: ""
             chain: ""
-            port:
-              - 0
-              - 10000
+            port: "0:10000"
             fail2banAgent: ""
             banaction: ""
             banactionAllports: ""
