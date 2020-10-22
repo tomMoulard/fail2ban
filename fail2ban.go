@@ -22,7 +22,7 @@ type IPViewed struct {
 	blacklisted bool
 }
 
-// Logger TestLogger
+// Logger Main logger
 var (
 	Logger   = log.New(os.Stdout, "Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
 	ipViewed = map[string]IPViewed{}
@@ -145,32 +145,24 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, fmt.Errorf("Your port configuration is bad, please change that")
 	}
 
-	iplist, err := ImportIP(config.whitelist)
+	whiteips, err := ImportIP(config.whitelist)
 	if err != nil {
 		return nil, err
-	}
-	whitelist := []ipchecking.IP{}
-	for _, v := range iplist {
-		ip, err := ipchecking.BuildIP(v)
-		if err != nil {
-			Logger.Printf("Error: %s not valid", v)
-			continue
-		}
-		whitelist = append(whitelist, ip)
 	}
 
-	iplist, err = ImportIP(config.blacklist)
+	whitelist, err := ipchecking.StrToIP(whiteips)
 	if err != nil {
 		return nil, err
 	}
-	blacklist := []ipchecking.IP{}
-	for _, v := range iplist {
-		ip, err := ipchecking.BuildIP(v)
-		if err != nil {
-			Logger.Printf("Error: %s not valid", v)
-			continue
-		}
-		blacklist = append(blacklist, ip)
+
+	blackips, err := ImportIP(config.blacklist)
+	if err != nil {
+		return nil, err
+	}
+
+	blacklist, err := ipchecking.StrToIP(blackips) // Do not mistake with Black Eyed Peas
+	if err != nil {
+		return nil, err
 	}
 
 	rules, err := TransformRule(config.rules)

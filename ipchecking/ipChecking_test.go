@@ -96,3 +96,17 @@ func TestIPChecking(t *testing.T) {
 		})
 	}
 }
+
+func TestStrToIP(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "dummy",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+		})
+	}
+}

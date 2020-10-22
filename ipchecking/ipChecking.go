@@ -2,14 +2,35 @@ package ipchecking
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strconv"
 	"strings"
+)
+
+var (
+	// Logger ip checking logger
+	Logger = log.New(os.Stdout, "IPChecking: ", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
 // IP struct that holds an IP Addr
 type IP struct {
 	IP   uint32
 	Cidr uint32
+}
+
+// StrToIP convert ip string array to ip struct array
+func StrToIP(iplist []string) ([]IP, error) {
+	rlist := []IP{}
+	for _, v := range iplist {
+		ip, err := BuildIP(v)
+		if err != nil {
+			Logger.Printf("Error: %s not valid", v)
+			continue
+		}
+		rlist = append(rlist, ip)
+	}
+	return rlist, nil
 }
 
 // BuildIP Parse a string to extract the IP
