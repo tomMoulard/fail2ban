@@ -28,6 +28,7 @@ before_install:
   - curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b $GOPATH/bin ${YAEGI_VERSION}
   - go get -u golang.org/x/lint/golint
   # docker part
+  - docker network create test
   - docker run -d --rm --name traefik --network test -p 8080:8080 -p 80:80 -v ${PWD}/:/etc/traefik/ -v ${PWD}/tests/traefik_test.yaml:/etc/traefik/traefik.yaml traefik
   - docker run -d --rm --network test containous/whoami --name service-whoami
   - docker ps -a
