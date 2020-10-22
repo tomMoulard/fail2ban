@@ -42,3 +42,6 @@ install:
   - git diff --exit-code
 
 script: make lint test-v
+
+after_script:
+  - docker run -d --network host alpine --name test echo "but he run !"
