@@ -33,13 +33,7 @@ func StrToIP(iplist []string) ([]IP, error) {
 }
 
 func isIPv4(ip string) bool {
-	for i := 0; i < len(ip); i++ {
-		switch ip[i] {
-		case '.':
-			return true
-		}
-	}
-	return false
+	return strings.Contains(ip, ".")
 }
 
 // BuildIP Parse a string to extract the IP
@@ -76,9 +70,5 @@ func (ip IP) ToString() string {
 
 // CheckIPInSubnet Check is the IP Is the same or in the same subnet
 func (ip IP) CheckIPInSubnet(i string) bool {
-	tempIP := net.ParseIP(i)
-	if tempIP == nil {
-		return false
-	}
-	return ip.Net.Contains(tempIP)
+	return ip.Net.Contains(net.ParseIP(i))
 }
