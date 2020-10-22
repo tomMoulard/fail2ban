@@ -2,8 +2,15 @@ package ipchecking
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"strconv"
 	"strings"
+)
+
+var (
+	// Logger ip checking logger
+	Logger = log.New(os.Stdout, "IPChecking: ", log.Ldate|log.Ltime|log.Lshortfile)
 )
 
 // IP struct that holds an IP Addr
@@ -11,6 +18,20 @@ type IP struct {
 	IP     uint32
 	Cidr   uint32
 	String string
+}
+
+// StrToIP convert ip string array to ip struct array
+func StrToIP(iplist []string) ([]IP, error) {
+	rlist := []IP{}
+	for _, v := range iplist {
+		ip, err := BuildIP(v)
+		if err != nil {
+			Logger.Printf("Error: %s not valid", v)
+			continue
+		}
+		rlist = append(rlist, ip)
+	}
+	return rlist, nil
 }
 
 // BuildIP Parse a string to extract the IP
@@ -54,15 +75,16 @@ func BuildIP(ip string) (IP, error) {
 	return res, nil
 }
 
+// ToString convert IP struct to string
 func (ip IP) ToString() string {
 	return ip.String
 }
 
 // CheckIPInSubnet Check is the IP Is the same or in the same subnet
-func (i IP) CheckIPInSubnet(ip string) bool {
-	checkIP, err := BuildIP(ip)
+func (ip IP) CheckIPInSubnet(i string) bool {
+	checkIP, err := BuildIP(i)
 	if err != nil {
 		return false
 	}
-	return i.IP>>(32-i.Cidr) == checkIP.IP>>(32-i.Cidr)
+	return ip.IP>>(32-ip.Cidr) == checkIP.IP>>(32-ip.Cidr)
 }

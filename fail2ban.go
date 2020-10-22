@@ -22,7 +22,7 @@ type IPViewed struct {
 	blacklisted bool
 }
 
-// Logger TestLogger
+// Logger Main logger
 var (
 	Logger   = log.New(os.Stdout, "Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
 	ipViewed = map[string]IPViewed{}
@@ -136,15 +136,14 @@ type Fail2Ban struct {
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
 	for _, ip := range list.Files {
-
 		content, err := files.GetFileContent(ip)
 		if err != nil {
 			return nil, err
 		}
 		rlist = append(rlist, strings.Split(content, "\n")...)
-	}
-	if len(rlist) > 1 {
-		rlist = rlist[:len(rlist)-1]
+		if len(rlist) > 1 {
+			rlist = rlist[:len(rlist)-1]
+		}
 	}
 	rlist = append(rlist, list.IP...)
 
@@ -153,32 +152,24 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	iplist, err := ImportIP(config.Whitelist)
+	whiteips, err := ImportIP(config.Whitelist)
 	if err != nil {
 		return nil, err
-	}
-	whitelist := []ipchecking.IP{}
-	for _, v := range iplist {
-		ip, err := ipchecking.BuildIP(v)
-		if err != nil {
-			Logger.Printf("Error: %s not valid", v)
-			continue
-		}
-		whitelist = append(whitelist, ip)
 	}
 
-	iplist, err = ImportIP(config.Blacklist)
+	whitelist, err := ipchecking.StrToIP(whiteips)
 	if err != nil {
 		return nil, err
 	}
-	blacklist := []ipchecking.IP{}
-	for _, v := range iplist {
-		ip, err := ipchecking.BuildIP(v)
-		if err != nil {
-			Logger.Printf("Error: %s not valid", v)
-			continue
-		}
-		blacklist = append(blacklist, ip)
+
+	blackips, err := ImportIP(config.Blacklist)
+	if err != nil {
+		return nil, err
+	}
+
+	blacklist, err := ipchecking.StrToIP(blackips) // Do not mistake with Black Eyed Peas
+	if err != nil {
+		return nil, err
 	}
 
 	rules, err := TransformRule(config.Rules)

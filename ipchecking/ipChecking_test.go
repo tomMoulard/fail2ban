@@ -129,6 +129,20 @@ func TestIPChecking(t *testing.T) {
 	}
 }
 
+func TestStrToIP(t *testing.T) {
+	tests := []struct {
+		name string
+	}{
+		{
+			name: "dummy",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+		})
+	}
+}
+
 func TestIPtoString(t *testing.T) {
 	ip, err := ipchecking.BuildIP("127.0.0.1")
 	if err != nil {
