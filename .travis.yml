@@ -25,7 +25,6 @@ jobs:
 
   before_install:
     # Install linters
-    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.31.0
     - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
     - golangci-lint --version
     - curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b $GOPATH/bin ${YAEGI_VERSION}
@@ -43,12 +42,11 @@ jobs:
     # - git diff --exit-code ./vendor/
     - make fmt
     - git diff --exit-code
-    
-  after_script:
+  
+  script: 
+    - make lint test-v
     - docker run -d --rm --network host alpine curl --interface 127.0.0.2 http://localhost:whoami/
     - docker run -d --rm --network host alpine curl --interface 127.0.0.2 http://localhost:whoami/
     - docker run -d --rm --network host alpine curl --interface 127.0.0.2 http://localhost:whoami/
     - docker run -d --rm --network host alpine curl --interface 127.0.0.3 http://localhost:whoami/
-  
-  script: make lint test-v
 
