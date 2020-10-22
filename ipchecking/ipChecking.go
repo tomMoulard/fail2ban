@@ -8,8 +8,9 @@ import (
 
 // IP struct that holds an IP Addr
 type IP struct {
-	IP   uint32
-	Cidr uint32
+	IP     uint32
+	Cidr   uint32
+	String string
 }
 
 // BuildIP Parse a string to extract the IP
@@ -45,7 +46,12 @@ func BuildIP(ip string) (IP, error) {
 		err = fmt.Errorf("The string is not an IP not a Subnet")
 		return IP{}, err
 	}
+	res.String = ip
 	return res, nil
+}
+
+func (ip IP) ToString() string {
+	return ip.String
 }
 
 // CheckIPInSubnet Check is the IP Is the same or in the same subnet
