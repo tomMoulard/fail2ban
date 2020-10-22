@@ -7,8 +7,13 @@ import (
 )
 
 type Ip struct {
-	Ip   uint32
-	Cidr uint32
+	Ip     uint32
+	Cidr   uint32
+	String string
+}
+
+func (ip Ip) ToString() string {
+	return ip.String
 }
 
 func BuildIp(ip string) (Ip, error) {
@@ -18,6 +23,7 @@ func BuildIp(ip string) (Ip, error) {
 
 	tmpSubnet := strings.Split(ip, "/")
 	tmpIp := strings.Split(tmpSubnet[0], ".")
+	res.String = ip
 
 	if len(tmpSubnet) <= 2 && len(tmpIp) == 4 {
 		if tmpInt, err = strconv.ParseUint(tmpIp[0], 10, 32); err == nil && tmpInt <= 255 {
