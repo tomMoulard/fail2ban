@@ -3,11 +3,11 @@ package fail2ban
 import (
 	"context"
 	"fmt"
-
 	"log"
 	"net/http"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,27 +30,27 @@ var (
 
 // Rules struct fail2ban config
 type Rules struct {
-	// ignorecommand     string        `yaml:"igonecommand"`
-	bantime  string `yaml:"bantime"`  //exprimate in second
-	findtime string `yaml:"findtime"` //exprimate in second
-	maxretry int    `yaml:"maxretry"`
-	// backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
-	// usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
-	// logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
-	enabled bool `yaml:"enabled"` //enable or disable the jail
-	// mode              string        `yaml:"mode"`        //same than usedns
-	// filter            string        `yaml:"filter"`      //= %(name)s[mode=%(mode)s] maybe change for a []string
-	// destemail         string        `yaml:"destemail"`
-	// sender            string        `yaml:"sender"`
-	// mta               string        `yaml:"mta"`      //same than usedns
-	// protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
-	// chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
-	port [2]int `yaml:"port"`
-	// fail2banAgent     string        `yaml:"fail2ban_agent"`
-	// banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
-	// banactionAllports string        `yaml:"banaction_allports"` //same as above
-	// actionAbuseipdb   string        `yaml:"action_abuseipdb"`
-	// action            string        `yaml:"action"` //maybe change for []string
+	// Ignorecommand     string        `yaml:"igonecommand"`
+	Bantime  string `yaml:"bantime"`  //exprimate in second
+	Findtime string `yaml:"findtime"` //exprimate in second
+	Maxretry int    `yaml:"maxretry"`
+	// Backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
+	// Usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
+	// Logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
+	Enabled bool `yaml:"enabled"` //enable or disable the jail
+	// Mode              string        `yaml:"mode"`        //same than usedns
+	// Filter            string        `yaml:"filter"`      //= %(name)s[mode=%(mode)s] maybe change for a []string
+	// Destemail         string        `yaml:"destemail"`
+	// Sender            string        `yaml:"sender"`
+	// Mta               string        `yaml:"mta"`      //same than usedns
+	// Protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
+	// Chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
+	Ports string `yaml:"ports"`
+	// Fail2banAgent     string        `yaml:"fail2ban_agent"`
+	// Banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
+	// BanactionAllports string        `yaml:"banaction_allports"` //same as above
+	// ActionAbuseipdb   string        `yaml:"action_abuseipdb"`
+	// Action            string        `yaml:"action"` //maybe change for []string
 }
 
 // List struct
@@ -61,24 +61,19 @@ type List struct {
 
 // Config struct
 type Config struct {
-	blacklist List
-	whitelist List
-	rules     Rules
-}
-
-// CreateRules create default rules
-func CreateRules() Rules {
-	return Rules{
-		bantime:  "300s",
-		findtime: "120s",
-		enabled:  false,
-	}
+	Blacklist List  `yaml:"blacklist"`
+	Whitelist List  `yaml:"whitelist"`
+	Rules     Rules `yaml:"port"`
 }
 
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
 	return &Config{
-		rules: CreateRules(),
+		Rules: Rules{
+			Bantime:  "300s",
+			Findtime: "120s",
+			Enabled:  true,
+		},
 	}
 }
 
@@ -88,17 +83,33 @@ type RulesTransformed struct {
 	findtime time.Duration
 	maxretry int
 	enabled  bool
-	port     [2]int
+	ports    [2]int
 }
 
 // TransformRule morph a Rules object into a RulesTransformed
 func TransformRule(r Rules) (RulesTransformed, error) {
-	bantime, err := time.ParseDuration(r.bantime)
+	bantime, err := time.ParseDuration(r.Bantime)
 	if err != nil {
 		return RulesTransformed{}, err
 	}
 
-	findtime, err := time.ParseDuration(r.bantime)
+	findtime, err := time.ParseDuration(r.Findtime)
+	if err != nil {
+		return RulesTransformed{}, err
+	}
+
+	ports := strings.Split(r.Ports, ":")
+	if len(ports) != 2 {
+		return RulesTransformed{},
+			fmt.Errorf(`Could not parse Ports, bad format (hint: use something like "80:443" to filter all ports from 80 to 443)`)
+	}
+
+	portStart, err := strconv.Atoi(ports[0])
+	if err != nil {
+		return RulesTransformed{}, err
+	}
+
+	portEnd, err := strconv.Atoi(ports[1])
 	if err != nil {
 		return RulesTransformed{}, err
 	}
@@ -106,9 +117,9 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	return RulesTransformed{
 		bantime:  bantime,
 		findtime: findtime,
-		maxretry: r.maxretry,
-		enabled:  r.enabled,
-		port:     r.port,
+		maxretry: r.Maxretry,
+		enabled:  r.Enabled,
+		ports:    [2]int{portStart, portEnd},
 	}, nil
 }
 
@@ -141,11 +152,7 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	if config.rules.port[0] < 0 || config.rules.port[1] < config.rules.port[0] {
-		return nil, fmt.Errorf("Your port configuration is bad, please change that")
-	}
-
-	whiteips, err := ImportIP(config.whitelist)
+	whiteips, err := ImportIP(config.Whitelist)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +162,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, err
 	}
 
-	blackips, err := ImportIP(config.blacklist)
+	blackips, err := ImportIP(config.Blacklist)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +172,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, err
 	}
 
-	rules, err := TransformRule(config.rules)
+	rules, err := TransformRule(config.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("Error when Transforming rules: %+v", err)
 	}
@@ -197,29 +204,29 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Blacklist
 	for _, ip := range u.blacklist {
 		if ip.CheckIPInSubnet(remoteIP) {
-			Logger.Println(remoteIP + " is in the Blacklist")
+			Logger.Println(remoteIP + " is in blacklisted")
 			rw.WriteHeader(http.StatusForbidden)
 			return
 		}
 	}
 	//Fail2Ban
 	ip := ipViewed[remoteIP]
-
 	if reflect.DeepEqual(ip, IPViewed{}) {
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
 	} else {
 		if ip.blacklisted {
 			if time.Now().Before(ip.viewed.Add(u.rules.bantime)) {
 				ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
-				Logger.Println(remoteIP + " is in the Blacklist")
+				Logger.Println(remoteIP + " is in blacklist mode")
 				rw.WriteHeader(http.StatusForbidden)
 				return
 			}
 			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+			Logger.Println(remoteIP + " is now back in whitelist mode")
 		} else if time.Now().Before(ip.viewed.Add(u.rules.findtime)) {
 			if ip.nb+1 >= u.rules.maxretry {
 				ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
-				Logger.Println(remoteIP + " is in the Blacklist")
+				Logger.Println(remoteIP + " is in blacklist mode")
 				rw.WriteHeader(http.StatusForbidden)
 				return
 			}
