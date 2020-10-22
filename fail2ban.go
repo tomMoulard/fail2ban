@@ -99,7 +99,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	}
 
 	ports := strings.Split(r.Ports, ":")
-	if len(ports) != 3 {
+	if len(ports) != 2 {
 		return RulesTransformed{},
 			fmt.Errorf(`Could not parse Ports, bad format (hint: use something like "80:443" to filter all ports from 80 to 443)`)
 	}

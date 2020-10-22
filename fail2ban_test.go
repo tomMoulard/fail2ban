@@ -22,6 +22,7 @@ func TestTransformRules(t *testing.T) {
 			send: Rules{
 				Bantime:  "300s",
 				Findtime: "120s",
+				Ports:    "0:80",
 				Enabled:  true,
 			},
 			expect: RulesTransformed{},
@@ -29,15 +30,15 @@ func TestTransformRules(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, e := TransformRule(tt.send)
+			got, e := TransformRule(tt.send)
 			if e != nil && (tt.err == nil || e.Error() != tt.err.Error()) {
 				t.Errorf("TransformRule_err: wanted '%s' got '%s'",
 					tt.err, e)
 			}
-			// if tt.expect.Bantime == got.Bantime {
-			// t.Errorf("TransformRule: wanted '%+v' got '%+v'",
-			// tt.expect, got)
-			// }
+			if tt.expect.bantime == got.bantime {
+				t.Errorf("TransformRule: wanted '%+v' got '%+v'",
+					tt.expect, got)
+			}
 		})
 	}
 }
