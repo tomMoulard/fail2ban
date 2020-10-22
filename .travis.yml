@@ -1,9 +1,5 @@
 language: go
 
-
-services:
-  - docker
-
 notifications:
   email:
     on_success: never
@@ -23,24 +19,21 @@ jobs:
   allow_failures:
     - go: tip
 
-  before_install:
-    # Install linters
-    - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
-    - golangci-lint --version
-    - curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b $GOPATH/bin ${YAEGI_VERSION}
-    - go get -u golang.org/x/lint/golint
-    # docker part
-    - docker run -d --network host containous/whoami -port 5000 --name service-whoami
-    - docker ps -a
+before_install:
+  # Install linters
+  - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | bash -s -- -b $GOPATH/bin ${GOLANGCI_LINT_VERSION}
+  - golangci-lint --version
+  - curl -sfL https://raw.githubusercontent.com/traefik/yaegi/master/install.sh | bash -s -- -b $GOPATH/bin ${YAEGI_VERSION}
+  - go get -u golang.org/x/lint/golint
 
-  install:
-    - go mod tidy
-    - git diff --exit-code go.mod
-    # - git diff --exit-code go.sum
-    - go mod download
-    - go mod vendor
-    # - git diff --exit-code ./vendor/
-    - make fmt
-    - git diff --exit-code
-  
-  script: make lint test-v
+install:
+  - go mod tidy
+  - git diff --exit-code go.mod
+  # - git diff --exit-code go.sum
+  - go mod download
+  - go mod vendor
+  # - git diff --exit-code ./vendor/
+  - make fmt
+  - git diff --exit-code
+
+script: make lint test-v
