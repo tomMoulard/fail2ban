@@ -1,0 +1,10 @@
+pilot:
+    token: "1f307fb3-6d50-4ee8-9f9d-6986d5235edc"
+
+entrypoint:
+    http:
+        address: ":80"
+
+provider:
+    file:
+        filename: rules-fail2ban.yaml
