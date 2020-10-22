@@ -6,17 +6,41 @@ import: github.com/tommoulard/fail2ban
 summary: 'Blacklist (or whitelist) IP depending on some conditions'
 
 testData:
-    Whitelist:
-      Files:
+  whitelist:
+    files:
         - "file1.txt"
         - "file2.txt"
-      IP:
+    ip:
         - "::1"
         - "127.0.0.1"
-    Blacklist:
-      Files:
+  blacklist:
+    files:
         - "file3.txt"
         - "file4.txt"
-      IP:
+    ip:
         - "::1"
         - "127.0.0.1"
+  rules:
+    ignorecommand: ""
+    bantime: "3h"
+    findtime: "10m"
+    maxretry: 4
+    backend: ""
+    usedns: ""
+    logencoding: "UTF-8"
+    enabled: true
+    mode: ""
+    filter: ""
+    destemail: ""
+    sender: ""
+    mta: ""
+    protocol: ""
+    chain: ""
+    port:
+        - 0
+        - 10000
+    fail2banAgent: ""
+    banaction: ""
+    banactionAllports: ""
+    actionAbuseipdb: ""
+    action: ""
