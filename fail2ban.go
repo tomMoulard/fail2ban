@@ -31,7 +31,7 @@ var (
 // Rules struct fail2ban config
 type Rules struct {
 	// ignorecommand     string        `yaml:"igonecommand"`
-	bantime  string `yaml:"bantime"`  //exprimate in second
+	bantime  string `yaml:"Xbantime"`  //exprimate in second
 	findtime string `yaml:"findtime"` //exprimate in second
 	maxretry int    `yaml:"maxretry"`
 	// backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
@@ -55,30 +55,25 @@ type Rules struct {
 
 // List struct
 type List struct {
-	IP    []string
-	Files []string
+	ip    []string
+	files []string
 }
 
 // Config struct
 type Config struct {
-	blacklist List
-	whitelist List
-	rules     Rules
-}
-
-// CreateRules create default rules
-func CreateRules() Rules {
-	return Rules{
-		bantime:  "300s",
-		findtime: "120s",
-		enabled:  true,
-	}
+	blacklist List `yaml:"blacklist"`
+	whitelist List `yaml:"whitelist"`
+	rules     Rules `yaml:"port"`
 }
 
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
 	return &Config{
-		rules: CreateRules(),
+		rules: Rules{
+			bantime:  "300s",
+			findtime: "120s",
+			enabled:  true,
+		},
 	}
 }
 
@@ -98,7 +93,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		return RulesTransformed{}, err
 	}
 
-	findtime, err := time.ParseDuration(r.bantime)
+	findtime, err := time.ParseDuration(r.findtime)
 	if err != nil {
 		return RulesTransformed{}, err
 	}
@@ -124,7 +119,7 @@ type Fail2Ban struct {
 // ImportIP extract all ip from config sources
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
-	for _, ip := range list.Files {
+	for _, ip := range list.files {
 
 		content, err := files.GetFileContent(ip)
 		if err != nil {
@@ -135,7 +130,7 @@ func ImportIP(list List) ([]string, error) {
 	if len(rlist) > 1 {
 		rlist = rlist[:len(rlist)-1]
 	}
-	rlist = append(rlist, list.IP...)
+	rlist = append(rlist, list.ip...)
 
 	return rlist, nil
 }
@@ -179,6 +174,15 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, fmt.Errorf("Error when Transforming rules: %+v", err)
 	}
 
+	Logger.Printf("%+v", config)
+	Logger.Printf("%+v", &Fail2Ban{
+		next:      next,
+		name:      name,
+		whitelist: whitelist,
+		blacklist: blacklist,
+		rules:     rules,
+	})
+
 	return &Fail2Ban{
 		next:      next,
 		name:      name,
@@ -206,7 +210,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Blacklist
 	for _, ip := range u.blacklist {
 		if ip.CheckIPInSubnet(remoteIP) {
-			Logger.Println(remoteIP + " is in the Blacklist")
+			Logger.Println(remoteIP + " is in blacklisted")
 			rw.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -219,15 +223,16 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if ip.blacklisted {
 			if time.Now().Before(ip.viewed.Add(u.rules.bantime)) {
 				ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
-				Logger.Println(remoteIP + " is in the Blacklist")
+				Logger.Println(remoteIP + " is in blacklist mode")
 				rw.WriteHeader(http.StatusForbidden)
 				return
 			}
 			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+			Logger.Println(remoteIP + " is now back in whitelist mode")
 		} else if time.Now().Before(ip.viewed.Add(u.rules.findtime)) {
 			if ip.nb+1 >= u.rules.maxretry {
 				ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
-				Logger.Println(remoteIP + " is in the Blacklist")
+				Logger.Println(remoteIP + " is in blacklist mode")
 				rw.WriteHeader(http.StatusForbidden)
 				return
 			}
