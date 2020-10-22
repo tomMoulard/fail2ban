@@ -1,4 +1,4 @@
-displayName: Fail2Ban middleware impelementation
+displayName: Fail2Ban
 type: middleware
 
 import: github.com/tommoulard/fail2ban
@@ -36,9 +36,7 @@ testData:
     mta: ""
     protocol: ""
     chain: ""
-    port:
-        - 0
-        - 10000
+    ports: "0:8000"
     fail2banAgent: ""
     banaction: ""
     banactionAllports: ""
