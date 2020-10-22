@@ -23,26 +23,27 @@ func BuildIP(ip string) (IP, error) {
 	tmpIP := strings.Split(tmpSubnet[0], ".")
 
 	if len(tmpSubnet) <= 2 && len(tmpIP) == 4 {
-		if tmpInt, err = strconv.ParseUint(tmpIP[0], 10, 32); err == nil && tmpInt <= 255 {
-			res.IP = uint32(tmpInt) << 24
-		}
-		if tmpInt, err = strconv.ParseUint(tmpIP[1], 10, 32); err == nil && tmpInt <= 255 {
-			res.IP += uint32(tmpInt) << 16
-		}
-		if tmpInt, err = strconv.ParseUint(tmpIP[2], 10, 32); err == nil && tmpInt <= 255 {
-			res.IP += uint32(tmpInt) << 8
-		}
-		if tmpInt, err = strconv.ParseUint(tmpIP[3], 10, 32); err == nil && tmpInt <= 255 {
-			res.IP += uint32(tmpInt)
+		for i := 24; i >= 0; i -= 8 {
+			if tmpInt, err = strconv.ParseUint(tmpIP[3-i/8], 10, 32); err == nil && tmpInt <= 255 {
+				res.IP += (uint32(tmpInt) << i)
+			} else {
+				if tmpInt > 255 {
+					err = fmt.Errorf("Invalid IP field: %d", tmpInt)
+				}
+				return IP{}, err
+			}
 		}
 		if len(tmpSubnet) == 2 {
-			if tmpInt, err = strconv.ParseUint(tmpSubnet[1], 10, 32); err == nil && tmpInt <= 255 {
-				res.Cidr = 0xFFFFFFFF << uint32(tmpInt)
+			if tmpInt, err = strconv.ParseUint(tmpSubnet[1], 10, 32); err == nil && tmpInt <= 32 {
+				res.Cidr = uint32(tmpInt)
 			} else {
+				if tmpInt > 32 {
+					return IP{}, fmt.Errorf("Invalid CIDR value: %d", tmpInt)
+				}
 				return IP{}, err
 			}
 		} else {
-			res.Cidr = 0xFFFFFFFF
+			res.Cidr = 32
 		}
 	} else {
 		err = fmt.Errorf("The string is not an IP not a Subnet")
@@ -62,5 +63,5 @@ func (i IP) CheckIPInSubnet(ip string) bool {
 	if err != nil {
 		return false
 	}
-	return i.IP&i.Cidr == checkIP.IP&i.Cidr
+	return i.IP>>(32-i.Cidr) == checkIP.IP>>(32-i.Cidr)
 }
