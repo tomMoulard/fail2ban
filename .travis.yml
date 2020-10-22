@@ -43,9 +43,9 @@ install:
   - git diff --exit-code
 
 before_script:
-  - make lint test-v
+  - ls -lisa
 
-script: ls
+script: make lint test-v
 
 after_script:
   - docker run -ti --rm --link traefik --name test alpine apk add curl && curl localhost/whoami
