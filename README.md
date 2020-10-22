@@ -4,6 +4,95 @@
 
 This plugin allow to change on the fly header's value of a request.
 
+## Configuration
+### Whitelist
+You can whitelist some IP using this:
+```yml
+testData:
+  whitelist:
+    files:
+      - "tests/test-ipfile.txt"
+    ip:
+      - "::1"
+      - "127.0.0.1"
+```
+
+Where you can use some IP in an array of files or directly in the config.
+### Blacklist
+Like whitelist, you can blacklist some IP using this:
+```yml
+testData:
+  blacklist:
+    files:
+      - "tests/test-ipfile.txt"
+    ip:
+      - "::1"
+      - "127.0.0.1"
+```
+
+Where you can use some IP in an array of files or directly in the config.
+
+## Fail2ban
+We plan to use all [default fail2ban configuration]() but at this time only a
+few features are implemented:
+```yml
+testData:
+  rules:
+    bantime: "3h"
+    findtime: "10m"
+    maxretry: 4
+    enabled: true
+```
+
+Where:
+ - `findtime`: is the time slot used to count requests (if the count is too
+much, the IP goes into Ban mode). You can use 'smart' strings: "4h", "2m",
+"1s", ...
+ - `bantime`: correspond to the amount of time the IP is in Ban mode
+ - `maxretry`: number of request before Ban mode.
+ - `enabled`: is the plugin is enabled ?
+
+#### Schema
+First request, IP is added to the Pool, and the `findtime` timer is started:
+```
+A |------------->
+  ↑
+```
+
+Second request, `findtime` is not yet finished thus the request is fine:
+```
+A |--x---------->
+     ↑
+```
+
+Third request, `maxretry` is now full, this request is fine but the next wont.
+```
+A |--x--x------->
+        ↑
+```
+
+Fourth request, too bad, now it's jail time, next request will go through after
+`bantime`:
+```
+A |--x--x--x---->
+           ↓
+B          |------------->
+```
+
+Fifth request, the IP is in Ban mode, nothing happen:
+```
+A |--x--x--x---->
+B          |--x---------->
+              ↑
+```
+
+Last request, the `bantime` is now over, another `findtime` is started:
+```
+A |--x--x--x---->            |------------->
+                             ↑
+B          |--x---------->
+```
+
 ## Dev `traefik.yml` configuration file for traefik
 
 ```yml
