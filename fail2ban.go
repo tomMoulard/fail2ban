@@ -31,7 +31,7 @@ var (
 // Rules struct fail2ban config
 type Rules struct {
 	// ignorecommand     string        `yaml:"igonecommand"`
-	bantime  string `yaml:"Xbantime"`  //exprimate in second
+	bantime  string `yaml:"bantime"`  //exprimate in second
 	findtime string `yaml:"findtime"` //exprimate in second
 	maxretry int    `yaml:"maxretry"`
 	// backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
@@ -61,8 +61,8 @@ type List struct {
 
 // Config struct
 type Config struct {
-	blacklist List `yaml:"blacklist"`
-	whitelist List `yaml:"whitelist"`
+	blacklist List  `yaml:"blacklist"`
+	whitelist List  `yaml:"whitelist"`
 	rules     Rules `yaml:"port"`
 }
 
