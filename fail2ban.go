@@ -31,13 +31,13 @@ var (
 // Rules struct fail2ban config
 type Rules struct {
 	// ignorecommand     string        `yaml:"igonecommand"`
-	bantime  string `yaml:"bantime"`  //exprimate in second
-	findtime string `yaml:"findtime"` //exprimate in second
-	maxretry int    `yaml:"maxretry"`
+	Bantime  string `yaml:"bantime"`  //exprimate in second
+	Findtime string `yaml:"findtime"` //exprimate in second
+	Maxretry int    `yaml:"maxretry"`
 	// backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
 	// usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
 	// logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
-	enabled bool `yaml:"enabled"` //enable or disable the jail
+	Enabled bool `yaml:"enabled"` //enable or disable the jail
 	// mode              string        `yaml:"mode"`        //same than usedns
 	// filter            string        `yaml:"filter"`      //= %(name)s[mode=%(mode)s] maybe change for a []string
 	// destemail         string        `yaml:"destemail"`
@@ -45,7 +45,7 @@ type Rules struct {
 	// mta               string        `yaml:"mta"`      //same than usedns
 	// protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
 	// chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
-	port [2]int `yaml:"port"`
+	Port [2]int `yaml:"port"`
 	// fail2banAgent     string        `yaml:"fail2ban_agent"`
 	// banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
 	// banactionAllports string        `yaml:"banaction_allports"` //same as above
@@ -55,24 +55,24 @@ type Rules struct {
 
 // List struct
 type List struct {
-	ip    []string
-	files []string
+	IP    []string
+	Files []string
 }
 
 // Config struct
 type Config struct {
-	blacklist List  `yaml:"blacklist"`
-	whitelist List  `yaml:"whitelist"`
-	rules     Rules `yaml:"port"`
+	Blacklist List  `yaml:"blacklist"`
+	Whitelist List  `yaml:"whitelist"`
+	Rules     Rules `yaml:"port"`
 }
 
 // CreateConfig populates the Config data object
 func CreateConfig() *Config {
 	return &Config{
-		rules: Rules{
-			bantime:  "300s",
-			findtime: "120s",
-			enabled:  true,
+		Rules: Rules{
+			Bantime:  "300s",
+			Findtime: "120s",
+			Enabled:  true,
 		},
 	}
 }
@@ -88,12 +88,12 @@ type RulesTransformed struct {
 
 // TransformRule morph a Rules object into a RulesTransformed
 func TransformRule(r Rules) (RulesTransformed, error) {
-	bantime, err := time.ParseDuration(r.bantime)
+	bantime, err := time.ParseDuration(r.Bantime)
 	if err != nil {
 		return RulesTransformed{}, err
 	}
 
-	findtime, err := time.ParseDuration(r.findtime)
+	findtime, err := time.ParseDuration(r.Findtime)
 	if err != nil {
 		return RulesTransformed{}, err
 	}
@@ -101,9 +101,9 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	return RulesTransformed{
 		bantime:  bantime,
 		findtime: findtime,
-		maxretry: r.maxretry,
-		enabled:  r.enabled,
-		port:     r.port,
+		maxretry: r.Maxretry,
+		enabled:  r.Enabled,
+		port:     r.Port,
 	}, nil
 }
 
@@ -119,7 +119,7 @@ type Fail2Ban struct {
 // ImportIP extract all ip from config sources
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
-	for _, ip := range list.files {
+	for _, ip := range list.Files {
 
 		content, err := files.GetFileContent(ip)
 		if err != nil {
@@ -130,18 +130,18 @@ func ImportIP(list List) ([]string, error) {
 	if len(rlist) > 1 {
 		rlist = rlist[:len(rlist)-1]
 	}
-	rlist = append(rlist, list.ip...)
+	rlist = append(rlist, list.IP...)
 
 	return rlist, nil
 }
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-	if config.rules.port[0] < 0 || config.rules.port[1] < config.rules.port[0] {
+	if config.Rules.Port[0] < 0 || config.Rules.Port[1] < config.Rules.Port[0] {
 		return nil, fmt.Errorf("Your port configuration is bad, please change that")
 	}
 
-	iplist, err := ImportIP(config.whitelist)
+	iplist, err := ImportIP(config.Whitelist)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		whitelist = append(whitelist, ip)
 	}
 
-	iplist, err = ImportIP(config.blacklist)
+	iplist, err = ImportIP(config.Blacklist)
 	if err != nil {
 		return nil, err
 	}
@@ -169,19 +169,12 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		blacklist = append(blacklist, ip)
 	}
 
-	rules, err := TransformRule(config.rules)
+	rules, err := TransformRule(config.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("Error when Transforming rules: %+v", err)
 	}
 
 	Logger.Printf("%+v", config)
-	Logger.Printf("%+v", &Fail2Ban{
-		next:      next,
-		name:      name,
-		whitelist: whitelist,
-		blacklist: blacklist,
-		rules:     rules,
-	})
 
 	return &Fail2Ban{
 		next:      next,

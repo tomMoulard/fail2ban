@@ -20,9 +20,9 @@ func TestTransformRules(t *testing.T) {
 		{
 			name: "dummy",
 			send: Rules{
-				bantime:  "300s",
-				findtime: "120s",
-				enabled:  true,
+				Bantime:  "300s",
+				Findtime: "120s",
+				Enabled:  true,
 			},
 			expect: RulesTransformed{},
 		},
@@ -34,7 +34,7 @@ func TestTransformRules(t *testing.T) {
 				t.Errorf("TransformRule_err: wanted '%s' got '%s'",
 					tt.err, e)
 			}
-			// if tt.expect.bantime == got.bantime {
+			// if tt.expect.Bantime == got.Bantime {
 			// t.Errorf("TransformRule: wanted '%+v' got '%+v'",
 			// tt.expect, got)
 			// }
@@ -52,8 +52,8 @@ func TestImportIP(t *testing.T) {
 		{
 			name: "empty list",
 			list: List{
-				ip:    []string{},
-				files: []string{},
+				IP:    []string{},
+				Files: []string{},
 			},
 			strWant: []string{},
 			err:     nil,
@@ -62,8 +62,8 @@ func TestImportIP(t *testing.T) {
 		{
 			name: "simple import",
 			list: List{
-				ip:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
-				files: []string{"tests/test-ipfile.txt"},
+				IP:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
+				Files: []string{"tests/test-ipfile.txt"},
 			},
 			strWant: []string{"192.168.0.0", "255.0.0.0", "42.42.42.42", "13.38.70.00", "192.168.0.0", "0.0.0.0", "255.255.255.255"},
 			err:     nil,
@@ -72,8 +72,8 @@ func TestImportIP(t *testing.T) {
 		{
 			name: "import only file",
 			list: List{
-				ip:    []string{},
-				files: []string{"tests/test-ipfile.txt"},
+				IP:    []string{},
+				Files: []string{"tests/test-ipfile.txt"},
 			},
 			strWant: []string{"192.168.0.0", "255.0.0.0", "42.42.42.42", "13.38.70.00"},
 			err:     nil,
@@ -82,8 +82,8 @@ func TestImportIP(t *testing.T) {
 		{
 			name: "import only ip",
 			list: List{
-				ip:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
-				files: []string{},
+				IP:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
+				Files: []string{},
 			},
 			strWant: []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
 			err:     nil,
@@ -92,8 +92,8 @@ func TestImportIP(t *testing.T) {
 		{
 			name: "import no file",
 			list: List{
-				ip:    []string{},
-				files: []string{"tests/idontexist.txt"},
+				IP:    []string{},
+				Files: []string{"tests/idontexist.txt"},
 			},
 			strWant: []string{},
 			err:     errors.New("open tests/idontexist.txt: no such file or directory"),
