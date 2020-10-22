@@ -30,27 +30,27 @@ var (
 
 // Rules struct fail2ban config
 type Rules struct {
-	// ignorecommand     string        `yaml:"igonecommand"`
+	// Ignorecommand     string        `yaml:"igonecommand"`
 	Bantime  string `yaml:"bantime"`  //exprimate in second
 	Findtime string `yaml:"findtime"` //exprimate in second
 	Maxretry int    `yaml:"maxretry"`
-	// backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
-	// usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
-	// logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
+	// Backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
+	// Usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
+	// Logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
 	Enabled bool `yaml:"enabled"` //enable or disable the jail
-	// mode              string        `yaml:"mode"`        //same than usedns
-	// filter            string        `yaml:"filter"`      //= %(name)s[mode=%(mode)s] maybe change for a []string
-	// destemail         string        `yaml:"destemail"`
-	// sender            string        `yaml:"sender"`
-	// mta               string        `yaml:"mta"`      //same than usedns
-	// protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
-	// chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
+	// Mode              string        `yaml:"mode"`        //same than usedns
+	// Filter            string        `yaml:"filter"`      //= %(name)s[mode=%(mode)s] maybe change for a []string
+	// Destemail         string        `yaml:"destemail"`
+	// Sender            string        `yaml:"sender"`
+	// Mta               string        `yaml:"mta"`      //same than usedns
+	// Protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
+	// Chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
 	Port [2]int `yaml:"port"`
-	// fail2banAgent     string        `yaml:"fail2ban_agent"`
-	// banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
-	// banactionAllports string        `yaml:"banaction_allports"` //same as above
-	// actionAbuseipdb   string        `yaml:"action_abuseipdb"`
-	// action            string        `yaml:"action"` //maybe change for []string
+	// Fail2banAgent     string        `yaml:"fail2ban_agent"`
+	// Banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
+	// BanactionAllports string        `yaml:"banaction_allports"` //same as above
+	// ActionAbuseipdb   string        `yaml:"action_abuseipdb"`
+	// Action            string        `yaml:"action"` //maybe change for []string
 }
 
 // List struct
