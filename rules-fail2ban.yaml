@@ -14,7 +14,7 @@ http:
     service-whoami:
       loadBalancer:
         servers:
-          - url: http://localhost:5000
+          - url: http://service-whoami:5000
         passHostHeader: false
   middlewares:
     fail2ban:
