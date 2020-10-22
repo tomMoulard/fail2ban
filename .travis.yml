@@ -1,5 +1,7 @@
 language: go
 
+services: docker
+
 notifications:
   email:
     on_success: never
