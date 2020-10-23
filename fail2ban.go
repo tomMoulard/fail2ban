@@ -194,18 +194,18 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 	remoteIP := req.RemoteAddr
-	// Whitelist
-	for _, ip := range u.whitelist {
-		if ip.CheckIPInSubnet(remoteIP) {
-			u.next.ServeHTTP(rw, req)
-			return
-		}
-	}
 	// Blacklist
 	for _, ip := range u.blacklist {
 		if ip.CheckIPInSubnet(remoteIP) {
 			Logger.Println(remoteIP + " is in blacklisted")
 			rw.WriteHeader(http.StatusForbidden)
+			return
+		}
+	}
+	// Whitelist
+	for _, ip := range u.whitelist {
+		if ip.CheckIPInSubnet(remoteIP) {
+			u.next.ServeHTTP(rw, req)
 			return
 		}
 	}
