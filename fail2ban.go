@@ -240,7 +240,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			Logger.Println(remoteIP + " is now back in whitelist mode")
 		} else if time.Now().Before(ip.viewed.Add(u.rules.findtime)) {
 			if ip.nb+1 >= u.rules.maxretry {
-				ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
+				ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
 				Logger.Println(remoteIP + " is in blacklist mode")
 				rw.WriteHeader(http.StatusForbidden)
 				return
