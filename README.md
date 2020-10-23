@@ -129,3 +129,16 @@ providers:
 $ docker run -d --network host containous/whoami -port 5000
 # traefik --config-file traefik.yml
 ```
+
+# Authors
+<div class="row" style="display: flex;">
+    <div class="column" style="flex: 100%; padding: 5px;">
+        <a href="https://tom.moulard.org">
+            <img src="img/gopher-tom_moulard.png" alt="Tom Moulard" style="width:100%;">
+            <div class="text-block" style="position: absolute; bottom: 20px; right: 20px; background-color: black; color: white; padding-left: 20px; padding-right: 20px;">
+                <h4>Tom Moulard</h4>
+                <p>Go enthousiast</p>
+            </div>
+        </a>
+    </div>
+</div>
