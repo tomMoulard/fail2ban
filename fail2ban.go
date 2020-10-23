@@ -198,12 +198,6 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if matched, err := regexp.Match(u.rules.urlregexp, []byte(req.URL.String())); err != nil || !matched {
-		Logger.Printf("Url ('%s') was not matched by regexp: '%s'", req.URL.String(), u.rules.urlregexp)
-		rw.WriteHeader(http.StatusForbidden)
-		return
-	}
-
 	remoteIP := req.RemoteAddr
 	// Blacklist
 	for _, ip := range u.blacklist {
@@ -222,8 +216,16 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	//Fail2Ban
 	ip := ipViewed[remoteIP]
+
+	if matched, err := regexp.Match(u.rules.urlregexp, []byte(req.URL.String())); err != nil || !matched {
+		Logger.Printf("Url ('%s') was not matched by regexp: '%s'", req.URL.String(), u.rules.urlregexp)
+		rw.WriteHeader(http.StatusForbidden)
+		ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
+		return
+	}
+
+	//Fail2Ban
 	if reflect.DeepEqual(ip, IPViewed{}) {
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
 	} else {
