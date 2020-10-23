@@ -198,8 +198,8 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if matched, err := regexp.Match(u.urlregexp, []byte(req.URL.String())); err != nil || !matched {
-		Logger.Printf("Url ('%s') was not matched by regexp: '%s'", req.URL.String(), u.urlregexp)
+	if matched, err := regexp.Match(u.rules.urlregexp, []byte(req.URL.String())); err != nil || !matched {
+		Logger.Printf("Url ('%s') was not matched by regexp: '%s'", req.URL.String(), u.rules.urlregexp)
 		rw.WriteHeader(http.StatusForbidden)
 		return
 	}
