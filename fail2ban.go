@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -31,9 +32,10 @@ var (
 // Rules struct fail2ban config
 type Rules struct {
 	// Ignorecommand     string        `yaml:"igonecommand"`
-	Bantime  string `yaml:"bantime"`  //exprimate in second
-	Findtime string `yaml:"findtime"` //exprimate in second
-	Maxretry int    `yaml:"maxretry"`
+	Bantime   string `yaml:"bantime"`  //exprimate in a smart way: 3m
+	Findtime  string `yaml:"findtime"` //exprimate in a smart way: 3m
+	Maxretry  int    `yaml:"maxretry"`
+	Urlregexp string `yaml:"urlregexp"`
 	// Backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
 	// Usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
 	// Logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
@@ -79,11 +81,12 @@ func CreateConfig() *Config {
 
 // RulesTransformed transformed Rules struct
 type RulesTransformed struct {
-	bantime  time.Duration
-	findtime time.Duration
-	maxretry int
-	enabled  bool
-	ports    [2]int
+	bantime   time.Duration
+	findtime  time.Duration
+	urlregexp string
+	maxretry  int
+	enabled   bool
+	ports     [2]int
 }
 
 // TransformRule morph a Rules object into a RulesTransformed
@@ -115,11 +118,12 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	}
 
 	return RulesTransformed{
-		bantime:  bantime,
-		findtime: findtime,
-		maxretry: r.Maxretry,
-		enabled:  r.Enabled,
-		ports:    [2]int{portStart, portEnd},
+		bantime:   bantime,
+		findtime:  findtime,
+		urlregexp: r.Urlregexp,
+		maxretry:  r.Maxretry,
+		enabled:   r.Enabled,
+		ports:     [2]int{portStart, portEnd},
 	}, nil
 }
 
@@ -193,6 +197,13 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		u.next.ServeHTTP(rw, req)
 		return
 	}
+
+	if matched, err := regexp.Match(u.urlregexp, []byte(req.URL.String())); err != nil || !matched {
+		Logger.Printf("Url ('%s') was not matched by regexp: '%s'", req.URL.String(), u.urlregexp)
+		rw.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	remoteIP := req.RemoteAddr
 	// Blacklist
 	for _, ip := range u.blacklist {
@@ -202,6 +213,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+
 	// Whitelist
 	for _, ip := range u.whitelist {
 		if ip.CheckIPInSubnet(remoteIP) {
@@ -209,6 +221,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
+
 	//Fail2Ban
 	ip := ipViewed[remoteIP]
 	if reflect.DeepEqual(ip, IPViewed{}) {

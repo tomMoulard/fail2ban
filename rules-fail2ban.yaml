@@ -27,6 +27,7 @@ http:
             ip:
                 - "127.0.0.3"
           rules:
+            urlregexp: ""
             ignorecommand: ""
             bantime: "3h"
             findtime: "3h"
