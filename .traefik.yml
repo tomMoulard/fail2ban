@@ -14,6 +14,7 @@ testData:
     ip:
         - "192.168.0.0/24"
   rules:
+    urlregexp: ""
     ignorecommand: ""
     bantime: "3h"
     findtime: "10m"
