@@ -131,6 +131,6 @@ $ docker run -d --network host containous/whoami -port 5000
 ```
 
 # Authors
-| Tom Moulard |
-|-------------|
-|[![](img/gopher-tom_moulard.png)](https://tom.moulard.org)|
+| Tom Moulard | Clément David |
+|-------------|-------------|
+|[![](img/gopher-tom_moulard.png)](https://tom.moulard.org)|[![](img/gopher-clement_david.png)](https://github.com/cledavid)|
