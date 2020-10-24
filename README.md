@@ -131,6 +131,6 @@ $ docker run -d --network host containous/whoami -port 5000
 ```
 
 # Authors
-| Tom Moulard | Clément David | Martin Huvelle |
-|-------------|---------------|----------------|
-|[![](img/gopher-tom_moulard.png)](https://tom.moulard.org)|[![](img/gopher-clement_david.png)](https://github.com/cledavid)|[![](img/gopher-martin_huvelle.png)](https://github.com/nitra-mfs)|
+| Tom Moulard | Clément David | Martin Huvelle | Alexandre Bossut-Lasry |
+|-------------|---------------|----------------|------------------------|
+|[![](img/gopher-tom_moulard.png)](https://tom.moulard.org)|[![](img/gopher-clement_david.png)](https://github.com/cledavid)|[![](img/gopher-martin_huvelle.png)](https://github.com/nitra-mfs)|[![](img/gopher-alexandre_bossut-lasry.png)](https://www.linkedin.com/in/alexandre-bossut-lasry/)|
