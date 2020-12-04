@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.com/tomMoulard/fail2ban.svg?branch=main)](https://travis-ci.com/tomMoulard/fail2ban)
 
-This plugin is a small implementation of a fail2ban instance as a widdleware
+This plugin is a small implementation of a fail2ban instance as a middleware
 plugin for Traefik.
 
 ## Configuration
@@ -57,7 +57,7 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
  - `urlregexp`: a regexp to block request with a regexp on the url
- - `ports`: block requests to port or port range
+ - `ports`: filter requests by port range
 
 #### Schema
 First request, IP is added to the Pool, and the `findtime` timer is started:
