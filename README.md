@@ -44,7 +44,8 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
-    urlregexp: ""
+    urlregexp:
+      - ""
 ```
 
 Where:
@@ -55,7 +56,7 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `maxretry`: number of request before Ban mode.
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
- - `urlregexp`: a regexp to block request with a regexp on the url
+ - `urlregexp`: a regexp list to block request with regexps on the url
 
 #### Schema
 First request, IP is added to the Pool, and the `findtime` timer is started:
@@ -127,7 +128,7 @@ providers:
 ## How to dev
 ```bash
 $ docker run -d --network host containous/whoami -port 5000
-# traefik --config-file traefik.yml
+# traefik --configfile traefik.yml
 ```
 
 # Authors
