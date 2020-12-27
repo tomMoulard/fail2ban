@@ -34,6 +34,18 @@ testData:
 
 Where you can use some IP in an array of files or directly in the config.
 
+### Configuration debug
+In order to check if the configuration is correct, there should be some logs
+on stdout like:
+```
+Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Whitelisted: '127.0.0.2/32'
+Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Blacklisted: '127.0.0.3/32'
+Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Bantime: 3h0m0s
+Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Findtime: 3h0m0s
+Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Ports range from 0 to 800
+Fail2Ban: 2020/12/27 22:40:04 restricted.go:52: Plugin: FailToBan is up and running
+```
+
 ## Fail2ban
 We plan to use all [default fail2ban configuration]() but at this time only a
 few features are implemented:
