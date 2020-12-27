@@ -25,8 +25,9 @@ type IPViewed struct {
 
 // Logger Main logger
 var (
-	Logger   = log.New(os.Stdout, "Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
-	ipViewed = map[string]IPViewed{}
+	Logger       = log.New(os.Stdout, "Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
+	LoggerConfig = log.New(os.Stdout, "Fail2Ban_config: ", log.Ldate|log.Ltime|log.Lshortfile)
+	ipViewed     = map[string]IPViewed{}
 )
 
 // Rules struct fail2ban config
@@ -95,11 +96,13 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	if err != nil {
 		return RulesTransformed{}, err
 	}
+	LoggerConfig.Printf("Bantime: %s", bantime)
 
 	findtime, err := time.ParseDuration(r.Findtime)
 	if err != nil {
 		return RulesTransformed{}, err
 	}
+	LoggerConfig.Printf("Findtime: %s", findtime)
 
 	ports := strings.Split(r.Ports, ":")
 	if len(ports) != 2 {
@@ -116,6 +119,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	if err != nil {
 		return RulesTransformed{}, err
 	}
+	LoggerConfig.Printf("Ports range from %d to %d", portStart, portEnd)
 
 	return RulesTransformed{
 		bantime:   bantime,
@@ -166,6 +170,10 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, err
 	}
 
+	for _, whiteip := range whitelist {
+		LoggerConfig.Printf("Whitelisted: '%s'", whiteip.ToString())
+	}
+
 	blackips, err := ImportIP(config.Blacklist)
 	if err != nil {
 		return nil, err
@@ -176,11 +184,16 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, err
 	}
 
+	for _, blackip := range blacklist {
+		LoggerConfig.Printf("Blacklisted: '%s'", blackip.ToString())
+	}
+
 	rules, err := TransformRule(config.Rules)
 	if err != nil {
 		return nil, fmt.Errorf("Error when Transforming rules: %+v", err)
 	}
 
+	Logger.Println("Plugin: FailToBan is up and running")
 	return &Fail2Ban{
 		next:      next,
 		name:      name,
