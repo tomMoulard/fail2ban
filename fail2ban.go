@@ -33,10 +33,10 @@ var (
 // Rules struct fail2ban config
 type Rules struct {
 	// Ignorecommand     string        `yaml:"igonecommand"`
-	Bantime   string `yaml:"bantime"`  //exprimate in a smart way: 3m
-	Findtime  string `yaml:"findtime"` //exprimate in a smart way: 3m
-	Maxretry  int    `yaml:"maxretry"`
-	Urlregexp string `yaml:"urlregexp"`
+	Bantime   string   `yaml:"bantime"`  //exprimate in a smart way: 3m
+	Findtime  string   `yaml:"findtime"` //exprimate in a smart way: 3m
+	Maxretry  int      `yaml:"maxretry"`
+	Urlregexp []string `yaml:"urlregexp"`
 	// Backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
 	// Usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
 	// Logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
@@ -84,7 +84,7 @@ func CreateConfig() *Config {
 type RulesTransformed struct {
 	bantime   time.Duration
 	findtime  time.Duration
-	urlregexp string
+	urlregexp []string
 	maxretry  int
 	enabled   bool
 	ports     [2]int
@@ -231,11 +231,14 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	ip := ipViewed[remoteIP]
 
-	if matched, err := regexp.Match(u.rules.urlregexp, []byte(req.URL.String())); err != nil || matched {
-		Logger.Printf("Url ('%s') was matched by regexp: '%s'", req.URL.String(), u.rules.urlregexp)
-		rw.WriteHeader(http.StatusForbidden)
-		ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
-		return
+	for _, reg := range u.rules.urlregexp {
+		url := req.Host + req.URL.String()
+		if matched, err := regexp.Match(reg, []byte(url)); err != nil || matched {
+			Logger.Printf("Url ('%s') was matched by regexp: '%s'", url, reg)
+			rw.WriteHeader(http.StatusForbidden)
+			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
+			return
+		}
 	}
 
 	//Fail2Ban
