@@ -121,14 +121,16 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	}
 	LoggerConfig.Printf("Ports range from %d to %d", portStart, portEnd)
 
-	return RulesTransformed{
+	rules := RulesTransformed{
 		bantime:   bantime,
 		findtime:  findtime,
 		urlregexp: r.Urlregexp,
 		maxretry:  r.Maxretry,
 		enabled:   r.Enabled,
 		ports:     [2]int{portStart, portEnd},
-	}, nil
+	}
+	LoggerConfig.Printf("FailToBan Rules : '%+v'", rules)
+	return rules, nil
 }
 
 // Fail2Ban holds the necessary components of a Traefik plugin
