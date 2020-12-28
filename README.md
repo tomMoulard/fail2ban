@@ -42,7 +42,8 @@ Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Whitelisted: '127.0.0.2/3
 Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Blacklisted: '127.0.0.3/32'
 Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Bantime: 3h0m0s
 Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Findtime: 3h0m0s
-Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Ports range from 0 to 800
+Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Ports range from 0 to 8000
+Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
 Fail2Ban: 2020/12/27 22:40:04 restricted.go:52: Plugin: FailToBan is up and running
 ```
 
