@@ -44,6 +44,8 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
+    urlregexp:
+      - ""
     urlregexp: ""
     ports: "80:443"
 ```
@@ -56,7 +58,7 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `maxretry`: number of request before Ban mode.
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
- - `urlregexp`: a regexp to block request with a regexp on the url
+ - `urlregexp`: a regexp list to block request with regexps on the url
  - `ports`: filter requests by port range
 
 #### Schema
@@ -129,5 +131,10 @@ providers:
 ## How to dev
 ```bash
 $ docker run -d --network host containous/whoami -port 5000
-# traefik --config-file traefik.yml
+# traefik --configfile traefik.yml
 ```
+
+# Authors
+| Tom Moulard | Clément David | Martin Huvelle | Alexandre Bossut-Lasry |
+|-------------|---------------|----------------|------------------------|
+|[![](img/gopher-tom_moulard.png)](https://tom.moulard.org)|[![](img/gopher-clement_david.png)](https://github.com/cledavid)|[![](img/gopher-martin_huvelle.png)](https://github.com/nitra-mfs)|[![](img/gopher-alexandre_bossut-lasry.png)](https://www.linkedin.com/in/alexandre-bossut-lasry/)|

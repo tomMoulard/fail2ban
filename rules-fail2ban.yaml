@@ -22,12 +22,13 @@ http:
         dev:
           whitelist:
             ip:
-                - "127.0.0.2"
+              - "127.0.0.2"
           blacklist:
             ip:
-                - "127.0.0.3"
+              - "127.0.0.3"
           rules:
-            urlregexp: ""
+            urlregexp:
+              - "localhost:5000/whoami"
             ignorecommand: ""
             bantime: "3h"
             findtime: "3h"
