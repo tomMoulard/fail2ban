@@ -57,11 +57,6 @@ func TestIPv4Generation(t *testing.T) {
 			stringIP: "127.0.0.1/23",
 			res:      true,
 		},
-		{
-			name:     "[PORT] Valid IPv4 with ports",
-			stringIP: "127.0.0.1233:80",
-			res:      true,
-		},
 	}
 
 	for _, tt := range tests {
