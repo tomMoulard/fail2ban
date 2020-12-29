@@ -41,12 +41,6 @@ func BuildIP(ip string) (IP, error) {
 	var res IP
 	var err error
 
-	ip, _, err = net.SplitHostPort(ip)
-	if err == nil {
-		Logger.Printf("%s is not a valid IP or IP/Net", ip)
-		return res, fmt.Errorf("%s is not a valid IP or IP/Net", ip)
-	}
-
 	tmpSubnet := strings.Split(ip, "/")
 	if len(tmpSubnet) == 1 {
 		tempIP := net.ParseIP(ip)
