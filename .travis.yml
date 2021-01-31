@@ -13,6 +13,9 @@ cache:
   directories:
     - $GOPATH/pkg/mod
 
+services:
+  - docker
+
 jobs:
   fast_finish: true
   include:
@@ -27,9 +30,10 @@ jobs:
       stage: test
       script: make lint test-v
     - stage: e2e
+      provider: script
       go: 1.15.x
       env: STABLE=true
-      script: ./scripts/e2e
+      script: .scripts/e2e.sh
 
   allow_failures:
     - go: tip
