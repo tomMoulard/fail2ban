@@ -3,7 +3,7 @@ pilot:
  
 experimental:
   devPlugin:
-    goPath: /home/${USER}/go
+    goPath:
     moduleName: github.com/tommoulard/fail2ban
 
 entryPoints:
