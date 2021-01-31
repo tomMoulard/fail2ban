@@ -1,0 +1,21 @@
+pilot:
+    token: "1e10ba4b-7aa1-4af9-a568-510751e3a142"
+ 
+experimental:
+  devPlugin:
+    goPath: /home/${USER}/go
+    moduleName: github.com/tommoulard/fail2ban
+
+entryPoints:
+  http:
+    address: ":8000"
+    forwardedHeaders:
+      insecure: true
+
+api:
+  dashboard: true
+  insecure: true
+
+providers:
+  file:
+    filename: rules-fail2ban.yaml

@@ -5,6 +5,10 @@ notifications:
     on_success: never
     on_failure: change
 
+stages:
+   - test
+   - e2e
+
 cache:
   directories:
     - $GOPATH/pkg/mod
@@ -14,8 +18,17 @@ jobs:
   include:
     - go: 1.15.x
       env: STABLE=true
+      stage: test
+      script: make lint test-v
     - go: 1.x
+      stage: test
+      script: make lint test-v
     - go: tip
+      stage: test
+      script: make lint test-v
+    - stage: e2e
+      script: ./scripts/e2e
+
   allow_failures:
     - go: tip
 
@@ -35,5 +48,3 @@ install:
   # - git diff --exit-code ./vendor/
   - make fmt
   - git diff --exit-code
-
-script: make lint test-v
