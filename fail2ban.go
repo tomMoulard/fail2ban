@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
-    "net"
 	"os"
 	"reflect"
 	"regexp"
@@ -214,10 +214,10 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-    remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
+	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err == nil {
 		Logger.Println(remoteIP + " is not a valid IP or a IP/NET")
-        return
+		return
 	}
 
 	// Blacklist
