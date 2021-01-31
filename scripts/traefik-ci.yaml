@@ -18,4 +18,4 @@ api:
 
 providers:
   file:
-    filename: rules-fail2ban.yaml
+    filename: 
