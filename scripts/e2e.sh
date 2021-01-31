@@ -7,4 +7,6 @@ tar -zxvf traefik_v2.3.6_linux_amd64.tar.gz
 
 sed "/goPath/ s;$; $GOPATH;" "scripts/traefik-ci.yaml"
 
+pwd
+
 ./traefik --configfile scripts/traefik-ci.yaml
