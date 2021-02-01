@@ -1,0 +1,47 @@
+# Template for configuration
+
+http:
+  routers:
+    my-router:
+      middlewares:
+        - fail2ban
+      entrypoints:
+        - http
+      service: service-whoami
+      rule: Path(`/whoami`)
+
+  services:
+    service-whoami:
+      loadBalancer:
+        servers:
+          - url: http://localhost:5000
+        passHostHeader: false
+  middlewares:
+    fail2ban:
+      plugin:
+        dev:
+          blacklist:
+            ip:
+              - "127.0.0.1"
+          rules:
+            ignorecommand: ""
+            bantime: "3h"
+            findtime: "3h"
+            maxretry: 4
+            backend: ""
+            usedns: ""
+            logencoding: "UTF-8"
+            enabled: true
+            mode: ""
+            filter: ""
+            destemail: ""
+            sender: ""
+            mta: ""
+            protocol: ""
+            chain: ""
+            ports: "0:8000"
+            fail2banAgent: ""
+            banaction: ""
+            banactionAllports: ""
+            actionAbuseipdb: ""
+            action: ""
