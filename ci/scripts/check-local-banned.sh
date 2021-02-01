@@ -1,5 +1,5 @@
 #!/bin/bash
-set -v
+set -ev
 
 grep "Blacklisted: '127.0.0.1'" ci/inside_ci/logs.all
 

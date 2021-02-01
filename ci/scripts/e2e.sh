@@ -1,6 +1,5 @@
 #!/bin/bash
-
-set -v
+set -ev
 
 docker run -d --network host containous/whoami -port 5000
 
