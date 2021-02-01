@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ev
+set -v
 
 echo "########### $1 # START ##############"
 
