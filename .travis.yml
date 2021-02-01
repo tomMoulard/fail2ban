@@ -32,7 +32,7 @@ jobs:
     - stage: e2e
       go: 1.15.x
       env: STABLE=true
-      script: ./scripts/e2e.sh
+      script: ./ci/scripts/e2e.sh
       go_import_path: github.com/tommoulard/fail2ban
 
   allow_failures:

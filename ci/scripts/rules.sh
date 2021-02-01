@@ -2,17 +2,11 @@
 
 set -v
 
-docker run -d --network host containous/whoami -port 5000
+echo "########### $1 # START ##############"
 
-curl -L -O https://github.com/traefik/traefik/releases/download/v2.3.6/traefik_v2.3.6_linux_amd64.tar.gz
-tar -zxvf traefik_v2.3.6_linux_amd64.tar.gz
+sed "/filename:/ s;$; ci/yamls/$1.yaml;" "ci/yamls/traefik-ci.yaml" > ci/inside_ci/ci-$1.yaml
 
-sed -i "/goPath:/ s;$; $GOPATH;" "scripts/traefik-ci.yaml"
-
-# NO RULES
-sed -i "/filename:/ s;$; scripts/no-rules.yaml;" "scripts/traefik-ci.yaml"
-
-timeout 20s ./traefik --configfile scripts/traefik-ci.yaml 1> logs.all &
+timeout 20s ./traefik --configfile ci/inside_ci/ci-$1.yaml 1> ci/inside_ci/logs.all &
 
 sleep 5
 
@@ -31,4 +25,6 @@ curl 'http://localhost:5000/whoami'
 
 sleep 20
 
-cat logs.all
+cat ci/inside_ci/logs.all
+
+echo '########### $1 # END ##############'
