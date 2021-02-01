@@ -9,18 +9,21 @@ timeout 20s ./traefik --configfile ci/inside_ci/ci-$1.yaml 1> ci/inside_ci/logs.
 
 sleep 5
 
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
-curl 'http://localhost:5000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/whoami'
+
 
 sleep 20
 

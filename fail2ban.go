@@ -215,7 +215,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err == nil {
+	if err != nil {
 		Logger.Println(remoteIP + " is not a valid IP or a IP/NET")
 		return
 	}
