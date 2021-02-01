@@ -27,4 +27,6 @@ sleep 20
 
 cat ci/inside_ci/logs.all
 
-echo '########### $1 # END ##############'
+./ci/scripts/check-$1.sh
+
+echo "########### $1 # END ##############"
