@@ -10,8 +10,10 @@ sed -i "/goPath:/ s;$; $GOPATH;" "ci/yamls/traefik-ci.yaml"
 
 mkdir ci/inside_ci
 
-./ci/scripts/rules.sh no-rules
+sed "/filename:/ s;$; ci/yamls/$1.yaml;" "ci/yamls/traefik-ci.yaml" > ci/inside_ci/ci-$1.yaml
 
-./ci/scripts/rules.sh local-banned
+timeout 20s ./traefik --configfile ci/inside_ci/ci-$1.yaml 1> ci/inside_ci/logs.all || echo 'timeout traefik' &
 
-./ci/scripts/rules.sh local-whited
+sleep 5
+
+./ci/scripts/check-$1.sh
