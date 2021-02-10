@@ -1,6 +1,10 @@
 #!/bin/bash
 set -ev
 
+docker run -d --network host containous/whoami -port 5000
+
+sleep 5
+
 curl 'http://localhost:8000/whoami'
 curl 'http://localhost:8000/whoami'
 curl 'http://localhost:8000/whoami'

@@ -1,0 +1,60 @@
+# Template for configuration
+
+http:
+  routers:
+    router1:
+      middlewares:
+        - fail2ban
+      entrypoints:
+        - http
+      service: service-whoami1
+      rule: Host(`whoami1.docker.localhost`) || Path(`/whoami1`)
+    router2:
+      middlewares:
+        - fail2ban
+      entrypoints:
+        - http
+      service: service-whoami2
+      rule: Host(`whoami2.docker.localhost`) || Path(`/whoami2`)
+
+  services:
+    service-whoami1:
+      loadBalancer:
+        servers:
+          - url: http://localhost:5000
+        passHostHeader: false
+    service-whoami2:
+      loadBalancer:
+        servers:
+          - url: http://localhost:30000
+        passHostHeader: false
+  middlewares:
+    fail2ban:
+      plugin:
+        dev:
+          rules:
+            urlregexp:
+              - "/path1"
+              - "whoami1.docker.localhost:8000/path2"
+              - "whoami2.docker.localhost:8000/path3"
+            ignorecommand: ""
+            bantime: "3h"
+            findtime: "3h"
+            maxretry: 4
+            backend: ""
+            usedns: ""
+            logencoding: "UTF-8"
+            enabled: true
+            mode: ""
+            filter: ""
+            destemail: ""
+            sender: ""
+            mta: ""
+            protocol: ""
+            chain: ""
+            ports: "0:8000"
+            fail2banAgent: ""
+            banaction: ""
+            banactionAllports: ""
+            actionAbuseipdb: ""
+            action: ""
