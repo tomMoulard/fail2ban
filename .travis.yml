@@ -19,20 +19,36 @@ services:
 jobs:
   fast_finish: true
   include:
-    - go: 1.15.x
-      env: STABLE=true
-      stage: test
-      script: make lint test-v
-    - go: 1.x
-      stage: test
-      script: make lint test-v
-    - go: tip
-      stage: test
-      script: make lint test-v
-    - stage: e2e
+    - stage: test
+      name: "lint go 1.15.x"
       go: 1.15.x
       env: STABLE=true
-      script: ./ci/scripts/e2e.sh
+      script: make lint test-v
+    - stage: test
+      name: "lint go 1.x"
+      go: 1.x
+      script: make lint test-v
+    - stage: test
+      name: "lint go tip"
+      go: tip
+      script: make lint test-v
+    - stage: e2e
+      name: "No-rules"
+      go: 1.15.x
+      env: STABLE=true
+      script: ./ci/scripts/e2e.sh no-rules
+      go_import_path: github.com/tommoulard/fail2ban
+    - stage: e2e
+      name: "Local-banned"
+      go: 1.15.x
+      env: STABLE=true
+      script: ./ci/scripts/e2e.sh local-banned
+      go_import_path: github.com/tommoulard/fail2ban
+    - stage: e2e
+      name: "Local-whited"
+      go: 1.15.x
+      env: STABLE=true
+      script: ./ci/scripts/e2e.sh local-whited
       go_import_path: github.com/tommoulard/fail2ban
 
   allow_failures:
