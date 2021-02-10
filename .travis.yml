@@ -50,6 +50,12 @@ jobs:
       env: STABLE=true
       script: ./ci/scripts/e2e.sh local-whited
       go_import_path: github.com/tommoulard/fail2ban
+    - stage: e2e
+      name: "Urlregexp-ban"
+      go: 1.15.x
+      env: STABLE=true
+      script: ./ci/scripts/e2e.sh urlregexp-ban
+      go_import_path: github.com/tommoulard/fail2ban
 
   allow_failures:
     - go: tip
