@@ -27,8 +27,13 @@ http:
             ip:
               - "127.0.0.3"
           rules:
-            urlregexp:
-              - "localhost:5000/whoami"
+            urlregexps:
+              - regexp: "localhost:5000/whoami/no"
+                mode: block
+              - regexp: "localhost:5000/whoami/hey"
+                mode: allow
+              - regexp: "localhost:5000/whoami/me"
+                mode: toto
             ignorecommand: ""
             bantime: "3h"
             findtime: "3h"
