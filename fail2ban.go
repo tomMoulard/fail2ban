@@ -134,15 +134,16 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	var regexpBan []string
 	var regexpF2b []string
 
-	LoggerConfig.Println(r.Urlregexps)
-
 	for _, regexp := range r.Urlregexps {
 		if regexp.Mode == "block" {
 			regexpBan = append(regexpBan, regexp.Regexp)
+			LoggerConfig.Printf("%s will be blocked", regexp.Regexp)
 		} else if regexp.Mode == "allow" {
 			regexpAllow = append(regexpAllow, regexp.Regexp)
+			LoggerConfig.Printf("%s will be allowed (no restriction)", regexp.Regexp)
 		} else if regexp.Mode == "filter" {
 			regexpF2b = append(regexpF2b, regexp.Regexp)
+			LoggerConfig.Printf("%s will be filtered by fail2ban", regexp.Regexp)
 		} else {
 			LoggerConfig.Printf("Mode : %s is not known, the rule %s will not be applied", regexp.Mode, regexp.Regexp)
 		}
@@ -242,6 +243,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
 		Logger.Println(remoteIP + " is not a valid IP or a IP/NET")
@@ -266,28 +268,13 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	// UrlRegexp F2B
-	var f2b bool = false
-	for _, reg := range u.rules.urlregexpF2b {
-		url := req.Host + req.URL.String()
-		if matched, err := regexp.Match(reg, []byte(url)); err != nil || matched {
-			f2b = true
-			continue
-		}
-	}
-	if !f2b {
-		Logger.Println(req.Host + req.URL.String() + "is not in the fail2ban range: proceed without fail2ban")
-		u.next.ServeHTTP(rw, req)
-		return
-	}
-
 	// Urlregexp ban
 	ip := ipViewed[remoteIP]
 
 	for _, reg := range u.rules.urlregexpBan {
-		url := req.Host + req.URL.String()
+		url := req.URL.String()
 		if matched, err := regexp.Match(reg, []byte(url)); err != nil || matched {
-			Logger.Printf("Url ('%s') was matched by regexpBan: '%s'", url, reg)
+			Logger.Printf("Url ('%s') was matched by regexpBan: '%s' for '%s'", url, reg, req.Host)
 			rw.WriteHeader(http.StatusForbidden)
 			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
 			return
@@ -296,12 +283,27 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Urlregexp allow
 	for _, reg := range u.rules.urlregexpAllow {
-		url := req.Host + req.URL.String()
+		url := req.URL.String()
 		if matched, err := regexp.Match(reg, []byte(url)); err != nil || matched {
-			Logger.Println(req.Host + req.URL.String() + "is not in the fail2ban range: proceed without fail2ban")
+			Logger.Printf("Url ('%s') was matched by regexpAllow: '%s' for '%s'", url, reg, req.Host)
 			u.next.ServeHTTP(rw, req)
 			return
 		}
+	}
+
+	// UrlRegexp F2B
+	var f2b bool = false
+	for _, reg := range u.rules.urlregexpF2b {
+		url := req.URL.String()
+		if matched, err := regexp.Match(reg, []byte(url)); err != nil || matched {
+			f2b = true
+			continue
+		}
+	}
+	if !f2b {
+		Logger.Println(req.Host + req.URL.String() + " is not in the fail2ban range: proceed without fail2ban")
+		u.next.ServeHTTP(rw, req)
+		return
 	}
 
 	//Fail2Ban

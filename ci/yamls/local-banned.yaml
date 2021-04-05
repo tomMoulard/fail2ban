@@ -24,6 +24,9 @@ http:
             ip:
               - "127.0.0.1"
           rules:
+            urlregexps:
+              - regexp: "/whoami"
+                mode: filter
             ignorecommand: ""
             bantime: "3h"
             findtime: "3h"

@@ -21,6 +21,9 @@ http:
       plugin:
         dev:
           rules:
+            urlregexps:
+              - regexp: "/whoami"
+                mode: filter
             ignorecommand: ""
             bantime: "3h"
             findtime: "3h"

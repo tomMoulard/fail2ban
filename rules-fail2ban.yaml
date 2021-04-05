@@ -28,12 +28,12 @@ http:
               - "127.0.0.3"
           rules:
             urlregexps:
-              - regexp: "localhost:5000/whoami/no"
+              - regexp: "/no"
                 mode: block
-              - regexp: "localhost:5000/whoami/hey"
+              - regexp: "/yes"
                 mode: allow
-              - regexp: "localhost:5000/whoami/me"
-                mode: toto
+              - regexp: "/whoami"
+                mode: filter
             ignorecommand: ""
             bantime: "3h"
             findtime: "3h"
