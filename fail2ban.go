@@ -3,6 +3,7 @@ package fail2ban
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -61,6 +62,7 @@ type Rules struct {
 	// BanactionAllports string        `yaml:"banaction_allports"` //same as above
 	// ActionAbuseipdb   string        `yaml:"action_abuseipdb"`
 	// Action            string        `yaml:"action"` //maybe change for []string
+	LogLevel int `yaml:"loglevel"`
 }
 
 // List struct
@@ -83,6 +85,7 @@ func CreateConfig() *Config {
 			Bantime:  "300s",
 			Findtime: "120s",
 			Enabled:  true,
+			LogLevel: 2,
 		},
 	}
 }
@@ -186,6 +189,13 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+	if config.LogLevel < 2 {
+		Logger.SetOutput(ioutil.Discard)
+	}
+	if config.LogLevel < 1 {
+		LoggerConfig.SetOutput(ioutil.Discard)
+	}
+
 	whiteips, err := ImportIP(config.Whitelist)
 	if err != nil {
 		return nil, err
