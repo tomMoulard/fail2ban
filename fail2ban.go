@@ -25,9 +25,9 @@ type IPViewed struct {
 }
 
 // Regexp struct
-type Regexp struct {
-	regexp string `yaml:"regexp"`
-	mode   string `yaml:"mode"`
+type Urlregexp struct {
+	Regexp string `yaml:"regexp"`
+	Mode   string `yaml:"mode"`
 }
 
 // Logger Main logger
@@ -40,10 +40,10 @@ var (
 // Rules struct fail2ban config
 type Rules struct {
 	// Ignorecommand     string        `yaml:"igonecommand"`
-	Bantime    string   `yaml:"bantime"`  //exprimate in a smart way: 3m
-	Findtime   string   `yaml:"findtime"` //exprimate in a smart way: 3m
-	Maxretry   int      `yaml:"maxretry"`
-	Urlregexps []Regexp `yaml:"urlregexps"`
+	Bantime    string      `yaml:"bantime"`  //exprimate in a smart way: 3m
+	Findtime   string      `yaml:"findtime"` //exprimate in a smart way: 3m
+	Maxretry   int         `yaml:"maxretry"`
+	Urlregexps []Urlregexp `yaml:"urlregexps"`
 	// Backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
 	// Usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
 	// Logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
@@ -137,14 +137,14 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	LoggerConfig.Println(r.Urlregexps)
 
 	for _, regexp := range r.Urlregexps {
-		if regexp.mode == "block" {
-			regexpBan = append(regexpBan, regexp.regexp)
-		} else if regexp.mode == "allow" {
-			regexpAllow = append(regexpAllow, regexp.regexp)
-		} else if regexp.mode == "filter" {
-			regexpF2b = append(regexpF2b, regexp.regexp)
+		if regexp.Mode == "block" {
+			regexpBan = append(regexpBan, regexp.Regexp)
+		} else if regexp.Mode == "allow" {
+			regexpAllow = append(regexpAllow, regexp.Regexp)
+		} else if regexp.Mode == "filter" {
+			regexpF2b = append(regexpF2b, regexp.Regexp)
 		} else {
-			LoggerConfig.Printf("Mode : %s is not known, the rule %s will not be applied", regexp.mode, regexp.regexp)
+			LoggerConfig.Printf("Mode : %s is not known, the rule %s will not be applied", regexp.Mode, regexp.Regexp)
 		}
 	}
 
