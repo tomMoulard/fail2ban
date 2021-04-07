@@ -53,13 +53,17 @@ few features are implemented:
 ```yml
 testData:
   rules:
+    urlregexps:
+    - regexp: "/no"
+      mode: block
+    - regexp: "/yes"
+      mode: allow
+    - regexp: "/whoami"
+      mode: filter
     bantime: "3h"
     findtime: "10m"
     maxretry: 4
     enabled: true
-    urlregexp:
-      - ""
-    urlregexp: ""
     ports: "80:443"
 ```
 
@@ -71,8 +75,72 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `maxretry`: number of request before Ban mode.
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
- - `urlregexp`: a regexp list to block request with regexps on the url
+ - `urlregexp`: a regexp list to block / allow / filter requests with regexps on the url
  - `ports`: filter requests by port range
+
+#### URL Regexp
+Urlregexp are used to defined witch part of your website will be either allowed, blocked or filtered :
+- block : all requests to theses urls will be stopped
+- allow : all requests to theses urls will be forwarded to the backend without any check
+- filter : all requests will go through the fail2ban process 
+
+##### Minimal
+
+```yml
+testData:
+  rules:
+    urlregexps:
+    - regexp: "*"
+      mode: filter
+    bantime: "3h"
+    findtime: "10m"
+    maxretry: 4
+    enabled: true
+    ports: "80:443"
+```
+The minimal definition will be a wildcard `*` and fail2ban will be applied in all the urls.
+
+##### No definitions
+
+```yml
+testData:
+  rules:
+    bantime: "3h"
+    findtime: "10m"
+    maxretry: 4
+    enabled: true
+    ports: "80:443"
+```
+
+By default, no fail2ban will be applied. You need to specify an urlregexp with mode filter to enable it.
+
+This configuration will no do anything and will allow all requests to be forwarded to your backend
+
+##### Multiple definition
+
+```yml
+testData:
+  rules:
+    urlregexps:
+    - regexp: "/whoami"
+      mode: block
+    - regexp: "/whoami"
+      mode: allow
+    - regexp: "/whoami"
+      mode: filter
+    bantime: "3h"
+    findtime: "10m"
+    maxretry: 4
+    enabled: true
+    ports: "80:443"
+```
+
+In the case where you define multiple regexp on the same url, the order of process will be :
+1. Block
+2. Allow
+3. Filter
+
+In this exemple, all requets to `/whoami` will be denied.
 
 #### Schema
 First request, IP is added to the Pool, and the `findtime` timer is started:
