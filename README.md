@@ -80,9 +80,8 @@ enable the plugin).
 
 #### URL Regexp
 Urlregexp are used to defined witch part of your website will be either allowed, blocked or filtered :
-- block : all requests to theses urls will be stopped
-- allow : all requests to theses urls will be forwarded to the backend without any check
-- filter : all requests will go through the fail2ban process 
+- allow : all requests where the url match the regexp will be forwarded to the backend without any check
+- block : all requests where the url match the regexp will be stopped
 
 ##### Minimal
 
@@ -90,15 +89,16 @@ Urlregexp are used to defined witch part of your website will be either allowed,
 testData:
   rules:
     urlregexps:
-    - regexp: "*"
-      mode: filter
+    - regexp: "/admin*"
+      mode: block
     bantime: "3h"
     findtime: "10m"
     maxretry: 4
     enabled: true
     ports: "80:443"
 ```
-The minimal definition will be a wildcard `*` and fail2ban will be applied in all the urls.
+
+The minimal definition will be a wildcard `*` and fail2ban will be applied in all matching urls.
 
 ##### No definitions
 
@@ -112,9 +112,7 @@ testData:
     ports: "80:443"
 ```
 
-By default, no fail2ban will be applied. You need to specify an urlregexp with mode filter to enable it.
-
-This configuration will no do anything and will allow all requests to be forwarded to your backend
+By default, fail2ban will be applied.
 
 ##### Multiple definition
 
@@ -123,11 +121,9 @@ testData:
   rules:
     urlregexps:
     - regexp: "/whoami"
-      mode: block
-    - regexp: "/whoami"
       mode: allow
-    - regexp: "/whoami"
-      mode: filter
+    - regexp: "/do-not-access"
+      mode: block
     bantime: "3h"
     findtime: "10m"
     maxretry: 4
@@ -136,11 +132,10 @@ testData:
 ```
 
 In the case where you define multiple regexp on the same url, the order of process will be :
-1. Block
-2. Allow
-3. Filter
+1. Allow
+2. Block
 
-In this exemple, all requets to `/whoami` will be denied.
+In this example, all requets to `/whoami` will be denied.
 
 #### Schema
 First request, IP is added to the Pool, and the `findtime` timer is started:
