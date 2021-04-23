@@ -23,6 +23,9 @@ curl 'http://localhost:8000/whoami'
 curl 'http://localhost:8000/whoami'
 curl 'http://localhost:8000/whoami'
 curl 'http://localhost:8000/whoami'
+curl 'http://localhost:8000/yes'
+curl 'http://localhost:8000/no'
+curl 'http://localhost:8000/blocked'
 
 
 sleep 20

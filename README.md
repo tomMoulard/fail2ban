@@ -58,8 +58,6 @@ testData:
       mode: block
     - regexp: "/yes"
       mode: allow
-    - regexp: "/whoami"
-      mode: filter
     bantime: "3h"
     findtime: "10m"
     maxretry: 4
@@ -75,7 +73,7 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `maxretry`: number of request before Ban mode.
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
- - `urlregexp`: a regexp list to block / allow / filter requests with regexps on the url
+ - `urlregexp`: a regexp list to block / allow requests with regexps on the url
  - `ports`: filter requests by port range
 
 #### URL Regexp

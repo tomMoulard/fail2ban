@@ -32,8 +32,6 @@ http:
                 mode: block
               - regexp: "/yes"
                 mode: allow
-              - regexp: "/whoami"
-                mode: filter
             ignorecommand: ""
             bantime: "3h"
             findtime: "3h"
