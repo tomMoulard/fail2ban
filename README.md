@@ -6,6 +6,7 @@ This plugin is a small implementation of a fail2ban instance as a middleware
 plugin for Traefik.
 
 ## Configuration
+
 ### Whitelist
 You can whitelist some IP using this:
 ```yml
@@ -34,18 +35,69 @@ testData:
 
 Where you can use some IP in an array of files or directly in the config.
 
-### Configuration debug
-In order to check if the configuration is correct, there should be some logs
-on stdout like:
+### LogLevel
+You can choose the level of logging with this:
+
+```yml
+testData:
+  logLevel: "INFO"
 ```
-Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Whitelisted: '127.0.0.2/32'
-Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Blacklisted: '127.0.0.3/32'
-Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Bantime: 3h0m0s
-Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Findtime: 3h0m0s
-Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: Ports range from 0 to 8000
-Fail2Ban_config: 2020/12/27 22:40:04 restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
-Fail2Ban: 2020/12/27 22:40:04 restricted.go:52: Plugin: FailToBan is up and running
+
+<details>
+
+There is 3 level of logging :
+
+#### NONE
+Only the logs of traefik and your other plugins will be prompted
 ```
+INFO[0000] Configuration loaded from file: /home/tm/go/src/github.com/tommoulard/fail2ban/traeik.yml
+```
+
+#### INFO
+configuration informations will be prompted
+```
+INFO[0000] Configuration loaded from file: /home/tm/go/src/github.com/tommoulard/fail2ban/traeik.yml
+INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
+INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
+INFO: Fail2Ban: restricted.go:51: Bantime: 3h0m0s
+INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
+INFO: Fail2Ban: restricted.go:51: Ports range from 0 to 8000
+INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
+INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
+INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
+INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
+INFO: Fail2Ban: restricted.go:51: Bantime: 3h0m0s
+INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
+INFO: Fail2Ban: restricted.go:51: Ports range from 0 to 8000
+INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
+INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
+```
+#### DEBUG
+every event will be logged. Warning, all IPs will be prompted in clear text with this option
+```
+INFO[0000] Configuration loaded from file: /home/tm/go/src/github.com/tommoulard/fail2ban/traeik.yml
+INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
+INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
+INFO: Fail2Ban: restricted.go:51: Bantime: 3s
+INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
+INFO: Fail2Ban: restricted.go:51: Ports range from 0 to 8000
+INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
+INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
+DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
+DEBUG: Fail2Ban: restricted.go:51: welcome ::1
+DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
+DEBUG: Fail2Ban: restricted.go:51: welcome back ::1 for the 2 time
+DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
+DEBUG: Fail2Ban: restricted.go:51: welcome back ::1 for the 3 time
+DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
+DEBUG: Fail2Ban: restricted.go:52: ::1 is now banned temporarily
+DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
+DEBUG: Fail2Ban: restricted.go:51: ::1 is still banned since 2021-04-23T21:40:55+02:00, 5 request
+DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
+DEBUG: Fail2Ban: restricted.go:52: ::1 is no longer banned
+```
+
+</details>
 
 ## Fail2ban
 We plan to use all [default fail2ban configuration]() but at this time only a
