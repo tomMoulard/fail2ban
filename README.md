@@ -81,23 +81,6 @@ Urlregexp are used to defined witch part of your website will be either allowed,
 - allow : all requests where the url match the regexp will be forwarded to the backend without any check
 - block : all requests where the url match the regexp will be stopped
 
-##### Minimal
-
-```yml
-testData:
-  rules:
-    urlregexps:
-    - regexp: "/admin*"
-      mode: block
-    bantime: "3h"
-    findtime: "10m"
-    maxretry: 4
-    enabled: true
-    ports: "80:443"
-```
-
-The minimal definition will be a wildcard `*` and fail2ban will be applied in all matching urls.
-
 ##### No definitions
 
 ```yml
@@ -130,10 +113,11 @@ testData:
 ```
 
 In the case where you define multiple regexp on the same url, the order of process will be :
-1. Allow
-2. Block
+1. Block
+2. Allow
 
-In this example, all requets to `/whoami` will be denied.
+In this example, all requests to `/do-not-access` will be denied and all requests to `/whoami` will be allowed without
+any fail2ban interaction.
 
 #### Schema
 First request, IP is added to the Pool, and the `findtime` timer is started:
