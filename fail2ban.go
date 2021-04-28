@@ -136,14 +136,14 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	var regexpBan []string
 
 	for _, rg := range r.Urlregexps {
-		LoggerConfig.Printf("using mode %s for rule %q", rg.Mode, rg.Regexp)
+		LoggerINFO.Printf("using mode %s for rule %q", rg.Mode, rg.Regexp)
 		switch rg.Mode {
 		case "allow":
 			regexpAllow = append(regexpAllow, rg.Regexp)
 		case "block":
 			regexpBan = append(regexpBan, rg.Regexp)
 		default:
-			LoggerConfig.Printf("mode %s is not known, the rule %s cannot not be applied", rg.Mode, rg.Regexp)
+			LoggerINFO.Printf("mode %s is not known, the rule %s cannot not be applied", rg.Mode, rg.Regexp)
 		}
 	}
 
@@ -291,7 +291,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Urlregexp allow
 	for _, reg := range u.rules.urlregexpAllow {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
-			Logger.Printf("Url ('%s') was matched by regexpAllow: '%s' for '%s'", url, reg, req.Host)
+			LoggerDEBUG.Printf("Url ('%s') was matched by regexpAllow: '%s' for '%s'", url, reg, req.Host)
 			u.next.ServeHTTP(rw, req)
 			return
 		}
