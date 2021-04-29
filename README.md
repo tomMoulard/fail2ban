@@ -19,7 +19,8 @@ testData:
       - "127.0.0.1"
 ```
 
-Where you can use some IP in an array of files or directly in the config.
+Where you can use some IP in an array of files or directly in the
+configuration.
 
 ### Blacklist
 Like whitelist, you can blacklist some IP using this:
@@ -33,9 +34,12 @@ testData:
       - "127.0.0.1"
 ```
 
-Where you can use some IP in an array of files or directly in the config.
+Where you can use some IP in an array of files or directly in the
+configuration.
 
 ### LogLevel
+In order to help you and us when building and using the plugin, we added some
+logs on stdout.
 You can choose the level of logging with this:
 
 ```yml
@@ -47,16 +51,18 @@ testData:
 
 There is 3 level of logging :
 
-#### NONE
-Only the logs of traefik and your other plugins will be prompted
+#### `NONE`
+The plugin will not output *any* logs.
+
 ```
-INFO[0000] Configuration loaded from file: /home/tm/go/src/github.com/tommoulard/fail2ban/traeik.yml
+INFO[0000] Configuration loaded from file: ./traefik.yml
 ```
 
-#### INFO
-configuration informations will be prompted
+#### `INFO`
+Configuration informations will be displayed.
+
 ```
-INFO[0000] Configuration loaded from file: /home/tm/go/src/github.com/tommoulard/fail2ban/traeik.yml
+INFO[0000] Configuration loaded from file: ./traefik.yml
 INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
 INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
 INFO: Fail2Ban: restricted.go:51: Bantime: 3h0m0s
@@ -72,10 +78,14 @@ INFO: Fail2Ban: restricted.go:51: Ports range from 0 to 8000
 INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
 INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
 ```
-#### DEBUG
-every event will be logged. Warning, all IPs will be prompted in clear text with this option
+
+#### `DEBUG`
+Every event will be logged.
+
+Warning, all IPs will be prompted in clear text with this option.
+
 ```
-INFO[0000] Configuration loaded from file: /home/tm/go/src/github.com/tommoulard/fail2ban/traeik.yml
+INFO[0000] Configuration loaded from file: ./traefik.yml
 INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
 INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
 INFO: Fail2Ban: restricted.go:51: Bantime: 3s
@@ -104,6 +114,7 @@ We plan to use all [default fail2ban configuration]() but at this time only a
 few features are implemented:
 ```yml
 testData:
+  logLevel: "INFO"
   rules:
     urlregexps:
     - regexp: "/no"
@@ -127,10 +138,14 @@ use 'smart' strings: "4h", "2m", "1s", ...
 enable the plugin).
  - `urlregexp`: a regexp list to block / allow requests with regexps on the url
  - `ports`: filter requests by port range
+ - `logLevel`: is used to show the correct level of logs (`DEBUG`, `INFO`,
+`NONE`)
 
 #### URL Regexp
-Urlregexp are used to defined witch part of your website will be either allowed, blocked or filtered :
-- allow : all requests where the url match the regexp will be forwarded to the backend without any check
+Urlregexp are used to defined witch part of your website will be either
+allowed, blocked or filtered :
+- allow : all requests where the url match the regexp will be forwarded to the
+backend without any check
 - block : all requests where the url match the regexp will be stopped
 
 ##### No definitions
@@ -164,12 +179,13 @@ testData:
     ports: "80:443"
 ```
 
-In the case where you define multiple regexp on the same url, the order of process will be :
+In the case where you define multiple regexp on the same url, the order of
+process will be :
 1. Block
 2. Allow
 
-In this example, all requests to `/do-not-access` will be denied and all requests to `/whoami` will be allowed without
-any fail2ban interaction.
+In this example, all requests to `/do-not-access` will be denied and all
+requests to `/whoami` will be allowed without any fail2ban interaction.
 
 #### Schema
 First request, IP is added to the Pool, and the `findtime` timer is started:
