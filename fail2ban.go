@@ -3,6 +3,7 @@ package fail2ban
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -24,17 +25,18 @@ type IPViewed struct {
 	blacklisted bool
 }
 
-// Regexp struct
+// Urlregexp struct
 type Urlregexp struct {
 	Regexp string `yaml:"regexp"`
 	Mode   string `yaml:"mode"`
 }
 
-// Logger Main logger
 var (
-	Logger       = log.New(os.Stdout, "Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
-	LoggerConfig = log.New(os.Stdout, "Fail2Ban_config: ", log.Ldate|log.Ltime|log.Lshortfile)
-	ipViewed     = map[string]IPViewed{}
+	// LoggerINFO Main logger
+	LoggerINFO = log.New(ioutil.Discard, "INFO: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
+	// LoggerDEBUG debug logger
+	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
+	ipViewed    = map[string]IPViewed{}
 )
 
 // Rules struct fail2ban config
@@ -71,9 +73,10 @@ type List struct {
 
 // Config struct
 type Config struct {
-	Blacklist List  `yaml:"blacklist"`
-	Whitelist List  `yaml:"whitelist"`
-	Rules     Rules `yaml:"rules"`
+	Blacklist List   `yaml:"blacklist"`
+	Whitelist List   `yaml:"whitelist"`
+	Rules     Rules  `yaml:"port"`
+	LogLevel  string `yaml:"loglevel"`
 }
 
 // CreateConfig populates the Config data object
@@ -104,13 +107,13 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	if err != nil {
 		return RulesTransformed{}, err
 	}
-	LoggerConfig.Printf("Bantime: %s", bantime)
+	LoggerINFO.Printf("Bantime: %s", bantime)
 
 	findtime, err := time.ParseDuration(r.Findtime)
 	if err != nil {
 		return RulesTransformed{}, err
 	}
-	LoggerConfig.Printf("Findtime: %s", findtime)
+	LoggerINFO.Printf("Findtime: %s", findtime)
 
 	ports := strings.Split(r.Ports, ":")
 	if len(ports) != 2 {
@@ -127,20 +130,20 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	if err != nil {
 		return RulesTransformed{}, err
 	}
-	LoggerConfig.Printf("Ports range from %d to %d", portStart, portEnd)
+	LoggerINFO.Printf("Ports range from %d to %d", portStart, portEnd)
 
 	var regexpAllow []string
 	var regexpBan []string
 
 	for _, rg := range r.Urlregexps {
-		LoggerConfig.Printf("using mode %s for rule %q", rg.Mode, rg.Regexp)
+		LoggerINFO.Printf("using mode %s for rule %q", rg.Mode, rg.Regexp)
 		switch rg.Mode {
 		case "allow":
 			regexpAllow = append(regexpAllow, rg.Regexp)
 		case "block":
 			regexpBan = append(regexpBan, rg.Regexp)
 		default:
-			LoggerConfig.Printf("mode %s is not known, the rule %s cannot not be applied", rg.Mode, rg.Regexp)
+			LoggerINFO.Printf("mode %s is not known, the rule %s cannot not be applied", rg.Mode, rg.Regexp)
 		}
 	}
 
@@ -153,7 +156,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		enabled:        r.Enabled,
 		ports:          [2]int{portStart, portEnd},
 	}
-	LoggerConfig.Printf("FailToBan Rules : '%+v'", rules)
+	LoggerINFO.Printf("FailToBan Rules : '%+v'", rules)
 	return rules, nil
 }
 
@@ -186,6 +189,14 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP request
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+	switch config.LogLevel {
+	case "INFO":
+		LoggerINFO.SetOutput(os.Stdout)
+	case "DEBUG":
+		LoggerINFO.SetOutput(os.Stdout)
+		LoggerDEBUG.SetOutput(os.Stdout)
+	}
+
 	whiteips, err := ImportIP(config.Whitelist)
 	if err != nil {
 		return nil, err
@@ -197,7 +208,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	for _, whiteip := range whitelist {
-		LoggerConfig.Printf("Whitelisted: '%s'", whiteip.ToString())
+		LoggerINFO.Printf("Whitelisted: '%s'", whiteip.ToString())
 	}
 
 	blackips, err := ImportIP(config.Blacklist)
@@ -211,7 +222,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	for _, blackip := range blacklist {
-		LoggerConfig.Printf("Blacklisted: '%s'", blackip.ToString())
+		LoggerINFO.Printf("Blacklisted: '%s'", blackip.ToString())
 	}
 
 	rules, err := TransformRule(config.Rules)
@@ -219,7 +230,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, fmt.Errorf("error when Transforming rules: %+v", err)
 	}
 
-	Logger.Println("Plugin: FailToBan is up and running")
+	LoggerINFO.Println("Plugin: FailToBan is up and running")
 	return &Fail2Ban{
 		next:      next,
 		name:      name,
@@ -232,6 +243,8 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 // Iterate over every headers to match the ones specified in the config and
 // return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	LoggerDEBUG.Printf("New request: %v", req)
+
 	if !u.rules.enabled {
 		u.next.ServeHTTP(rw, req)
 		return
@@ -239,14 +252,14 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
-		Logger.Println(remoteIP + " is not a valid IP or a IP/NET")
+		LoggerDEBUG.Println(remoteIP + " is not a valid IP or a IP/NET")
 		return
 	}
 
 	// Blacklist
 	for _, ip := range u.blacklist {
 		if ip.CheckIPInSubnet(remoteIP) {
-			Logger.Println(remoteIP + " is in blacklisted")
+			LoggerDEBUG.Println(remoteIP + " is blacklisted")
 			rw.WriteHeader(http.StatusForbidden)
 			return
 		}
@@ -255,7 +268,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Whitelist
 	for _, ip := range u.whitelist {
 		if ip.CheckIPInSubnet(remoteIP) {
-			Logger.Println(remoteIP + " is in whitelisted")
+			LoggerDEBUG.Println(remoteIP + " is whitelisted")
 			u.next.ServeHTTP(rw, req)
 			return
 		}
@@ -268,7 +281,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	for _, reg := range u.rules.urlregexpBan {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
-			Logger.Printf("Url ('%s') was matched by regexpBan: '%s' for '%s'", url, reg, req.Host)
+			LoggerDEBUG.Printf("Url ('%s') was matched by regexpBan: '%s' for '%s'", url, reg, req.Host)
 			rw.WriteHeader(http.StatusForbidden)
 			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
 			return
@@ -278,7 +291,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Urlregexp allow
 	for _, reg := range u.rules.urlregexpAllow {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
-			Logger.Printf("Url ('%s') was matched by regexpAllow: '%s' for '%s'", url, reg, req.Host)
+			LoggerDEBUG.Printf("Url ('%s') was matched by regexpAllow: '%s' for '%s'", url, reg, req.Host)
 			u.next.ServeHTTP(rw, req)
 			return
 		}
@@ -286,27 +299,31 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Fail2Ban
 	if reflect.DeepEqual(ip, IPViewed{}) {
+		LoggerDEBUG.Printf("welcome %s", remoteIP)
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
 	} else {
 		if ip.blacklisted {
 			if time.Now().Before(ip.viewed.Add(u.rules.bantime)) {
 				ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
-				Logger.Println(remoteIP + " is in blacklist mode")
+				LoggerDEBUG.Printf("%s is still banned since %s, %d request",
+					remoteIP, ip.viewed.Format(time.RFC3339), ip.nb+1)
 				rw.WriteHeader(http.StatusForbidden)
 				return
 			}
 			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
-			Logger.Println(remoteIP + " is now back in whitelist mode")
+			LoggerDEBUG.Println(remoteIP + " is no longer banned")
 		} else if time.Now().Before(ip.viewed.Add(u.rules.findtime)) {
 			if ip.nb+1 >= u.rules.maxretry {
 				ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
-				Logger.Println(remoteIP + " is in blacklist mode")
+				LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
 				rw.WriteHeader(http.StatusForbidden)
 				return
 			}
 			ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, false}
+			LoggerDEBUG.Printf("welcome back %s for the %d time", remoteIP, ip.nb+1)
 		} else {
 			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+			LoggerDEBUG.Printf("welcome back %s", remoteIP)
 		}
 	}
 	u.next.ServeHTTP(rw, req)

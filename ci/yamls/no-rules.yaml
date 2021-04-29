@@ -20,6 +20,7 @@ http:
     fail2ban:
       plugin:
         dev:
+          logLevel: "DEBUG"
           rules:
             urlregexps:
               - regexp: "/blocked"
