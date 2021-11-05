@@ -22,7 +22,6 @@ func TestTransformRules(t *testing.T) {
 			send: Rules{
 				Bantime:  "300s",
 				Findtime: "120s",
-				Ports:    "0:80",
 				Enabled:  true,
 			},
 			expect: RulesTransformed{},
