@@ -67,15 +67,13 @@ INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
 INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
 INFO: Fail2Ban: restricted.go:51: Bantime: 3h0m0s
 INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
-INFO: Fail2Ban: restricted.go:51: Ports range from 0 to 8000
-INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
+INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true}'
 INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
 INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
 INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
 INFO: Fail2Ban: restricted.go:51: Bantime: 3h0m0s
 INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
-INFO: Fail2Ban: restricted.go:51: Ports range from 0 to 8000
-INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
+INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true}'
 INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
 ```
 
@@ -90,8 +88,7 @@ INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
 INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
 INFO: Fail2Ban: restricted.go:51: Bantime: 3s
 INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
-INFO: Fail2Ban: restricted.go:51: Ports range from 0 to 8000
-INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true Xports:[0 8000]}'
+INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true}'
 INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
 DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
 DEBUG: Fail2Ban: restricted.go:51: welcome ::1
@@ -125,7 +122,6 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
-    ports: "80:443"
 ```
 
 Where:
@@ -137,7 +133,6 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
  - `urlregexp`: a regexp list to block / allow requests with regexps on the url
- - `ports`: filter requests by port range
  - `logLevel`: is used to show the correct level of logs (`DEBUG`, `INFO`,
 `NONE`)
 
@@ -157,7 +152,6 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
-    ports: "80:443"
 ```
 
 By default, fail2ban will be applied.
@@ -176,7 +170,6 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
-    ports: "80:443"
 ```
 
 In the case where you define multiple regexp on the same url, the order of

@@ -10,7 +10,6 @@ import (
 	"os"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -41,28 +40,11 @@ var (
 
 // Rules struct fail2ban config
 type Rules struct {
-	// Ignorecommand     string        `yaml:"igonecommand"`
 	Bantime    string      `yaml:"bantime"`  // exprimate in a smart way: 3m
+	Enabled    bool        `yaml:"enabled"`  // enable or disable the jail
 	Findtime   string      `yaml:"findtime"` // exprimate in a smart way: 3m
 	Maxretry   int         `yaml:"maxretry"`
 	Urlregexps []Urlregexp `yaml:"urlregexps"`
-	// Backend           string        `yaml:"backend"`     //maybe we have to change this to another things or just delete it if its useless
-	// Usedns            string        `yaml:"usedns"`      //maybe change string by a int for limit the size (yes:0, warn:1, no:2, raw:3)
-	// Logencoding       string        `yaml:"logencoding"` //maybe useless for our project (utf-8, ascii)
-	Enabled bool `yaml:"enabled"` // enable or disable the jail
-	// Mode              string        `yaml:"mode"`        //same than usedns
-	// Filter            string        `yaml:"filter"`      //= %(name)s[mode=%(mode)s] maybe change for a []string
-	// Destemail         string        `yaml:"destemail"`
-	// Sender            string        `yaml:"sender"`
-	// Mta               string        `yaml:"mta"`      //same than usedns
-	// Protocol          string        `yaml:"protocol"` //maybe int (tcp:0, udp:1)
-	// Chain             string        `yaml:"chain"`    //maybe useless because handle by traefik chain
-	Ports string `yaml:"ports"`
-	// Fail2banAgent     string        `yaml:"fail2ban_agent"`
-	// Banaction         string        `yaml:"banaction"`          //maybe useless because we are the firewall ?
-	// BanactionAllports string        `yaml:"banaction_allports"` //same as above
-	// ActionAbuseipdb   string        `yaml:"action_abuseipdb"`
-	// Action            string        `yaml:"action"` //maybe change for []string
 }
 
 // List struct
@@ -98,7 +80,6 @@ type RulesTransformed struct {
 	urlregexpBan   []string
 	maxretry       int
 	enabled        bool
-	ports          [2]int
 }
 
 // TransformRule morph a Rules object into a RulesTransformed
@@ -114,23 +95,6 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		return RulesTransformed{}, err
 	}
 	LoggerINFO.Printf("Findtime: %s", findtime)
-
-	ports := strings.Split(r.Ports, ":")
-	if len(ports) != 2 {
-		return RulesTransformed{},
-			fmt.Errorf(`could not parse Ports, bad format (hint: use something like "80:443" to filter all ports from 80 to 443)`)
-	}
-
-	portStart, err := strconv.Atoi(ports[0])
-	if err != nil {
-		return RulesTransformed{}, err
-	}
-
-	portEnd, err := strconv.Atoi(ports[1])
-	if err != nil {
-		return RulesTransformed{}, err
-	}
-	LoggerINFO.Printf("Ports range from %d to %d", portStart, portEnd)
 
 	var regexpAllow []string
 	var regexpBan []string
@@ -154,7 +118,6 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		urlregexpBan:   regexpBan,
 		maxretry:       r.Maxretry,
 		enabled:        r.Enabled,
-		ports:          [2]int{portStart, portEnd},
 	}
 	LoggerINFO.Printf("FailToBan Rules : '%+v'", rules)
 	return rules, nil

@@ -33,24 +33,7 @@ http:
                 mode: block
               - regexp: "/yes"
                 mode: allow
-            ignorecommand: ""
             bantime: "3h"
+            enabled: true
             findtime: "3h"
             maxretry: 4
-            backend: ""
-            usedns: ""
-            logencoding: "UTF-8"
-            enabled: true
-            mode: ""
-            filter: ""
-            destemail: ""
-            sender: ""
-            mta: ""
-            protocol: ""
-            chain: ""
-            ports: "0:8000"
-            fail2banAgent: ""
-            banaction: ""
-            banactionAllports: ""
-            actionAbuseipdb: ""
-            action: ""
