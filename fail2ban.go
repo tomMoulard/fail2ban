@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tommoulard/fail2ban/files"
-	"github.com/tommoulard/fail2ban/ipchecking"
+	"github.com/tomMoulard/fail2ban/files"
+	"github.com/tomMoulard/fail2ban/ipchecking"
 )
 
 // IPViewed struct

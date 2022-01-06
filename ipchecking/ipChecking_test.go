@@ -3,7 +3,7 @@ package ipchecking_test
 import (
 	"testing"
 
-	ipchecking "github.com/tommoulard/fail2ban/ipchecking"
+	ipchecking "github.com/tomMoulard/fail2ban/ipchecking"
 )
 
 func TestIPv4Generation(t *testing.T) {

@@ -1,3 +1,3 @@
-module github.com/tommoulard/fail2ban
+module github.com/tomMoulard/fail2ban
 
 go 1.15
