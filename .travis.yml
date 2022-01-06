@@ -33,7 +33,7 @@ jobs:
       go: 1.15.x
       env: STABLE=true
       script: ./ci/scripts/e2e.sh
-      go_import_path: github.com/tommoulard/fail2ban
+      go_import_path: github.com/tomMoulard/fail2ban
 
   allow_failures:
     - go: tip
