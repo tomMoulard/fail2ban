@@ -1,7 +1,7 @@
 displayName: Fail2Ban
 type: middleware
 
-import: github.com/tommoulard/fail2ban
+import: github.com/tomMoulard/fail2ban
 
 summary: 'Blacklist (or whitelist) IP depending on some conditions'
 
