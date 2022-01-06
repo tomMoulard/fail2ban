@@ -230,7 +230,7 @@ pilot:
 experimental:
   devPlugin:
     goPath: /home/${USER}/go
-    moduleName: github.com/tommoulard/fail2ban
+    moduleName: github.com/tomMoulard/fail2ban
 
 entryPoints:
   http:
