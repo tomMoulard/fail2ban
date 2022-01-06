@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tommoulard/fail2ban/files"
@@ -35,7 +36,9 @@ var (
 	LoggerINFO = log.New(ioutil.Discard, "INFO: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
 	// LoggerDEBUG debug logger
 	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
-	ipViewed    = map[string]IPViewed{}
+
+	muIP     sync.Mutex
+	ipViewed = map[string]IPViewed{}
 )
 
 // Rules struct fail2ban config
@@ -238,6 +241,8 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Urlregexp ban
+	muIP.Lock()
+	defer muIP.Unlock()
 	ip := ipViewed[remoteIP]
 	url := req.URL.String()
 	urlBytes := []byte(url)
