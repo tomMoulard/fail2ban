@@ -215,7 +215,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		u.next.ServeHTTP(rw, req)
 		return
 	}
-	HandleRequest(rw, req);
+	HandleRequest(rw, req)
 	
 	u.next.ServeHTTP(rw, req)
 }
