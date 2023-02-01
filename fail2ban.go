@@ -215,7 +215,12 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		u.next.ServeHTTP(rw, req)
 		return
 	}
+	HandleRequest(rw, req);
+	
+	u.next.ServeHTTP(rw, req)
+}
 
+func (u *Fail2Ban) HandleRequest(rw http.ResponseWriter, req *http.Request) {
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
 		LoggerDEBUG.Println(remoteIP + " is not a valid IP or a IP/NET")
@@ -294,5 +299,4 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			LoggerDEBUG.Printf("welcome back %s", remoteIP)
 		}
 	}
-	u.next.ServeHTTP(rw, req)
 }
