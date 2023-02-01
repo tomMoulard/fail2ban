@@ -211,12 +211,10 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	LoggerDEBUG.Printf("New request: %v", req)
 
-	if !u.rules.enabled {
-		u.next.ServeHTTP(rw, req)
-		return
+	if u.rules.enabled {
+		HandleRequest(rw, req)
 	}
-	HandleRequest(rw, req)
-	
+
 	u.next.ServeHTTP(rw, req)
 }
 
