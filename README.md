@@ -17,8 +17,8 @@ metadata:
 spec:
   plugin:
     fail2ban:
+      logLevel: DEBUG
       blacklist:
-        logLevel: DEBUG
         ip: 127.0.0.1
 ```
 
