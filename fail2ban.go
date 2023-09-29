@@ -166,6 +166,12 @@ func ImportIP(list List) ([]string, error) {
 // New instantiates and returns the required components used to handle a HTTP
 // request.
 func New(_ context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+	if !config.Rules.Enabled {
+		LoggerINFO.Println("Plugin: FailToBan is disabled")
+
+		return next, nil
+	}
+
 	switch config.LogLevel {
 	case "INFO":
 		LoggerINFO.SetOutput(os.Stdout)
@@ -222,12 +228,6 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 // configuration and return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	LoggerDEBUG.Printf("New request: %v", req)
-
-	if !u.rules.Enabled {
-		u.next.ServeHTTP(rw, req)
-
-		return
-	}
 
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
