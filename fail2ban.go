@@ -91,19 +91,23 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	if err != nil {
 		return RulesTransformed{}, fmt.Errorf("failed to parse bantime duration: %w", err)
 	}
+
 	LoggerINFO.Printf("Bantime: %s", bantime)
 
 	findtime, err := time.ParseDuration(r.Findtime)
 	if err != nil {
 		return RulesTransformed{}, fmt.Errorf("failed to parse findtime duration: %w", err)
 	}
+
 	LoggerINFO.Printf("Findtime: %s", findtime)
 
 	var regexpAllow []string
+
 	var regexpBan []string
 
 	for _, rg := range r.Urlregexps {
 		LoggerINFO.Printf("using mode %s for rule %q", rg.Mode, rg.Regexp)
+
 		switch rg.Mode {
 		case "allow":
 			regexpAllow = append(regexpAllow, rg.Regexp)
@@ -140,6 +144,7 @@ type Fail2Ban struct {
 // ImportIP extract all ip from config sources
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
+
 	for _, ip := range list.Files {
 		content, err := files.GetFileContent(ip)
 		if err != nil {
@@ -151,6 +156,7 @@ func ImportIP(list List) ([]string, error) {
 			rlist = rlist[:len(rlist)-1]
 		}
 	}
+
 	rlist = append(rlist, list.IP...)
 
 	return rlist, nil
@@ -251,6 +257,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Urlregexp ban
 	muIP.Lock()
 	defer muIP.Unlock()
+
 	ip := ipViewed[remoteIP]
 	url := req.URL.String()
 	urlBytes := []byte(url)
@@ -259,6 +266,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
 			LoggerDEBUG.Printf("Url ('%s') was matched by regexpBan: '%s' for '%s'", url, reg, req.Host)
 			rw.WriteHeader(http.StatusForbidden)
+
 			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
 
 			return
@@ -278,6 +286,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Fail2Ban
 	if reflect.DeepEqual(ip, IPViewed{}) {
 		LoggerDEBUG.Printf("welcome %s", remoteIP)
+
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
 	} else {
 		if ip.blacklisted {

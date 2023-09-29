@@ -21,6 +21,7 @@ type IP struct {
 // StrToIP convert ip string array to ip struct array
 func StrToIP(iplist []string) ([]IP, error) {
 	rlist := []IP{}
+
 	for _, v := range iplist {
 		ip, err := BuildIP(v)
 		if err != nil {
@@ -28,6 +29,7 @@ func StrToIP(iplist []string) ([]IP, error) {
 
 			continue
 		}
+
 		rlist = append(rlist, ip)
 	}
 
@@ -41,6 +43,7 @@ func isIPv4(ip string) bool {
 // BuildIP Parse a string to extract the IP
 func BuildIP(ip string) (IP, error) {
 	var res IP
+
 	var err error
 
 	tmpSubnet := strings.Split(ip, "/")
@@ -51,18 +54,21 @@ func BuildIP(ip string) (IP, error) {
 
 			return res, fmt.Errorf("%s is not a valid IP or IP/Net", ip)
 		}
+
 		if isIPv4(ip) {
 			ip = ip + "/32"
 		} else {
 			ip = ip + "/128"
 		}
 	}
+
 	_, ipNet, err := net.ParseCIDR(ip)
 	if err != nil {
 		Logger.Printf("%e", err)
 
 		return res, fmt.Errorf("failed to parse CIDR: %w", err)
 	}
+
 	res.Net = ipNet
 
 	return res, nil

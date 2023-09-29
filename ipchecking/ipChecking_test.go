@@ -142,18 +142,22 @@ func TestIPv6Generation(t *testing.T) {
 
 func TestIPv4Checking(t *testing.T) {
 	t.Parallel()
+
 	ip, err := ipchecking.BuildIP("127.0.0.1")
 	if err != nil {
 		t.Errorf("Error in IPv4 building: %s, with err %v", "127.0.0.1", err)
 	}
+
 	ip2, err := ipchecking.BuildIP("127.0.0.2")
 	if err != nil {
 		t.Errorf("Error in IPv4 building: %s, with err %v", "127.0.0.1", err)
 	}
+
 	cidr1, err := ipchecking.BuildIP("127.0.0.1/24")
 	if err != nil {
 		t.Errorf("Error in IPv4 building: %s, with err %v", "127.0.0.1", err)
 	}
+
 	cidr2, err := ipchecking.BuildIP("127.0.1.1/24")
 	if err != nil {
 		t.Errorf("Error in IPv4 building: %s, with err %v", "127.0.0.1", err)
@@ -205,18 +209,22 @@ func TestIPv4Checking(t *testing.T) {
 
 func TestIPv6Checking(t *testing.T) {
 	t.Parallel()
+
 	ip, err := ipchecking.BuildIP("::1")
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "::1", err)
 	}
+
 	ip2, err := ipchecking.BuildIP("::2")
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "::1", err)
 	}
+
 	cidr1, err := ipchecking.BuildIP("::1/124")
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "::1/24", err)
 	}
+
 	cidr2, err := ipchecking.BuildIP("::1:1/124")
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "::1:1/24", err)
@@ -273,6 +281,7 @@ func TestIPv4toString(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "127.0.0.1", err)
 	}
+
 	tests := []struct {
 		name     string
 		testedIP string
@@ -313,6 +322,7 @@ func TestIPv6toString(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "::1", err)
 	}
+
 	tests := []struct {
 		name     string
 		testedIP string
