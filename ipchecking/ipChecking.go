@@ -25,10 +25,12 @@ func StrToIP(iplist []string) ([]IP, error) {
 		ip, err := BuildIP(v)
 		if err != nil {
 			Logger.Printf("Error: %s not valid", v)
+
 			continue
 		}
 		rlist = append(rlist, ip)
 	}
+
 	return rlist, nil
 }
 
@@ -46,6 +48,7 @@ func BuildIP(ip string) (IP, error) {
 		tempIP := net.ParseIP(ip)
 		if tempIP == nil {
 			Logger.Printf("%s is not a valid IP or IP/Net", ip)
+
 			return res, fmt.Errorf("%s is not a valid IP or IP/Net", ip)
 		}
 		if isIPv4(ip) {
@@ -57,9 +60,11 @@ func BuildIP(ip string) (IP, error) {
 	_, ipNet, err := net.ParseCIDR(ip)
 	if err != nil {
 		Logger.Printf("%e", err)
+
 		return res, err
 	}
 	res.Net = ipNet
+
 	return res, nil
 }
 

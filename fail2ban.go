@@ -122,7 +122,9 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		maxretry:       r.Maxretry,
 		enabled:        r.Enabled,
 	}
+
 	LoggerINFO.Printf("FailToBan Rules : '%+v'", rules)
+
 	return rules, nil
 }
 
@@ -143,6 +145,7 @@ func ImportIP(list List) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		rlist = append(rlist, strings.Split(content, "\n")...)
 		if len(rlist) > 1 {
 			rlist = rlist[:len(rlist)-1]
@@ -197,6 +200,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	LoggerINFO.Println("Plugin: FailToBan is up and running")
+
 	return &Fail2Ban{
 		next:      next,
 		name:      name,
@@ -213,12 +217,14 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	if !u.rules.enabled {
 		u.next.ServeHTTP(rw, req)
+
 		return
 	}
 
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
 		LoggerDEBUG.Println(remoteIP + " is not a valid IP or a IP/NET")
+
 		return
 	}
 
@@ -227,6 +233,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if ip.CheckIPInSubnet(remoteIP) {
 			LoggerDEBUG.Println(remoteIP + " is blacklisted")
 			rw.WriteHeader(http.StatusForbidden)
+
 			return
 		}
 	}
@@ -236,6 +243,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if ip.CheckIPInSubnet(remoteIP) {
 			LoggerDEBUG.Println(remoteIP + " is whitelisted")
 			u.next.ServeHTTP(rw, req)
+
 			return
 		}
 	}
@@ -252,6 +260,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			LoggerDEBUG.Printf("Url ('%s') was matched by regexpBan: '%s' for '%s'", url, reg, req.Host)
 			rw.WriteHeader(http.StatusForbidden)
 			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
+
 			return
 		}
 	}
@@ -261,6 +270,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
 			LoggerDEBUG.Printf("Url ('%s') was matched by regexpAllow: '%s' for '%s'", url, reg, req.Host)
 			u.next.ServeHTTP(rw, req)
+
 			return
 		}
 	}
@@ -276,6 +286,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				LoggerDEBUG.Printf("%s is still banned since %s, %d request",
 					remoteIP, ip.viewed.Format(time.RFC3339), ip.nb+1)
 				rw.WriteHeader(http.StatusForbidden)
+
 				return
 			}
 			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
@@ -285,6 +296,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 				ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
 				LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
 				rw.WriteHeader(http.StatusForbidden)
+
 				return
 			}
 			ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, false}
@@ -294,5 +306,6 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 			LoggerDEBUG.Printf("welcome back %s", remoteIP)
 		}
 	}
+
 	u.next.ServeHTTP(rw, req)
 }

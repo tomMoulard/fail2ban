@@ -16,5 +16,6 @@ func GetFileContent(fileName string) (string, error) {
 	defer file.Close()
 
 	res, err := ioutil.ReadAll(file)
+
 	return string(res), err
 }

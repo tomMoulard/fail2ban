@@ -29,6 +29,7 @@ func TestGetFileContent(t *testing.T) {
 			text1, err := files.GetFileContent(tt.fileName)
 			if err != nil && err.Error() != tt.err {
 				t.Errorf("GetFileContent() error = %v, wantErr %v", err, tt.err)
+
 				return
 			}
 			if tt.err == "" {
