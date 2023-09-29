@@ -9,10 +9,8 @@ import (
 	"strings"
 )
 
-var (
-	// Logger ip checking logger
-	Logger = log.New(os.Stdout, "IPChecking: ", log.Ldate|log.Ltime|log.Lshortfile)
-)
+// Logger ip checking logger
+var Logger = log.New(os.Stdout, "IPChecking: ", log.Ldate|log.Ltime|log.Lshortfile)
 
 // IP struct that holds an IP Addr
 type IP struct {
