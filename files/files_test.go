@@ -19,7 +19,7 @@ func TestGetFileContent(t *testing.T) {
 		{name: "Open file", fileName: "test-file.txt", err: ""},
 		{name: "file do not exist",
 			fileName: "test-file-2.txt",
-			err:      "open test-file-2.txt: no such file or directory"},
+			err:      "Error opening file: open test-file-2.txt: no such file or directory"},
 	}
 	for _, tt := range tests {
 		tt := tt

@@ -89,13 +89,13 @@ type RulesTransformed struct {
 func TransformRule(r Rules) (RulesTransformed, error) {
 	bantime, err := time.ParseDuration(r.Bantime)
 	if err != nil {
-		return RulesTransformed{}, err
+		return RulesTransformed{}, fmt.Errorf("failed to parse bantime duration: %w", err)
 	}
 	LoggerINFO.Printf("Bantime: %s", bantime)
 
 	findtime, err := time.ParseDuration(r.Findtime)
 	if err != nil {
-		return RulesTransformed{}, err
+		return RulesTransformed{}, fmt.Errorf("failed to parse findtime duration: %w", err)
 	}
 	LoggerINFO.Printf("Findtime: %s", findtime)
 
@@ -143,7 +143,7 @@ func ImportIP(list List) ([]string, error) {
 	for _, ip := range list.Files {
 		content, err := files.GetFileContent(ip)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error when getting file content: %w", err)
 		}
 
 		rlist = append(rlist, strings.Split(content, "\n")...)
@@ -173,7 +173,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	whitelist, err := ipchecking.StrToIP(whiteips)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
 	}
 
 	for _, whiteip := range whitelist {
@@ -187,7 +187,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	blacklist, err := ipchecking.StrToIP(blackips) // Do not mistake with Black Eyed Peas
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
 	}
 
 	for _, blackip := range blacklist {

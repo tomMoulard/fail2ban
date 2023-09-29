@@ -1,6 +1,7 @@
 package files
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 )
@@ -11,7 +12,7 @@ func GetFileContent(fileName string) (string, error) {
 	// Opening the file.
 	file, err := os.Open(fileName) // O_RDONLY mode
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error opening file: %w", err)
 	}
 	defer file.Close()
 

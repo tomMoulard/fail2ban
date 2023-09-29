@@ -61,7 +61,7 @@ func BuildIP(ip string) (IP, error) {
 	if err != nil {
 		Logger.Printf("%e", err)
 
-		return res, err
+		return res, fmt.Errorf("failed to parse CIDR: %w", err)
 	}
 	res.Net = ipNet
 
