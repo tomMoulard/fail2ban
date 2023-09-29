@@ -1,7 +1,7 @@
 package files_test
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -41,7 +41,7 @@ func TestGetFileContent(t *testing.T) {
 				}
 				defer func() { _ = file.Close() }()
 
-				text, err := ioutil.ReadAll(file)
+				text, err := io.ReadAll(file)
 				if err != nil {
 					t.Error(err)
 				}

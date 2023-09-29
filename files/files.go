@@ -3,7 +3,7 @@ package files
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -19,7 +19,7 @@ func GetFileContent(fileName string) (string, error) {
 
 	defer func() { _ = file.Close() }()
 
-	res, err := ioutil.ReadAll(file)
+	res, err := io.ReadAll(file)
 
 	return string(res), err
 }
