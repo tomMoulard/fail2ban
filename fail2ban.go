@@ -3,7 +3,7 @@ package fail2ban
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -33,9 +33,9 @@ type Urlregexp struct {
 
 var (
 	// LoggerINFO Main logger
-	LoggerINFO = log.New(ioutil.Discard, "INFO: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
+	LoggerINFO = log.New(io.Discard, "INFO: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
 	// LoggerDEBUG debug logger
-	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
+	LoggerDEBUG = log.New(io.Discard, "DEBUG: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	muIP     sync.Mutex
 	ipViewed = map[string]IPViewed{}
