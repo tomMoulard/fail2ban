@@ -6,11 +6,15 @@ import (
 )
 
 func TestDummy(t *testing.T) {
+	t.Parallel()
+
 	cfg := CreateConfig()
 	t.Log(cfg)
 }
 
 func TestTransformRules(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
 		send   Rules
@@ -28,7 +32,10 @@ func TestTransformRules(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, e := TransformRule(tt.send)
 			if e != nil && (tt.err == nil || e.Error() != tt.err.Error()) {
 				t.Errorf("TransformRule_err: wanted '%s' got '%s'",
@@ -43,6 +50,8 @@ func TestTransformRules(t *testing.T) {
 }
 
 func TestImportIP(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		list    List
@@ -110,7 +119,10 @@ func TestImportIP(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, e := ImportIP(tt.list)
 			t.Logf("%+v", got)
 			if e != nil && e.Error() != tt.err.Error() {

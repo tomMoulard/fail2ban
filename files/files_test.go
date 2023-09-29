@@ -9,6 +9,8 @@ import (
 )
 
 func TestGetFileContent(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		fileName string
@@ -20,7 +22,10 @@ func TestGetFileContent(t *testing.T) {
 			err:      "open test-file-2.txt: no such file or directory"},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			text1, err := files.GetFileContent(tt.fileName)
 			if err != nil && err.Error() != tt.err {
 				t.Errorf("GetFileContent() error = %v, wantErr %v", err, tt.err)

@@ -7,6 +7,8 @@ import (
 )
 
 func TestIPv4Generation(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		stringIP string
@@ -60,7 +62,9 @@ func TestIPv4Generation(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			_, err := ipchecking.BuildIP(tt.stringIP)
 			if (err != nil) == tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, (err == nil))
@@ -70,6 +74,8 @@ func TestIPv4Generation(t *testing.T) {
 }
 
 func TestIPv6Generation(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		stringIP string
@@ -123,7 +129,9 @@ func TestIPv6Generation(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			_, err := ipchecking.BuildIP(tt.stringIP)
 			if (err != nil) == tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, (err == nil))
@@ -133,6 +141,7 @@ func TestIPv6Generation(t *testing.T) {
 }
 
 func TestIPv4Checking(t *testing.T) {
+	t.Parallel()
 	ip, err := ipchecking.BuildIP("127.0.0.1")
 	if err != nil {
 		t.Errorf("Error in IPv4 building: %s, with err %v", "127.0.0.1", err)
@@ -183,7 +192,9 @@ func TestIPv4Checking(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			r := tt.testedIP.CheckIPInSubnet(tt.stringIP)
 			if r != tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, r)
@@ -193,6 +204,7 @@ func TestIPv4Checking(t *testing.T) {
 }
 
 func TestIPv6Checking(t *testing.T) {
+	t.Parallel()
 	ip, err := ipchecking.BuildIP("::1")
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "::1", err)
@@ -243,7 +255,9 @@ func TestIPv6Checking(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			r := tt.testedIP.CheckIPInSubnet(tt.stringIP)
 			if r != tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, r)
@@ -252,21 +266,9 @@ func TestIPv6Checking(t *testing.T) {
 	}
 }
 
-func TestStrToIP(t *testing.T) {
-	tests := []struct {
-		name string
-	}{
-		{
-			name: "dummy",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-		})
-	}
-}
-
 func TestIPv4toString(t *testing.T) {
+	t.Parallel()
+
 	ip, err := ipchecking.BuildIP("127.0.0.1")
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "127.0.0.1", err)
@@ -292,7 +294,10 @@ func TestIPv4toString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			r := tt.stringIp.ToString()
 			if (r == tt.testedIP) != tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, r == tt.testedIP)
@@ -302,6 +307,8 @@ func TestIPv4toString(t *testing.T) {
 }
 
 func TestIPv6toString(t *testing.T) {
+	t.Parallel()
+
 	ip, err := ipchecking.BuildIP("::1")
 	if err != nil {
 		t.Errorf("Error in IP building: %s, with err %v", "::1", err)
@@ -327,7 +334,10 @@ func TestIPv6toString(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			r := tt.stringIp.ToString()
 			if (r == tt.testedIP) != tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, r == tt.testedIP)
