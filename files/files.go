@@ -11,7 +11,7 @@ import (
 // content of the file as a string.
 func GetFileContent(fileName string) (string, error) {
 	// Opening the file.
-	file, err := os.Open(fileName) // O_RDONLY mode
+	file, err := os.Open(filepath.Clean(fileName)) // O_RDONLY mode
 	if err != nil {
 		return "", fmt.Errorf("Error opening file: %w", err)
 	}
