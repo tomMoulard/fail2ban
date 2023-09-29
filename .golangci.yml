@@ -11,3 +11,66 @@ linters:
     - scopelint # deprecated
     - structcheck # deprecated
     - varcheck # deprecated
+    - varnamelen # Not relevant
+    - lll # not relevant
+    - exhaustruct # Not relevant
+    - goerr113 # Too strict
+    - gochecknoglobals
+
+linters-settings:
+  misspell:
+    locale: US
+  funlen:
+    lines: -1
+  depguard:
+    rules:
+      main:
+        allow:
+          - $gostd
+          - github.com/tomMoulard/fail2ban
+  godox:
+    keywords:
+      - FIXME
+  revive:
+    rules:
+      - name: struct-tag
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+        disabled: true
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+        disabled: true
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unused-parameter
+        disabled: true
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    - path: '(.+)_test.go'
+      linters:
+        - funlen
+    - path: 'fail2ban.go'
+      text: 'Function ''ServeHTTP'' has too many statements'
+    - path: 'fail2ban.go'
+      text: 'calculated cyclomatic complexity for function ServeHTTP'
