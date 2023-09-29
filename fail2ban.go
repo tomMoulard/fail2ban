@@ -190,10 +190,6 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
 	}
 
-	for _, whiteip := range whitelist {
-		LoggerINFO.Printf("Whitelisted: '%s'", whiteip.ToString())
-	}
-
 	blackips, err := ImportIP(config.Blacklist)
 	if err != nil {
 		return nil, err
@@ -202,10 +198,6 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 	blacklist, err := ipchecking.StrToIP(blackips) // Do not mistake with Black Eyed Peas
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
-	}
-
-	for _, blackip := range blacklist {
-		LoggerINFO.Printf("Blacklisted: '%s'", blackip.ToString())
 	}
 
 	rules, err := TransformRule(config.Rules)
