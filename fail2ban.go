@@ -204,7 +204,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 
 	rules, err := TransformRule(config.Rules)
 	if err != nil {
-		return nil, fmt.Errorf("error when Transforming rules: %+v", err)
+		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
 	LoggerINFO.Println("Plugin: FailToBan is up and running")
