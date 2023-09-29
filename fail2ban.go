@@ -78,12 +78,12 @@ func CreateConfig() *Config {
 
 // RulesTransformed transformed Rules struct.
 type RulesTransformed struct {
-	bantime        time.Duration
-	findtime       time.Duration
-	urlregexpAllow []string
-	urlregexpBan   []string
-	maxretry       int
-	enabled        bool
+	Bantime        time.Duration
+	Findtime       time.Duration
+	URLRegexpAllow []string
+	URLRegexpBan   []string
+	MaxRetry       int
+	Enabled        bool
 }
 
 // TransformRule morph a Rules object into a RulesTransformed.
@@ -120,12 +120,12 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	}
 
 	rules := RulesTransformed{
-		bantime:        bantime,
-		findtime:       findtime,
-		urlregexpAllow: regexpAllow,
-		urlregexpBan:   regexpBan,
-		maxretry:       r.Maxretry,
-		enabled:        r.Enabled,
+		Bantime:        bantime,
+		Findtime:       findtime,
+		URLRegexpAllow: regexpAllow,
+		URLRegexpBan:   regexpBan,
+		MaxRetry:       r.Maxretry,
+		Enabled:        r.Enabled,
 	}
 
 	LoggerINFO.Printf("FailToBan Rules : '%+v'", rules)
@@ -223,7 +223,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	LoggerDEBUG.Printf("New request: %v", req)
 
-	if !u.rules.enabled {
+	if !u.rules.Enabled {
 		u.next.ServeHTTP(rw, req)
 
 		return
@@ -264,7 +264,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	url := req.URL.String()
 	urlBytes := []byte(url)
 
-	for _, reg := range u.rules.urlregexpBan {
+	for _, reg := range u.rules.URLRegexpBan {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
 			LoggerDEBUG.Printf("Url ('%s') was matched by regexpBan: '%s' for '%s'", url, reg, req.Host)
 			rw.WriteHeader(http.StatusForbidden)
@@ -276,7 +276,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Urlregexp allow
-	for _, reg := range u.rules.urlregexpAllow {
+	for _, reg := range u.rules.URLRegexpAllow {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
 			LoggerDEBUG.Printf("Url ('%s') was matched by regexpAllow: '%s' for '%s'", url, reg, req.Host)
 			u.next.ServeHTTP(rw, req)
@@ -298,7 +298,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	switch {
 	case ip.blacklisted:
-		if time.Now().Before(ip.viewed.Add(u.rules.bantime)) {
+		if time.Now().Before(ip.viewed.Add(u.rules.Bantime)) {
 			ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
 			LoggerDEBUG.Printf("%s is still banned since %s, %d request",
 				remoteIP, ip.viewed.Format(time.RFC3339), ip.nb+1)
@@ -311,8 +311,8 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 		LoggerDEBUG.Println(remoteIP + " is no longer banned")
 
-	case time.Now().Before(ip.viewed.Add(u.rules.findtime)):
-		if ip.nb+1 >= u.rules.maxretry {
+	case time.Now().Before(ip.viewed.Add(u.rules.Findtime)):
+		if ip.nb+1 >= u.rules.MaxRetry {
 			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
 
 			LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
