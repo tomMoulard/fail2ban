@@ -39,7 +39,7 @@ func TestGetFileContent(t *testing.T) {
 				if err != nil {
 					t.Error(err)
 				}
-				defer file.Close()
+				defer func() { _ = file.Close() }()
 
 				text, err := ioutil.ReadAll(file)
 				if err != nil {
