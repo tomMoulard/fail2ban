@@ -218,8 +218,8 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 	}, nil
 }
 
-// Iterate over every headers to match the ones specified in the config and
-// return nothing if regexp failed.
+// ServeHTTP iterates over every headers to match the ones specified in the
+// configuration and return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	LoggerDEBUG.Printf("New request: %v", req)
 

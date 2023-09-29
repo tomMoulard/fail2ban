@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 // GetFileContent read the file(with the path of the input) and return the
@@ -13,7 +14,7 @@ func GetFileContent(fileName string) (string, error) {
 	// Opening the file.
 	file, err := os.Open(filepath.Clean(fileName)) // O_RDONLY mode
 	if err != nil {
-		return "", fmt.Errorf("Error opening file: %w", err)
+		return "", fmt.Errorf("error opening file: %w", err)
 	}
 
 	defer func() { _ = file.Close() }()
