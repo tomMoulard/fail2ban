@@ -19,30 +19,30 @@ import (
 	"github.com/tomMoulard/fail2ban/ipchecking"
 )
 
-// IPViewed struct
+// IPViewed struct.
 type IPViewed struct {
 	viewed      time.Time
 	nb          int
 	blacklisted bool
 }
 
-// Urlregexp struct
+// Urlregexp struct.
 type Urlregexp struct {
 	Regexp string `yaml:"regexp"`
 	Mode   string `yaml:"mode"`
 }
 
 var (
-	// LoggerINFO Main logger
+	// LoggerINFO Main logger.
 	LoggerINFO = log.New(io.Discard, "INFO: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
-	// LoggerDEBUG debug logger
+	// LoggerDEBUG debug logger.
 	LoggerDEBUG = log.New(io.Discard, "DEBUG: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	muIP     sync.Mutex
 	ipViewed = map[string]IPViewed{}
 )
 
-// Rules struct fail2ban config
+// Rules struct fail2ban config.
 type Rules struct {
 	Bantime    string      `yaml:"bantime"`  // exprimate in a smart way: 3m
 	Enabled    bool        `yaml:"enabled"`  // enable or disable the jail
@@ -51,13 +51,13 @@ type Rules struct {
 	Urlregexps []Urlregexp `yaml:"urlregexps"`
 }
 
-// List struct
+// List struct.
 type List struct {
 	IP    []string
 	Files []string
 }
 
-// Config struct
+// Config struct.
 type Config struct {
 	Blacklist List   `yaml:"blacklist"`
 	Whitelist List   `yaml:"whitelist"`
@@ -65,7 +65,7 @@ type Config struct {
 	LogLevel  string `yaml:"loglevel"`
 }
 
-// CreateConfig populates the Config data object
+// CreateConfig populates the Config data object.
 func CreateConfig() *Config {
 	return &Config{
 		Rules: Rules{
@@ -76,7 +76,7 @@ func CreateConfig() *Config {
 	}
 }
 
-// RulesTransformed transformed Rules struct
+// RulesTransformed transformed Rules struct.
 type RulesTransformed struct {
 	bantime        time.Duration
 	findtime       time.Duration
@@ -86,7 +86,7 @@ type RulesTransformed struct {
 	enabled        bool
 }
 
-// TransformRule morph a Rules object into a RulesTransformed
+// TransformRule morph a Rules object into a RulesTransformed.
 func TransformRule(r Rules) (RulesTransformed, error) {
 	bantime, err := time.ParseDuration(r.Bantime)
 	if err != nil {
@@ -133,7 +133,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	return rules, nil
 }
 
-// Fail2Ban holds the necessary components of a Traefik plugin
+// Fail2Ban holds the necessary components of a Traefik plugin.
 type Fail2Ban struct {
 	next      http.Handler
 	name      string
@@ -142,7 +142,7 @@ type Fail2Ban struct {
 	rules     RulesTransformed
 }
 
-// ImportIP extract all ip from config sources
+// ImportIP extract all ip from config sources.
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
 
@@ -163,7 +163,8 @@ func ImportIP(list List) ([]string, error) {
 	return rlist, nil
 }
 
-// New instantiates and returns the required components used to handle a HTTP request
+// New instantiates and returns the required components used to handle a HTTP
+// request.
 func New(_ context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	switch config.LogLevel {
 	case "INFO":
