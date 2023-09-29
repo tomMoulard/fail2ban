@@ -290,32 +290,36 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		LoggerDEBUG.Printf("welcome %s", remoteIP)
 
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
-	} else {
-		if ip.blacklisted {
-			if time.Now().Before(ip.viewed.Add(u.rules.bantime)) {
-				ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
-				LoggerDEBUG.Printf("%s is still banned since %s, %d request",
-					remoteIP, ip.viewed.Format(time.RFC3339), ip.nb+1)
-				rw.WriteHeader(http.StatusForbidden)
 
-				return
-			}
-			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
-			LoggerDEBUG.Println(remoteIP + " is no longer banned")
-		} else if time.Now().Before(ip.viewed.Add(u.rules.findtime)) {
-			if ip.nb+1 >= u.rules.maxretry {
-				ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
-				LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
-				rw.WriteHeader(http.StatusForbidden)
+		u.next.ServeHTTP(rw, req)
 
-				return
-			}
-			ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, false}
-			LoggerDEBUG.Printf("welcome back %s for the %d time", remoteIP, ip.nb+1)
-		} else {
-			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
-			LoggerDEBUG.Printf("welcome back %s", remoteIP)
+		return
+	}
+
+	if ip.blacklisted {
+		if time.Now().Before(ip.viewed.Add(u.rules.bantime)) {
+			ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
+			LoggerDEBUG.Printf("%s is still banned since %s, %d request",
+				remoteIP, ip.viewed.Format(time.RFC3339), ip.nb+1)
+			rw.WriteHeader(http.StatusForbidden)
+
+			return
 		}
+		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+		LoggerDEBUG.Println(remoteIP + " is no longer banned")
+	} else if time.Now().Before(ip.viewed.Add(u.rules.findtime)) {
+		if ip.nb+1 >= u.rules.maxretry {
+			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
+			LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
+			rw.WriteHeader(http.StatusForbidden)
+
+			return
+		}
+		ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, false}
+		LoggerDEBUG.Printf("welcome back %s for the %d time", remoteIP, ip.nb+1)
+	} else {
+		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+		LoggerDEBUG.Printf("welcome back %s", remoteIP)
 	}
 
 	u.next.ServeHTTP(rw, req)
