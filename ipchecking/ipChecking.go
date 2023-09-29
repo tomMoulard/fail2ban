@@ -55,9 +55,9 @@ func BuildIP(ip string) (IP, error) {
 		}
 
 		if isIPv4(ip) {
-			ip = ip + "/32"
+			ip += "/32"
 		} else {
-			ip = ip + "/128"
+			ip += "/128"
 		}
 	}
 

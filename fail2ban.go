@@ -296,7 +296,8 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if ip.blacklisted {
+	switch {
+	case ip.blacklisted:
 		if time.Now().Before(ip.viewed.Add(u.rules.bantime)) {
 			ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
 			LoggerDEBUG.Printf("%s is still banned since %s, %d request",
@@ -305,20 +306,26 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 			return
 		}
+
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+
 		LoggerDEBUG.Println(remoteIP + " is no longer banned")
-	} else if time.Now().Before(ip.viewed.Add(u.rules.findtime)) {
+
+	case time.Now().Before(ip.viewed.Add(u.rules.findtime)):
 		if ip.nb+1 >= u.rules.maxretry {
 			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
+
 			LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
 			rw.WriteHeader(http.StatusForbidden)
 
 			return
 		}
+
 		ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, false}
 		LoggerDEBUG.Printf("welcome back %s for the %d time", remoteIP, ip.nb+1)
-	} else {
+	default:
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+
 		LoggerDEBUG.Printf("welcome back %s", remoteIP)
 	}
 
