@@ -1,3 +1,4 @@
+// Package ipchecking contains the IP checking mechanism for the plugin.
 package ipchecking
 
 import (

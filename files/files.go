@@ -1,3 +1,4 @@
+// Package files contains the files management for the plugin.
 package files
 
 import (

@@ -1,3 +1,4 @@
+// Package fail2ban contains the Fail2ban mechanism for the plugin.
 package fail2ban
 
 import (
@@ -163,7 +164,7 @@ func ImportIP(list List) ([]string, error) {
 }
 
 // New instantiates and returns the required components used to handle a HTTP request
-func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+func New(_ context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	switch config.LogLevel {
 	case "INFO":
 		LoggerINFO.SetOutput(os.Stdout)

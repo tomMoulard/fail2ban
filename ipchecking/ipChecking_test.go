@@ -285,19 +285,19 @@ func TestIPv4toString(t *testing.T) {
 	tests := []struct {
 		name     string
 		testedIP string
-		stringIp ipchecking.IP
+		stringIP ipchecking.IP
 		res      bool
 	}{
 		{
 			name:     "[IP] Valid IPv4 string",
 			testedIP: "127.0.0.1/32",
-			stringIp: ip,
+			stringIP: ip,
 			res:      true,
 		},
 		{
 			name:     "[IP] Invalid IPv4 string",
 			testedIP: "127.0.0.2/32",
-			stringIp: ip,
+			stringIP: ip,
 			res:      false,
 		},
 	}
@@ -307,7 +307,7 @@ func TestIPv4toString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			r := tt.stringIp.ToString()
+			r := tt.stringIP.ToString()
 			if (r == tt.testedIP) != tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, r == tt.testedIP)
 			}
@@ -326,19 +326,19 @@ func TestIPv6toString(t *testing.T) {
 	tests := []struct {
 		name     string
 		testedIP string
-		stringIp ipchecking.IP
+		stringIP ipchecking.IP
 		res      bool
 	}{
 		{
 			name:     "[IP] Valid IPv6 string",
 			testedIP: "::1/128",
-			stringIp: ip,
+			stringIP: ip,
 			res:      true,
 		},
 		{
 			name:     "[IP] Invalid IPv6 string",
 			testedIP: "::2/128",
-			stringIp: ip,
+			stringIP: ip,
 			res:      false,
 		},
 	}
@@ -348,7 +348,7 @@ func TestIPv6toString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			r := tt.stringIp.ToString()
+			r := tt.stringIP.ToString()
 			if (r == tt.testedIP) != tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, r == tt.testedIP)
 			}
