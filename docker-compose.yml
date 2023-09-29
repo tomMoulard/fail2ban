@@ -1,0 +1,26 @@
+version: '3.9'
+
+services:
+  traefik:
+    image: traefik:v3.0
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --log.level=DEBUG
+      - --providers.file.filename=/rules-fail2ban.yaml
+      - --experimental.localPlugins.fail2ban.moduleName=github.com/tomMoulard/fail2ban
+    ports:
+      - 80:80
+      - 8080:8080
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./rules-fail2ban.yaml:/rules-fail2ban.yaml
+      - .:/plugins-local/src/github.com/tomMoulard/fail2ban/
+    tty: true
+
+  whoami:
+    image: traefik/whoami # https://github.com/traefik/whoami
+    command: -name whoami
+    labels:
+      traefik.http.routers.whoami.rule: Host(`whoami.localhost`)
+      traefik.http.routers.whoami.middlewares: fail2ban@file
