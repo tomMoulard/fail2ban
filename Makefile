@@ -1,35 +1,21 @@
-.PHONY: lint test vendor clean
+.POSIX: # the first failing command in a recipe will cause the recipe to fail immediately
 
-export GO111MODULE=on
+.PHONY: all
+all: lint test
 
-SRC = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
-
-default: fmt lint test
-
+.PHONY: lint
 lint:
 	golangci-lint run
-	golint ./...
 
-fmt:
-	gofmt -l -w $(SRC)
-
-test-v:
-	go test -v -cover ./...
-	go test -v -race ./...
-
+.PHONY: test
 test:
-	go test -cover ./...
+	go test -v -cover ./...
 
-cover:
-	go test $(ARGS) -tags mock -covermode=count -cover -coverprofile=coverage.txt ./...
-	go tool cover -html=coverage.txt -o test.html
-
+.PHONY: yaegi_test
 yaegi_test:
-	yaegi test .
+	yaegi test -v .
 
-vendor:
-	go mod vendor
-
-clean:
-	$(RM) -rf ./vendor
-	$(RM) -r coverage.txt test.html
+.PHONY: entr
+# https://github.com/eradman/entr
+entr:
+	find | entr -r -s "docker compose up --remove-orphans"

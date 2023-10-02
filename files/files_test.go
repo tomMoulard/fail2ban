@@ -1,7 +1,7 @@
 package files_test
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -9,21 +9,29 @@ import (
 )
 
 func TestGetFileContent(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name     string
 		fileName string
 		err      string
 	}{
 		{name: "Open file", fileName: "test-file.txt", err: ""},
-		{name: "file do not exist",
+		{
+			name:     "file do not exist",
 			fileName: "test-file-2.txt",
-			err:      "open test-file-2.txt: no such file or directory"},
+			err:      "error opening file: open test-file-2.txt: no such file or directory",
+		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			text1, err := files.GetFileContent(tt.fileName)
 			if err != nil && err.Error() != tt.err {
 				t.Errorf("GetFileContent() error = %v, wantErr %v", err, tt.err)
+
 				return
 			}
 			if tt.err == "" {
@@ -31,9 +39,9 @@ func TestGetFileContent(t *testing.T) {
 				if err != nil {
 					t.Error(err)
 				}
-				defer file.Close()
+				defer func() { _ = file.Close() }()
 
-				text, err := ioutil.ReadAll(file)
+				text, err := io.ReadAll(file)
 				if err != nil {
 					t.Error(err)
 				}

@@ -1,9 +1,10 @@
+// Package fail2ban contains the Fail2ban mechanism for the plugin.
 package fail2ban
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -18,30 +19,30 @@ import (
 	"github.com/tomMoulard/fail2ban/ipchecking"
 )
 
-// IPViewed struct
+// IPViewed struct.
 type IPViewed struct {
 	viewed      time.Time
 	nb          int
 	blacklisted bool
 }
 
-// Urlregexp struct
+// Urlregexp struct.
 type Urlregexp struct {
 	Regexp string `yaml:"regexp"`
 	Mode   string `yaml:"mode"`
 }
 
 var (
-	// LoggerINFO Main logger
-	LoggerINFO = log.New(ioutil.Discard, "INFO: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
-	// LoggerDEBUG debug logger
-	LoggerDEBUG = log.New(ioutil.Discard, "DEBUG: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
+	// LoggerINFO Main logger.
+	LoggerINFO = log.New(io.Discard, "INFO: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
+	// LoggerDEBUG debug logger.
+	LoggerDEBUG = log.New(io.Discard, "DEBUG: Fail2Ban: ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	muIP     sync.Mutex
 	ipViewed = map[string]IPViewed{}
 )
 
-// Rules struct fail2ban config
+// Rules struct fail2ban config.
 type Rules struct {
 	Bantime    string      `yaml:"bantime"`  // exprimate in a smart way: 3m
 	Enabled    bool        `yaml:"enabled"`  // enable or disable the jail
@@ -50,13 +51,13 @@ type Rules struct {
 	Urlregexps []Urlregexp `yaml:"urlregexps"`
 }
 
-// List struct
+// List struct.
 type List struct {
 	IP    []string
 	Files []string
 }
 
-// Config struct
+// Config struct.
 type Config struct {
 	Blacklist List   `yaml:"blacklist"`
 	Whitelist List   `yaml:"whitelist"`
@@ -64,7 +65,7 @@ type Config struct {
 	LogLevel  string `yaml:"loglevel"`
 }
 
-// CreateConfig populates the Config data object
+// CreateConfig populates the Config data object.
 func CreateConfig() *Config {
 	return &Config{
 		Rules: Rules{
@@ -75,35 +76,39 @@ func CreateConfig() *Config {
 	}
 }
 
-// RulesTransformed transformed Rules struct
+// RulesTransformed transformed Rules struct.
 type RulesTransformed struct {
-	bantime        time.Duration
-	findtime       time.Duration
-	urlregexpAllow []string
-	urlregexpBan   []string
-	maxretry       int
-	enabled        bool
+	Bantime        time.Duration
+	Findtime       time.Duration
+	URLRegexpAllow []string
+	URLRegexpBan   []string
+	MaxRetry       int
+	Enabled        bool
 }
 
-// TransformRule morph a Rules object into a RulesTransformed
+// TransformRule morph a Rules object into a RulesTransformed.
 func TransformRule(r Rules) (RulesTransformed, error) {
 	bantime, err := time.ParseDuration(r.Bantime)
 	if err != nil {
-		return RulesTransformed{}, err
+		return RulesTransformed{}, fmt.Errorf("failed to parse bantime duration: %w", err)
 	}
+
 	LoggerINFO.Printf("Bantime: %s", bantime)
 
 	findtime, err := time.ParseDuration(r.Findtime)
 	if err != nil {
-		return RulesTransformed{}, err
+		return RulesTransformed{}, fmt.Errorf("failed to parse findtime duration: %w", err)
 	}
+
 	LoggerINFO.Printf("Findtime: %s", findtime)
 
 	var regexpAllow []string
+
 	var regexpBan []string
 
 	for _, rg := range r.Urlregexps {
 		LoggerINFO.Printf("using mode %s for rule %q", rg.Mode, rg.Regexp)
+
 		switch rg.Mode {
 		case "allow":
 			regexpAllow = append(regexpAllow, rg.Regexp)
@@ -115,18 +120,20 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	}
 
 	rules := RulesTransformed{
-		bantime:        bantime,
-		findtime:       findtime,
-		urlregexpAllow: regexpAllow,
-		urlregexpBan:   regexpBan,
-		maxretry:       r.Maxretry,
-		enabled:        r.Enabled,
+		Bantime:        bantime,
+		Findtime:       findtime,
+		URLRegexpAllow: regexpAllow,
+		URLRegexpBan:   regexpBan,
+		MaxRetry:       r.Maxretry,
+		Enabled:        r.Enabled,
 	}
+
 	LoggerINFO.Printf("FailToBan Rules : '%+v'", rules)
+
 	return rules, nil
 }
 
-// Fail2Ban holds the necessary components of a Traefik plugin
+// Fail2Ban holds the necessary components of a Traefik plugin.
 type Fail2Ban struct {
 	next      http.Handler
 	name      string
@@ -135,26 +142,36 @@ type Fail2Ban struct {
 	rules     RulesTransformed
 }
 
-// ImportIP extract all ip from config sources
+// ImportIP extract all ip from config sources.
 func ImportIP(list List) ([]string, error) {
 	var rlist []string
+
 	for _, ip := range list.Files {
 		content, err := files.GetFileContent(ip)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error when getting file content: %w", err)
 		}
+
 		rlist = append(rlist, strings.Split(content, "\n")...)
 		if len(rlist) > 1 {
 			rlist = rlist[:len(rlist)-1]
 		}
 	}
+
 	rlist = append(rlist, list.IP...)
 
 	return rlist, nil
 }
 
-// New instantiates and returns the required components used to handle a HTTP request
-func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+// New instantiates and returns the required components used to handle a HTTP
+// request.
+func New(_ context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
+	if !config.Rules.Enabled {
+		LoggerINFO.Println("Plugin: FailToBan is disabled")
+
+		return next, nil
+	}
+
 	switch config.LogLevel {
 	case "INFO":
 		LoggerINFO.SetOutput(os.Stdout)
@@ -170,11 +187,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	whitelist, err := ipchecking.StrToIP(whiteips)
 	if err != nil {
-		return nil, err
-	}
-
-	for _, whiteip := range whitelist {
-		LoggerINFO.Printf("Whitelisted: '%s'", whiteip.ToString())
+		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
 	}
 
 	blackips, err := ImportIP(config.Blacklist)
@@ -184,19 +197,16 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	blacklist, err := ipchecking.StrToIP(blackips) // Do not mistake with Black Eyed Peas
 	if err != nil {
-		return nil, err
-	}
-
-	for _, blackip := range blacklist {
-		LoggerINFO.Printf("Blacklisted: '%s'", blackip.ToString())
+		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
 	}
 
 	rules, err := TransformRule(config.Rules)
 	if err != nil {
-		return nil, fmt.Errorf("error when Transforming rules: %+v", err)
+		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
 	LoggerINFO.Println("Plugin: FailToBan is up and running")
+
 	return &Fail2Ban{
 		next:      next,
 		name:      name,
@@ -206,19 +216,15 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}, nil
 }
 
-// Iterate over every headers to match the ones specified in the config and
-// return nothing if regexp failed.
+// ServeHTTP iterates over every headers to match the ones specified in the
+// configuration and return nothing if regexp failed.
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	LoggerDEBUG.Printf("New request: %v", req)
-
-	if !u.rules.enabled {
-		u.next.ServeHTTP(rw, req)
-		return
-	}
 
 	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
 	if err != nil {
 		LoggerDEBUG.Println(remoteIP + " is not a valid IP or a IP/NET")
+
 		return
 	}
 
@@ -227,6 +233,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if ip.CheckIPInSubnet(remoteIP) {
 			LoggerDEBUG.Println(remoteIP + " is blacklisted")
 			rw.WriteHeader(http.StatusForbidden)
+
 			return
 		}
 	}
@@ -236,6 +243,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		if ip.CheckIPInSubnet(remoteIP) {
 			LoggerDEBUG.Println(remoteIP + " is whitelisted")
 			u.next.ServeHTTP(rw, req)
+
 			return
 		}
 	}
@@ -243,24 +251,28 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Urlregexp ban
 	muIP.Lock()
 	defer muIP.Unlock()
+
 	ip := ipViewed[remoteIP]
 	url := req.URL.String()
 	urlBytes := []byte(url)
 
-	for _, reg := range u.rules.urlregexpBan {
+	for _, reg := range u.rules.URLRegexpBan {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
 			LoggerDEBUG.Printf("Url ('%s') was matched by regexpBan: '%s' for '%s'", url, reg, req.Host)
 			rw.WriteHeader(http.StatusForbidden)
+
 			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
+
 			return
 		}
 	}
 
 	// Urlregexp allow
-	for _, reg := range u.rules.urlregexpAllow {
+	for _, reg := range u.rules.URLRegexpAllow {
 		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
 			LoggerDEBUG.Printf("Url ('%s') was matched by regexpAllow: '%s' for '%s'", url, reg, req.Host)
 			u.next.ServeHTTP(rw, req)
+
 			return
 		}
 	}
@@ -268,31 +280,46 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	// Fail2Ban
 	if reflect.DeepEqual(ip, IPViewed{}) {
 		LoggerDEBUG.Printf("welcome %s", remoteIP)
+
 		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
-	} else {
-		if ip.blacklisted {
-			if time.Now().Before(ip.viewed.Add(u.rules.bantime)) {
-				ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
-				LoggerDEBUG.Printf("%s is still banned since %s, %d request",
-					remoteIP, ip.viewed.Format(time.RFC3339), ip.nb+1)
-				rw.WriteHeader(http.StatusForbidden)
-				return
-			}
-			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
-			LoggerDEBUG.Println(remoteIP + " is no longer banned")
-		} else if time.Now().Before(ip.viewed.Add(u.rules.findtime)) {
-			if ip.nb+1 >= u.rules.maxretry {
-				ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
-				LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
-				rw.WriteHeader(http.StatusForbidden)
-				return
-			}
-			ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, false}
-			LoggerDEBUG.Printf("welcome back %s for the %d time", remoteIP, ip.nb+1)
-		} else {
-			ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
-			LoggerDEBUG.Printf("welcome back %s", remoteIP)
-		}
+
+		u.next.ServeHTTP(rw, req)
+
+		return
 	}
+
+	switch {
+	case ip.blacklisted:
+		if time.Now().Before(ip.viewed.Add(u.rules.Bantime)) {
+			ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
+			LoggerDEBUG.Printf("%s is still banned since %s, %d request",
+				remoteIP, ip.viewed.Format(time.RFC3339), ip.nb+1)
+			rw.WriteHeader(http.StatusForbidden)
+
+			return
+		}
+
+		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+
+		LoggerDEBUG.Println(remoteIP + " is no longer banned")
+
+	case time.Now().Before(ip.viewed.Add(u.rules.Findtime)):
+		if ip.nb+1 >= u.rules.MaxRetry {
+			ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
+
+			LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
+			rw.WriteHeader(http.StatusForbidden)
+
+			return
+		}
+
+		ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, false}
+		LoggerDEBUG.Printf("welcome back %s for the %d time", remoteIP, ip.nb+1)
+	default:
+		ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+
+		LoggerDEBUG.Printf("welcome back %s", remoteIP)
+	}
+
 	u.next.ServeHTTP(rw, req)
 }

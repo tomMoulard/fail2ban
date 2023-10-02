@@ -1,8 +1,8 @@
 # Fail2ban plugin for traefik
 
-[![Build Status](https://travis-ci.com/tomMoulard/fail2ban.svg?branch=main)](https://travis-ci.com/tomMoulard/fail2ban)
+[![Build Status](https://github.com/tomMoulard/fail2ban/actions/workflows/main.yml/badge.svg)](https://github.com/tomMoulard/fail2ban/actions/workflows/main.yml)
 
-This plugin is a small implementation of a fail2ban instance as a middleware
+This plugin is an implementation of the fail2ban mechanism as a middleware
 plugin for Traefik.
 
 ## Configuration
@@ -107,7 +107,7 @@ DEBUG: Fail2Ban: restricted.go:52: ::1 is no longer banned
 </details>
 
 ## Fail2ban
-We plan to use all [default fail2ban configuration]() but at this time only a
+We plan to use all default fail2ban configuration but at this time only a
 few features are implemented:
 ```yml
 testData:
@@ -221,36 +221,10 @@ A |--x--x--x---->            |------------->
 B          |--x---------->
 ```
 
-## Dev `traefik.yml` configuration file for traefik
-
-```yml
-pilot:
-  token: [REDACTED]
-
-experimental:
-  devPlugin:
-    goPath: /home/${USER}/go
-    moduleName: github.com/tomMoulard/fail2ban
-
-entryPoints:
-  http:
-    address: ":8000"
-    forwardedHeaders:
-      insecure: true
-
-api:
-  dashboard: true
-  insecure: true
-
-providers:
-  file:
-    filename: rules-fail2ban.yaml
-```
-
 ## How to dev
+
 ```bash
-$ docker run -d --network host containous/whoami -port 5000
-# traefik --configfile traefik.yml
+$ docker compose up
 ```
 
 # Authors

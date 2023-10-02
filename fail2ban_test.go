@@ -1,40 +1,49 @@
-package fail2ban
+package fail2ban_test
 
 import (
 	"errors"
 	"testing"
+
+	"github.com/tomMoulard/fail2ban"
 )
 
 func TestDummy(t *testing.T) {
-	cfg := CreateConfig()
+	t.Parallel()
+
+	cfg := fail2ban.CreateConfig()
 	t.Log(cfg)
 }
 
 func TestTransformRules(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name   string
-		send   Rules
-		expect RulesTransformed
+		send   fail2ban.Rules
+		expect fail2ban.RulesTransformed
 		err    error
 	}{
 		{
 			name: "dummy",
-			send: Rules{
+			send: fail2ban.Rules{
 				Bantime:  "300s",
 				Findtime: "120s",
 				Enabled:  true,
 			},
-			expect: RulesTransformed{},
+			expect: fail2ban.RulesTransformed{},
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got, e := TransformRule(tt.send)
+			t.Parallel()
+
+			got, e := fail2ban.TransformRule(tt.send)
 			if e != nil && (tt.err == nil || e.Error() != tt.err.Error()) {
 				t.Errorf("TransformRule_err: wanted '%s' got '%s'",
 					tt.err, e)
 			}
-			if tt.expect.bantime == got.bantime {
+			if tt.expect.Bantime == got.Bantime {
 				t.Errorf("TransformRule: wanted '%+v' got '%+v'",
 					tt.expect, got)
 			}
@@ -43,15 +52,17 @@ func TestTransformRules(t *testing.T) {
 }
 
 func TestImportIP(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
-		list    List
+		list    fail2ban.List
 		strWant []string
 		err     error
 	}{
 		{
 			name: "empty list",
-			list: List{
+			list: fail2ban.List{
 				IP:    []string{},
 				Files: []string{},
 			},
@@ -61,7 +72,7 @@ func TestImportIP(t *testing.T) {
 
 		{
 			name: "simple import",
-			list: List{
+			list: fail2ban.List{
 				IP:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
 				Files: []string{"tests/test-ipfile.txt"},
 			},
@@ -71,7 +82,7 @@ func TestImportIP(t *testing.T) {
 
 		{
 			name: "import only file",
-			list: List{
+			list: fail2ban.List{
 				IP:    []string{},
 				Files: []string{"tests/test-ipfile.txt"},
 			},
@@ -81,7 +92,7 @@ func TestImportIP(t *testing.T) {
 
 		{
 			name: "import two file",
-			list: List{
+			list: fail2ban.List{
 				IP:    []string{},
 				Files: []string{"tests/test-ipfile.txt", "tests/test-ipfile.txt"},
 			},
@@ -91,7 +102,7 @@ func TestImportIP(t *testing.T) {
 
 		{
 			name: "import only ip",
-			list: List{
+			list: fail2ban.List{
 				IP:    []string{"192.168.0.0", "0.0.0.0", "255.255.255.255"},
 				Files: []string{},
 			},
@@ -101,17 +112,20 @@ func TestImportIP(t *testing.T) {
 
 		{
 			name: "import no file",
-			list: List{
+			list: fail2ban.List{
 				IP:    []string{},
 				Files: []string{"tests/idontexist.txt"},
 			},
 			strWant: []string{},
-			err:     errors.New("open tests/idontexist.txt: no such file or directory"),
+			err:     errors.New("error when getting file content: error opening file: open tests/idontexist.txt: no such file or directory"),
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got, e := ImportIP(tt.list)
+			t.Parallel()
+
+			got, e := fail2ban.ImportIP(tt.list)
 			t.Logf("%+v", got)
 			if e != nil && e.Error() != tt.err.Error() {
 				t.Errorf("wanted '%s' got '%s'", tt.err, e)
