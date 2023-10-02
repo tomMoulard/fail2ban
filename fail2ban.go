@@ -185,7 +185,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		return nil, err
 	}
 
-	whitelist, err := ipchecking.StrToIP(whiteips)
+	whitelist, err := ipchecking.ParseNetIPs(whiteips)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
 	}
@@ -195,7 +195,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		return nil, err
 	}
 
-	blacklist, err := ipchecking.StrToIP(blackips) // Do not mistake with Black Eyed Peas
+	blacklist, err := ipchecking.ParseNetIPs(blackips) // Do not mistake with Black Eyed Peas
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
 	}

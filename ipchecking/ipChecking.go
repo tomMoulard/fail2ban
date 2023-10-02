@@ -15,8 +15,9 @@ type NetIP struct {
 	Addr netip.Addr
 }
 
-// StrToIP convert ip string array to ip struct array.
-func StrToIP(iplist []string) ([]NetIP, error) {
+// ParseNetIPs Parse a slice string to extract the netip.
+// Returns an error on the first IP that failed to parse.
+func ParseNetIPs(iplist []string) ([]NetIP, error) {
 	rlist := make([]NetIP, 0, len(iplist))
 
 	for _, v := range iplist {
