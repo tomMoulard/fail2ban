@@ -8,8 +8,9 @@ lint:
 	golangci-lint run
 
 .PHONY: test
+TEST_ARGS ?= -v -cover -race
 test:
-	go test -v -cover ./...
+	go test ${TEST_ARGS} ./...
 
 .PHONY: yaegi_test
 yaegi_test:
