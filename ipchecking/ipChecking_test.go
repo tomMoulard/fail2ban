@@ -6,7 +6,7 @@ import (
 	ipchecking "github.com/tomMoulard/fail2ban/ipchecking"
 )
 
-func TestIPGeneration(t *testing.T) {
+func TestNetIPParseNetIP(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -118,7 +118,57 @@ func TestIPGeneration(t *testing.T) {
 	}
 }
 
-func helpBuildIP(t *testing.T, ip string) ipchecking.NetIP {
+func TestNetIPParseNetIPs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		ips         []string
+		expectedIPs []string
+		expectErr   bool
+	}{
+		{
+			name:        "valid IPv4",
+			ips:         []string{"127.0.0.1", "127.0.0.2"},
+			expectedIPs: []string{"127.0.0.1", "127.0.0.2"},
+		},
+		{
+			name:        "valid IPv6",
+			ips:         []string{"::1", "::2"},
+			expectedIPs: []string{"::1", "::2"},
+		},
+		{
+			name:      "invalid IPv4",
+			ips:       []string{"127.0.0.1.1", "127.0.0.2.42"},
+			expectErr: true,
+		},
+		{
+			name:      "invalid IPv6",
+			ips:       []string{"::1", "::2::42:"},
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ipchecking.ParseNetIPs(tt.ips)
+			if (err == nil) == tt.expectErr {
+				t.Logf("Got error: %v", err)
+				t.Errorf("wanted '%v' got '%v'", tt.expectErr, (err == nil))
+			}
+
+			for i, gotIP := range got {
+				if gotIP.String() != tt.expectedIPs[i] {
+					t.Errorf("wanted %q got %q", tt.expectedIPs[i], gotIP.String())
+				}
+			}
+		})
+	}
+}
+
+func helpParseNetIP(t *testing.T, ip string) ipchecking.NetIP {
 	t.Helper()
 
 	nip, err := ipchecking.ParseNetIP(ip)
@@ -129,18 +179,18 @@ func helpBuildIP(t *testing.T, ip string) ipchecking.NetIP {
 	return nip
 }
 
-func TestIPChecking(t *testing.T) {
+func TestNetIPContains(t *testing.T) {
 	t.Parallel()
 
-	ipv4 := helpBuildIP(t, "127.0.0.1")
-	ipv42 := helpBuildIP(t, "127.0.0.2")
-	cidrv41 := helpBuildIP(t, "127.0.0.1/24")
-	cidrv42 := helpBuildIP(t, "127.0.1.1/24")
+	ipv4 := helpParseNetIP(t, "127.0.0.1")
+	ipv42 := helpParseNetIP(t, "127.0.0.2")
+	cidrv41 := helpParseNetIP(t, "127.0.0.1/24")
+	cidrv42 := helpParseNetIP(t, "127.0.1.1/24")
 
-	ipv6 := helpBuildIP(t, "::1")
-	ipv62 := helpBuildIP(t, "::2")
-	cidrv61 := helpBuildIP(t, "::1/124")
-	cidrv62 := helpBuildIP(t, "::1:1/124")
+	ipv6 := helpParseNetIP(t, "::1")
+	ipv62 := helpParseNetIP(t, "::2")
+	cidrv61 := helpParseNetIP(t, "::1/124")
+	cidrv62 := helpParseNetIP(t, "::1:1/124")
 
 	tests := []struct {
 		name     string
@@ -196,6 +246,18 @@ func TestIPChecking(t *testing.T) {
 			testedIP: cidrv61,
 			res:      true,
 		},
+		{
+			name:     "invalid IPv4",
+			stringIP: "127.0.0.1.42",
+			testedIP: cidrv41,
+			res:      false,
+		},
+		{
+			name:     "invalid IPv6",
+			stringIP: "::1::",
+			testedIP: cidrv61,
+			res:      false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -210,7 +272,7 @@ func TestIPChecking(t *testing.T) {
 	}
 }
 
-func TestIPtoString(t *testing.T) {
+func TestNetIPString(t *testing.T) {
 	t.Parallel()
 
 	ipv4, err := ipchecking.ParseNetIP("127.0.0.1/32")
