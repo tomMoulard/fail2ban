@@ -137,8 +137,8 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 type Fail2Ban struct {
 	next      http.Handler
 	name      string
-	whitelist []ipchecking.IP
-	blacklist []ipchecking.IP
+	whitelist []ipchecking.NetIP
+	blacklist []ipchecking.NetIP
 	rules     RulesTransformed
 }
 
@@ -230,7 +230,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Blacklist
 	for _, ip := range u.blacklist {
-		if ip.CheckIPInSubnet(remoteIP) {
+		if ip.Contains(remoteIP) {
 			LoggerDEBUG.Println(remoteIP + " is blacklisted")
 			rw.WriteHeader(http.StatusForbidden)
 
@@ -240,7 +240,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	// Whitelist
 	for _, ip := range u.whitelist {
-		if ip.CheckIPInSubnet(remoteIP) {
+		if ip.Contains(remoteIP) {
 			LoggerDEBUG.Println(remoteIP + " is whitelisted")
 			u.next.ServeHTTP(rw, req)
 
