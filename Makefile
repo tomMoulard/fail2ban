@@ -12,9 +12,13 @@ TEST_ARGS ?= -v -cover -race
 test:
 	go test ${TEST_ARGS} ./...
 
+vendor:
+	go mod vendor
+
 .PHONY: yaegi_test
-yaegi_test:
-	yaegi test -v .
+YAEGI_TEST_ARGS ?= -v -unsafe
+yaegi_test: vendor
+	yaegi test ${YAEGI_TEST_ARGS} .
 
 .PHONY: entr
 # https://github.com/eradman/entr
