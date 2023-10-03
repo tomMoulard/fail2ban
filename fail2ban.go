@@ -137,8 +137,8 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 type Fail2Ban struct {
 	next      http.Handler
 	name      string
-	whitelist []ipchecking.IP
-	blacklist []ipchecking.IP
+	whitelist ipchecking.NetIPs
+	blacklist ipchecking.NetIPs
 	rules     RulesTransformed
 }
 
@@ -185,7 +185,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		return nil, err
 	}
 
-	whitelist, err := ipchecking.StrToIP(whiteips)
+	whitelist, err := ipchecking.ParseNetIPs(whiteips)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
 	}
@@ -195,7 +195,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		return nil, err
 	}
 
-	blacklist, err := ipchecking.StrToIP(blackips) // Do not mistake with Black Eyed Peas
+	blacklist, err := ipchecking.ParseNetIPs(blackips) // Do not mistake with Black Eyed Peas
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
 	}
@@ -229,23 +229,19 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Blacklist
-	for _, ip := range u.blacklist {
-		if ip.CheckIPInSubnet(remoteIP) {
-			LoggerDEBUG.Println(remoteIP + " is blacklisted")
-			rw.WriteHeader(http.StatusForbidden)
+	if u.blacklist.Contains(remoteIP) {
+		LoggerDEBUG.Println(remoteIP + " is blacklisted")
+		rw.WriteHeader(http.StatusForbidden)
 
-			return
-		}
+		return
 	}
 
 	// Whitelist
-	for _, ip := range u.whitelist {
-		if ip.CheckIPInSubnet(remoteIP) {
-			LoggerDEBUG.Println(remoteIP + " is whitelisted")
-			u.next.ServeHTTP(rw, req)
+	if u.whitelist.Contains(remoteIP) {
+		LoggerDEBUG.Println(remoteIP + " is whitelisted")
+		u.next.ServeHTTP(rw, req)
 
-			return
-		}
+		return
 	}
 
 	// Urlregexp ban

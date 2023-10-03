@@ -73,4 +73,4 @@ issues:
     - path: 'fail2ban.go'
       text: 'Function ''ServeHTTP'' has too many statements'
     - path: 'fail2ban.go'
-      text: 'calculated cyclomatic complexity for function ServeHTTP'
+      text: 'calculated cyclomatic complexity for function ServeHTTP is 16'
