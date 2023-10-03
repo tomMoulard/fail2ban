@@ -1,4 +1,4 @@
-// Package ipchecking wrapper over net/netip to handle both IP and CIRD.
+// Package ipchecking wrapper over net/netip to compare both IP and CIRD.
 package ipchecking
 
 import (
@@ -17,7 +17,7 @@ type NetIP struct {
 
 // ParseNetIPs Parse a slice string to extract the netip.
 // Returns an error on the first IP that failed to parse.
-func ParseNetIPs(iplist []string) ([]NetIP, error) {
+func ParseNetIPs(iplist []string) (NetIPs, error) {
 	rlist := make([]NetIP, 0, len(iplist))
 
 	for _, v := range iplist {
@@ -61,7 +61,7 @@ func (ip NetIP) String() string {
 	return ip.Net.String()
 }
 
-// Contains Check is the IP Is the same or in the same subnet.
+// Contains Check is the IP is the same or in the same subnet.
 func (ip NetIP) Contains(i string) bool {
 	rip, err := netip.ParseAddr(i)
 	if err != nil {
@@ -75,4 +75,32 @@ func (ip NetIP) Contains(i string) bool {
 	}
 
 	return ip.Net.Contains(rip)
+}
+
+type NetIPs []NetIP
+
+// Contains Check is the IP is the same or in the same subnet.
+func (netIPs NetIPs) Contains(ip string) bool {
+	rip, err := netip.ParseAddr(ip)
+	if err != nil {
+		log.Printf("failed to parse %q: %s", ip, err.Error())
+
+		return false
+	}
+
+	for _, netIP := range netIPs {
+		if netIP.Net == nil {
+			if netIP.Addr == rip {
+				return true
+			}
+
+			continue
+		}
+
+		if netIP.Net.Contains(rip) {
+			return true
+		}
+	}
+
+	return false
 }

@@ -1,10 +1,43 @@
 package ipchecking_test
 
 import (
+	"fmt"
 	"testing"
 
 	ipchecking "github.com/tomMoulard/fail2ban/ipchecking"
 )
+
+//nolint:dupword
+func Example() {
+	// Parse multiple IPs/CIDRS
+	ips, err := ipchecking.ParseNetIPs([]string{
+		"127.0.0.1",
+		"10.0.0.0/24", // 10.0.0.1-10.0.0.254
+		"::1",
+		"2001:db8::/32",
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	// Check if an IP is either in the list, or in the list networks
+	fmt.Println(ips.Contains(""))                        // false (empty string is not an IP)
+	fmt.Println(ips.Contains("127.0.0.1"))               // true
+	fmt.Println(ips.Contains("127.0.0.2"))               // false
+	fmt.Println(ips.Contains("10.0.0.42"))               // true
+	fmt.Println(ips.Contains("::1"))                     // true
+	fmt.Println(ips.Contains("2001:db8:beba:cafe::1:2")) // true
+	fmt.Println(ips.Contains("ff0X::101"))               // false
+
+	// Output:
+	// false
+	// true
+	// false
+	// true
+	// true
+	// true
+	// false
+}
 
 func TestNetIPParseNetIP(t *testing.T) {
 	t.Parallel()
@@ -265,6 +298,87 @@ func TestNetIPContains(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			r := tt.testedIP.Contains(tt.stringIP)
+			if r != tt.res {
+				t.Errorf("wanted '%v' got '%v'", tt.res, r)
+			}
+		})
+	}
+}
+
+func helpParseNetIPs(t *testing.T, ips []string) ipchecking.NetIPs {
+	t.Helper()
+
+	nip, err := ipchecking.ParseNetIPs(ips)
+	if err != nil {
+		t.Errorf("Error in IP building: %s, with err %v", nip, err)
+	}
+
+	return nip
+}
+
+func TestNetIPsContains(t *testing.T) {
+	t.Parallel()
+
+	ips := helpParseNetIPs(t, []string{
+		"127.0.0.1",
+		"10.0.0.0/24",
+		"::1",
+		"2001:db8::/32",
+	})
+
+	tests := []struct {
+		name     string
+		stringIP string
+		testedIP ipchecking.NetIP
+		res      bool
+	}{
+		{
+			name:     "IPv4 match",
+			stringIP: "127.0.0.1",
+			res:      true,
+		},
+		{
+			name:     "IPv4 match CIDR",
+			stringIP: "10.0.0.1",
+			res:      true,
+		},
+		{
+			name:     "IPv4 No Match",
+			stringIP: "11.0.0.1",
+			res:      false,
+		},
+		{
+			name:     "IPv6 match",
+			stringIP: "::1",
+			res:      true,
+		},
+		{
+			name:     "IPv6 match CIDR",
+			stringIP: "2001:db8:beba:cafe::1:2",
+			res:      true,
+		},
+		{
+			name:     "IPv6 No Match",
+			stringIP: "ff0X::101",
+			res:      false,
+		},
+		{
+			name:     "invalid IPv4",
+			stringIP: "127.0.0.1.42",
+			res:      false,
+		},
+		{
+			name:     "invalid IPv6",
+			stringIP: "::1::",
+			res:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r := ips.Contains(tt.stringIP)
 			if r != tt.res {
 				t.Errorf("wanted '%v' got '%v'", tt.res, r)
 			}
