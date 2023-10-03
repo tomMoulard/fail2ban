@@ -5,8 +5,24 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tomMoulard/fail2ban/files"
 )
+
+func Example() {
+	// Get file content
+	text, err := files.GetFileContent("test-file.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	// Print file content
+	println(text)
+
+	// Output:
+	//
+}
 
 func TestGetFileContent(t *testing.T) {
 	t.Parallel()
@@ -29,29 +45,20 @@ func TestGetFileContent(t *testing.T) {
 			t.Parallel()
 
 			text1, err := files.GetFileContent(tt.fileName)
-			if err != nil && err.Error() != tt.err {
-				t.Errorf("GetFileContent() error = %v, wantErr %v", err, tt.err)
+			if err != nil {
+				assert.Equal(t, tt.err, err.Error())
 
 				return
 			}
-			if tt.err == "" {
-				file, err := os.Open(tt.fileName)
-				if err != nil {
-					t.Error(err)
-				}
-				defer func() { _ = file.Close() }()
 
-				text, err := io.ReadAll(file)
-				if err != nil {
-					t.Error(err)
-				}
+			file, err := os.Open(tt.fileName)
+			require.NoError(t, err)
+			defer func() { require.NoError(t, file.Close()) }()
 
-				text2 := string(text)
+			text, err := io.ReadAll(file)
+			require.NoError(t, err)
 
-				if text1 != text2 {
-					t.Error("Did not get the same file out")
-				}
-			}
+			assert.Equal(t, string(text), text1)
 		})
 	}
 }
