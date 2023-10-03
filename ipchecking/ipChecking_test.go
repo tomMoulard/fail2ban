@@ -27,7 +27,7 @@ func Example() {
 	fmt.Println(ips.Contains("10.0.0.42"))               // true
 	fmt.Println(ips.Contains("::1"))                     // true
 	fmt.Println(ips.Contains("2001:db8:beba:cafe::1:2")) // true
-	fmt.Println(ips.Contains("ff0X::101"))               // false
+	fmt.Println(ips.Contains("64:ff9b::127.0.0.1"))      // false
 
 	// Output:
 	// false
