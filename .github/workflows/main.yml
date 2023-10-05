@@ -59,9 +59,7 @@ jobs:
       - name: Lint and Tests
         run: make
 
-      # - name: Run tests with Yaegi # cannot run tests with yaegi thanks to github.com/gorilla/websocket
-        # run: |
-          # go mod vendor
-          # make yaegi_test
+      # - name: Run tests with Yaegi
+        # run: make yaegi_test
         # env:
           # GOPATH: ${{ github.workspace }}/go

@@ -18,6 +18,10 @@ import (
 	logger "github.com/tomMoulard/fail2ban/log"
 )
 
+func init() {
+	log.SetOutput(os.Stdout)
+}
+
 // IPViewed struct.
 type IPViewed struct {
 	viewed      time.Time

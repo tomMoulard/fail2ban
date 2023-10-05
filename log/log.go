@@ -6,16 +6,9 @@ package log
 
 import (
 	"io"
+	"log"
 )
 
-type Logger struct{}
-
-func New(out io.Writer, prefix string, flag int) Logger {
-	return Logger{}
-}
-
-func (l Logger) Println(v ...interface{}) {
-}
-
-func (l Logger) Printf(format string, v ...interface{}) {
+func New(out io.Writer, prefix string, flag int) *log.Logger {
+	return nil
 }
