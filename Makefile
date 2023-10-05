@@ -13,7 +13,7 @@ test:
 	go test ${TEST_ARGS} ./...
 
 vendor:
-	go mod vendor
+	go mod vendor -v
 
 .PHONY: yaegi_test
 YAEGI_TEST_ARGS ?= -v

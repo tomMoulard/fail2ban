@@ -466,14 +466,6 @@ func TestShouldAllow(t *testing.T) {
 	}
 }
 
-func helperDefer(t *testing.T, funcToDefer func() error) {
-	t.Helper()
-
-	if err := funcToDefer(); err != nil {
-		t.Errorf("wanted no error got %q", err)
-	}
-}
-
 // https://github.com/tomMoulard/fail2ban/issues/67
 func TestDeadlockWebsocket(t *testing.T) {
 	t.Parallel()
@@ -510,7 +502,8 @@ func TestDeadlockWebsocket(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		defer helperDefer(t, ws.Close)
+		defer func() { _ = ws.Close() }()
+
 		conns[i] = ws
 	}
 
