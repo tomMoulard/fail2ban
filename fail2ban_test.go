@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -211,6 +212,45 @@ func TestFail2Ban(t *testing.T) {
 			},
 			newError:     false,
 			expectStatus: http.StatusOK,
+		},
+		{
+			name: "bad regexp",
+			url:  "/test",
+			cfg: Config{
+				Rules: Rules{
+					Enabled:  true,
+					Bantime:  "300s",
+					Findtime: "300s",
+					Maxretry: 10,
+					Urlregexps: []Urlregexp{
+						{
+							Regexp: "/(test",
+							Mode:   "allow",
+						},
+					},
+				},
+			},
+			newError: true,
+		},
+		{
+			name: "invalid Regexp mode",
+			url:  "/test",
+			cfg: Config{
+				Rules: Rules{
+					Enabled:  true,
+					Bantime:  "300s",
+					Findtime: "300s",
+					Maxretry: 20,
+					Urlregexps: []Urlregexp{
+						{
+							Regexp: "/test",
+							Mode:   "not-an-actual-mode",
+						},
+					},
+				},
+			},
+			newError:     false,
+			expectStatus: http.StatusOK, // request not blacklisted
 		},
 		{
 			name: "url whitelisted",
@@ -426,7 +466,7 @@ func TestShouldAllow(t *testing.T) {
 			cfg: &Fail2Ban{
 				rules: RulesTransformed{
 					Bantime:        300 * time.Second,
-					URLRegexpAllow: []string{"/test"}, // comment me.
+					URLRegexpAllow: []*regexp.Regexp{regexp.MustCompile("/test")}, // comment me.
 				},
 				ipViewed: map[string]IPViewed{
 					"10.0.0.0": {
@@ -444,7 +484,7 @@ func TestShouldAllow(t *testing.T) {
 			name: "block regexp",
 			cfg: &Fail2Ban{
 				rules: RulesTransformed{
-					URLRegexpBan: []string{"/test"}, // comment me.
+					URLRegexpBan: []*regexp.Regexp{regexp.MustCompile("/test")}, // comment me.
 				},
 				ipViewed: map[string]IPViewed{},
 			},
