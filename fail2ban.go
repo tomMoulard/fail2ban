@@ -75,8 +75,8 @@ func CreateConfig() *Config {
 type RulesTransformed struct {
 	Bantime        time.Duration
 	Findtime       time.Duration
-	URLRegexpAllow []string
-	URLRegexpBan   []string
+	URLRegexpAllow []*regexp.Regexp
+	URLRegexpBan   []*regexp.Regexp
 	MaxRetry       int
 	Enabled        bool
 }
@@ -97,18 +97,23 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 
 	log.Printf("Findtime: %s", findtime)
 
-	var regexpAllow []string
+	var regexpAllow []*regexp.Regexp
 
-	var regexpBan []string
+	var regexpBan []*regexp.Regexp
 
 	for _, rg := range r.Urlregexps {
 		log.Printf("using mode %q for rule %q", rg.Mode, rg.Regexp)
 
+		re, err := regexp.Compile(rg.Regexp)
+		if err != nil {
+			return RulesTransformed{}, fmt.Errorf("failed to compile regexp %q: %w", rg.Regexp, err)
+		}
+
 		switch rg.Mode {
 		case "allow":
-			regexpAllow = append(regexpAllow, rg.Regexp)
+			regexpAllow = append(regexpAllow, re)
 		case "block":
-			regexpBan = append(regexpBan, rg.Regexp)
+			regexpBan = append(regexpBan, re)
 		default:
 			log.Printf("mode %q is not known, the rule %q cannot not be applied", rg.Mode, rg.Regexp)
 		}
@@ -254,10 +259,10 @@ func (u *Fail2Ban) shouldAllow(remoteIP, reqURL string) bool {
 	urlBytes := []byte(reqURL)
 
 	for _, reg := range u.rules.URLRegexpBan {
-		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
+		if reg.Match(urlBytes) {
 			u.ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
 
-			LoggerDEBUG.Printf("Url (%q) was matched by regexpBan: %q for %q", reqURL, reg, remoteIP)
+			LoggerDEBUG.Printf("Url (%q) was matched by regexpBan: %q for %q", reqURL, reg.String(), remoteIP)
 
 			return false
 		}
@@ -265,8 +270,8 @@ func (u *Fail2Ban) shouldAllow(remoteIP, reqURL string) bool {
 
 	// Urlregexp allow
 	for _, reg := range u.rules.URLRegexpAllow {
-		if matched, err := regexp.Match(reg, urlBytes); err != nil || matched {
-			LoggerDEBUG.Printf("Url (%q) was matched by regexpAllow: %q for %q", reqURL, reg, remoteIP)
+		if reg.Match(urlBytes) {
+			LoggerDEBUG.Printf("Url (%q) was matched by regexpAllow: %q for %q", reqURL, reg.String(), remoteIP)
 
 			return true
 		}

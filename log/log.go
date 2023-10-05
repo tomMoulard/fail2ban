@@ -9,6 +9,14 @@ import (
 	"log"
 )
 
-func New(out io.Writer, prefix string, flag int) *log.Logger {
-	return nil
+type Logger struct {
+	*log.Logger
 }
+
+func New(out io.Writer, prefix string, flag int) Logger {
+	return Logger{}
+}
+
+func (l Logger) Printf(format string, v ...interface{}) {}
+
+func (l Logger) Println(v ...interface{}) {}
