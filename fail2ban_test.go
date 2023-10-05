@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/net/websocket"
 )
 
 func TestDummy(t *testing.T) {
@@ -477,32 +478,16 @@ func helperDefer(t *testing.T, funcToDefer func() error) {
 func TestDeadlockWebsocket(t *testing.T) {
 	t.Parallel()
 
-	upgrader := websocket.Upgrader{}
 	writeChan := make(chan any)
 	concurentWSCount := atomic.Int32{}
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := upgrader.Upgrade(w, r, nil)
-		require.NoError(t, err)
+	next := websocket.Handler(func(ws *websocket.Conn) {
+		concurentWSCount.Add(1)
+		<-writeChan
+		t.Cleanup(func() {
+			concurentWSCount.Add(-1)
+		})
 
-		defer helperDefer(t, c.Close)
-
-		for {
-			mt, message, err := c.ReadMessage()
-			if err != nil {
-				break
-			}
-
-			concurentWSCount.Add(1)
-			<-writeChan
-			t.Cleanup(func() {
-				concurentWSCount.Add(-1)
-			})
-
-			err = c.WriteMessage(mt, message)
-			if err != nil {
-				break
-			}
-		}
+		_, _ = io.Copy(ws, ws)
 	})
 
 	cfg := CreateConfig()
@@ -518,7 +503,7 @@ func TestDeadlockWebsocket(t *testing.T) {
 	conns := make([]*websocket.Conn, 10)
 
 	for i := 0; i < 10; i++ {
-		ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		ws, err := websocket.Dial(wsURL, "", "http://localhost")
 		require.NoError(t, err)
 
 		defer helperDefer(t, ws.Close)
@@ -529,10 +514,11 @@ func TestDeadlockWebsocket(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		msg := fmt.Sprintf("hello %d", i)
-		err := conns[i].WriteMessage(websocket.TextMessage, []byte(msg))
+		n, err := conns[i].Write([]byte(msg))
 		require.NoError(t, err)
 
-		_, p, err := conns[i].ReadMessage()
+		p := make([]byte, n)
+		_, err = conns[i].Read(p)
 		require.NoError(t, err)
 
 		assert.Equal(t, msg, string(p))
