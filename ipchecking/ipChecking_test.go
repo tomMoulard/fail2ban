@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/tomMoulard/fail2ban/ipchecking"
 )
 
@@ -47,97 +45,97 @@ func TestNetIPParseNetIP(t *testing.T) {
 	tests := []struct {
 		name     string
 		stringIP string
-		res      assert.ErrorAssertionFunc
+		res      bool
 	}{
 		{
 			name:     "Valid IPv4",
 			stringIP: "127.0.0.1",
-			res:      assert.NoError,
+			res:      false,
 		},
 		{
 			name:     "Invalid IPv4 value 8 first bits",
 			stringIP: "25666.0.0.1",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv4 value 8 second bits",
 			stringIP: "127.4444.0.1",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv4 value 8 third bits",
 			stringIP: "127.0.4440.1",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv4 value 8 last bits",
 			stringIP: "127.0.0.1233",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv4 CIDR form",
 			stringIP: "127.0.0.1/22/34",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv4 CIDR ",
 			stringIP: "127.0.0.1/55",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Missing IPv4 CIDR ",
 			stringIP: "127.0.0.1/",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Valid IPv4 CIDR ",
 			stringIP: "127.0.0.1/23",
-			res:      assert.NoError,
+			res:      false,
 		},
 		{
 			name:     "Valid IPv6",
 			stringIP: "::1",
-			res:      assert.NoError,
+			res:      false,
 		},
 		{
 			name:     "Invalid IPv6 value 8 first bits",
 			stringIP: "2566634::1",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv6 value 8 second bits",
 			stringIP: "127:444234564:0::1",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv6 value 8 third bits",
 			stringIP: "1::4440345::1",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv6 value 8 last bits",
 			stringIP: "::34561233",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv6 CIDR form",
 			stringIP: "::1/22/34",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Invalid IPv6 CIDR ",
 			stringIP: "::1/234",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Missing IPv6 CIDR ",
 			stringIP: "::1/",
-			res:      assert.Error,
+			res:      true,
 		},
 		{
 			name:     "Valid IPv6 CIDR ",
 			stringIP: "::1/53",
-			res:      assert.NoError,
+			res:      false,
 		},
 	}
 
@@ -147,7 +145,9 @@ func TestNetIPParseNetIP(t *testing.T) {
 			t.Parallel()
 
 			_, err := ipchecking.ParseNetIP(tt.stringIP)
-			tt.res(t, err)
+			if tt.res != (err != nil) {
+				t.Errorf("ParseNetIP() = %v, want %v", err, tt.res)
+			}
 		})
 	}
 }
@@ -159,29 +159,29 @@ func TestNetIPParseNetIPs(t *testing.T) {
 		name        string
 		ips         []string
 		expectedIPs []string
-		expectErr   assert.ErrorAssertionFunc
+		expectErr   bool
 	}{
 		{
 			name:        "valid IPv4",
 			ips:         []string{"127.0.0.1", "127.0.0.2"},
 			expectedIPs: []string{"127.0.0.1", "127.0.0.2"},
-			expectErr:   assert.NoError,
+			expectErr:   false,
 		},
 		{
 			name:        "valid IPv6",
 			ips:         []string{"::1", "::2"},
 			expectedIPs: []string{"::1", "::2"},
-			expectErr:   assert.NoError,
+			expectErr:   false,
 		},
 		{
 			name:      "invalid IPv4",
 			ips:       []string{"127.0.0.1.1", "127.0.0.2.42"},
-			expectErr: assert.Error,
+			expectErr: true,
 		},
 		{
 			name:      "invalid IPv6",
 			ips:       []string{"::1", "::2::42:"},
-			expectErr: assert.Error,
+			expectErr: true,
 		},
 	}
 
@@ -191,10 +191,14 @@ func TestNetIPParseNetIPs(t *testing.T) {
 			t.Parallel()
 
 			got, err := ipchecking.ParseNetIPs(tt.ips)
-			tt.expectErr(t, err)
+			if tt.expectErr != (err != nil) {
+				t.Errorf("ParseNetIPs() = %v, want %v", err, tt.expectErr)
+			}
 
 			for i, gotIP := range got {
-				assert.Equal(t, tt.expectedIPs[i], gotIP.String())
+				if tt.expectedIPs[i] != gotIP.String() {
+					t.Errorf("ParseNetIPs() = %q, want %q", gotIP.String(), tt.expectedIPs[i])
+				}
 			}
 		})
 	}
@@ -298,7 +302,9 @@ func TestNetIPContains(t *testing.T) {
 			t.Parallel()
 
 			r := tt.testedIP.Contains(tt.stringIP)
-			assert.Equal(t, tt.res, r)
+			if tt.res != r {
+				t.Errorf("Contains() = %v, want %v", r, tt.res)
+			}
 		})
 	}
 }
@@ -307,7 +313,9 @@ func helpParseNetIPs(t *testing.T, ips []string) ipchecking.NetIPs {
 	t.Helper()
 
 	nip, err := ipchecking.ParseNetIPs(ips)
-	require.NoError(t, err)
+	if err != nil {
+		t.Errorf("Error in IP building: %q, with err %v", nip, err)
+	}
 
 	return nip
 }
@@ -376,7 +384,9 @@ func TestNetIPsContains(t *testing.T) {
 			t.Parallel()
 
 			r := ips.Contains(tt.stringIP)
-			assert.Equal(t, tt.res, r)
+			if tt.res != r {
+				t.Errorf("Contains() = %v, want %v", r, tt.res)
+			}
 		})
 	}
 }
@@ -388,34 +398,34 @@ func TestNetIPString(t *testing.T) {
 	ipv6 := helpParseNetIP(t, "::1/128")
 
 	tests := []struct {
-		name     string
-		testedIP string
-		stringIP ipchecking.NetIP
-		res      assert.ComparisonAssertionFunc
+		name          string
+		testedIP      string
+		stringIP      ipchecking.NetIP
+		expectIsEqual bool
 	}{
 		{
-			name:     "Valid IPv4 string",
-			testedIP: "127.0.0.1/32",
-			stringIP: ipv4,
-			res:      assert.Equal,
+			name:          "Valid IPv4 string",
+			testedIP:      "127.0.0.1/32",
+			stringIP:      ipv4,
+			expectIsEqual: true,
 		},
 		{
-			name:     "Invalid IPv4 string",
-			testedIP: "127.0.0.2/32",
-			stringIP: ipv4,
-			res:      assert.NotEqual,
+			name:          "Invalid IPv4 string",
+			testedIP:      "127.0.0.2/32",
+			stringIP:      ipv4,
+			expectIsEqual: false,
 		},
 		{
-			name:     "Valid IPv6 string",
-			testedIP: "::1/128",
-			stringIP: ipv6,
-			res:      assert.Equal,
+			name:          "Valid IPv6 string",
+			testedIP:      "::1/128",
+			stringIP:      ipv6,
+			expectIsEqual: true,
 		},
 		{
-			name:     "Invalid IPv6 string",
-			testedIP: "::2/128",
-			stringIP: ipv6,
-			res:      assert.NotEqual,
+			name:          "Invalid IPv6 string",
+			testedIP:      "::2/128",
+			stringIP:      ipv6,
+			expectIsEqual: false,
 		},
 	}
 
@@ -425,7 +435,15 @@ func TestNetIPString(t *testing.T) {
 			t.Parallel()
 
 			r := tt.stringIP.String()
-			tt.res(t, tt.testedIP, r)
+			if tt.expectIsEqual {
+				if r != tt.testedIP {
+					t.Errorf("String() = %q, want %q", r, tt.testedIP)
+				}
+			} else {
+				if r == tt.testedIP {
+					t.Errorf("String() = %q, want not %q", r, tt.testedIP)
+				}
+			}
 		})
 	}
 }

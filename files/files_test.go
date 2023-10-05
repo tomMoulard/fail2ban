@@ -5,8 +5,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/tomMoulard/fail2ban/files"
 )
 
@@ -46,19 +44,32 @@ func TestGetFileContent(t *testing.T) {
 
 			text1, err := files.GetFileContent(tt.fileName)
 			if err != nil {
-				assert.Equal(t, tt.err, err.Error())
+				if tt.err != err.Error() {
+					t.Errorf("GetFileContent() = %q, want %q", err.Error(), tt.err)
+				}
 
 				return
 			}
 
 			file, err := os.Open(tt.fileName)
-			require.NoError(t, err)
-			defer func() { require.NoError(t, file.Close()) }()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			defer func() {
+				if err := file.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}()
 
 			text, err := io.ReadAll(file)
-			require.NoError(t, err)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			assert.Equal(t, string(text), text1)
+			if text1 != string(text) {
+				t.Errorf("GetFileContent() = %q, want %q", text1, string(text))
+			}
 		})
 	}
 }

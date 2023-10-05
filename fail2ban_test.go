@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"golang.org/x/net/websocket"
 )
 
@@ -51,7 +49,7 @@ func TestTransformRules(t *testing.T) {
 
 			got, e := TransformRule(tt.send)
 			if e != nil && (tt.err == nil || e.Error() != tt.err.Error()) {
-				t.Errorf("TransformRule_err: wanted '%s' got '%s'",
+				t.Errorf("TransformRule_err: wanted %q got %q",
 					tt.err, e)
 			}
 			if tt.expect.Bantime == got.Bantime {
@@ -139,7 +137,7 @@ func TestImportIP(t *testing.T) {
 			got, e := ImportIP(tt.list)
 			t.Logf("%+v", got)
 			if e != nil && e.Error() != tt.err.Error() {
-				t.Errorf("wanted '%s' got '%s'", tt.err, e)
+				t.Errorf("wanted %q got %q", tt.err, e)
 			}
 			if len(got) != len(tt.strWant) {
 				t.Errorf("wanted '%d' got '%d'", len(tt.strWant), len(got))
@@ -147,7 +145,7 @@ func TestImportIP(t *testing.T) {
 
 			for i, elt := range tt.strWant {
 				if got[i] != elt {
-					t.Errorf("wanted '%s' got '%s'", elt, got[i])
+					t.Errorf("wanted %q got %q", elt, got[i])
 				}
 			}
 		})
@@ -303,7 +301,9 @@ func TestFail2Ban(t *testing.T) {
 			tt.cfg.LogLevel = logLevelDebug
 			handler, err := New(context.Background(), next, &tt.cfg, "fail2ban_test")
 			if err != nil {
-				assert.Equal(t, tt.newError, err != nil, "newError: wanted '%t' got '%t'", tt.newError, err != nil)
+				if tt.newError != (err != nil) {
+					t.Errorf("newError: wanted '%t' got '%t'", tt.newError, err != nil)
+				}
 
 				return
 			}
@@ -463,7 +463,9 @@ func TestShouldAllow(t *testing.T) {
 			LoggerDEBUG.SetOutput(os.Stdout)
 
 			got := tt.cfg.shouldAllow(tt.remoteIP, tt.reqURL)
-			assert.Equal(t, tt.expect, got)
+			if tt.expect != got {
+				t.Errorf("wanted '%t' got '%t'", tt.expect, got)
+			}
 		})
 	}
 }
@@ -471,7 +473,9 @@ func TestShouldAllow(t *testing.T) {
 func helperDefer(t *testing.T, funcToDefer func() error) {
 	t.Helper()
 
-	require.NoError(t, funcToDefer())
+	if err := funcToDefer(); err != nil {
+		t.Errorf("wanted no error got %q", err)
+	}
 }
 
 // https://github.com/tomMoulard/fail2ban/issues/67
@@ -493,8 +497,11 @@ func TestDeadlockWebsocket(t *testing.T) {
 	cfg := CreateConfig()
 	cfg.LogLevel = logLevelDebug
 	cfg.Rules.Maxretry = 20
+
 	handler, err := New(context.Background(), next, cfg, "fail2ban_test")
-	require.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	s := httptest.NewServer(handler)
 	defer s.Close()
@@ -504,7 +511,9 @@ func TestDeadlockWebsocket(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		ws, err := websocket.Dial(wsURL, "", "http://localhost")
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		defer helperDefer(t, ws.Close)
 		conns[i] = ws
@@ -514,15 +523,25 @@ func TestDeadlockWebsocket(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		msg := fmt.Sprintf("hello %d", i)
+
 		n, err := conns[i].Write([]byte(msg))
-		require.NoError(t, err)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		p := make([]byte, n)
-		_, err = conns[i].Read(p)
-		require.NoError(t, err)
 
-		assert.Equal(t, msg, string(p))
+		_, err = conns[i].Read(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if msg != string(p) {
+			t.Errorf("wanted %q got %q", msg, string(p))
+		}
 	}
 
-	assert.Equal(t, 10, int(concurentWSCount.Load()))
+	if concurentWSCount.Load() != 10 {
+		t.Errorf("wanted %d got %d", 10, concurentWSCount.Load())
+	}
 }
