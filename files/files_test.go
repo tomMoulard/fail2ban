@@ -8,6 +8,20 @@ import (
 	"github.com/tomMoulard/fail2ban/files"
 )
 
+func Example() {
+	// Get file content
+	text, err := files.GetFileContent("test-file.txt")
+	if err != nil {
+		panic(err)
+	}
+
+	// Print file content
+	println(text)
+
+	// Output:
+	//
+}
+
 func TestGetFileContent(t *testing.T) {
 	t.Parallel()
 
@@ -29,28 +43,32 @@ func TestGetFileContent(t *testing.T) {
 			t.Parallel()
 
 			text1, err := files.GetFileContent(tt.fileName)
-			if err != nil && err.Error() != tt.err {
-				t.Errorf("GetFileContent() error = %v, wantErr %v", err, tt.err)
+			if err != nil {
+				if tt.err != err.Error() {
+					t.Errorf("GetFileContent() = %q, want %q", err.Error(), tt.err)
+				}
 
 				return
 			}
-			if tt.err == "" {
-				file, err := os.Open(tt.fileName)
-				if err != nil {
-					t.Error(err)
-				}
-				defer func() { _ = file.Close() }()
 
-				text, err := io.ReadAll(file)
-				if err != nil {
-					t.Error(err)
-				}
+			file, err := os.Open(tt.fileName)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-				text2 := string(text)
-
-				if text1 != text2 {
-					t.Error("Did not get the same file out")
+			defer func() {
+				if err := file.Close(); err != nil {
+					t.Fatal(err)
 				}
+			}()
+
+			text, err := io.ReadAll(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if text1 != string(text) {
+				t.Errorf("GetFileContent() = %q, want %q", text1, string(text))
 			}
 		})
 	}

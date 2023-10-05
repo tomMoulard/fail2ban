@@ -37,81 +37,12 @@ testData:
 Where you can use some IP in an array of files or directly in the
 configuration.
 
-### LogLevel
-In order to help you and us when building and using the plugin, we added some
-logs on stdout.
-You can choose the level of logging with this:
-
-```yml
-testData:
-  logLevel: "INFO"
-```
-
-<details>
-
-There is 3 level of logging :
-
-#### `NONE`
-The plugin will not output *any* logs.
-
-```
-INFO[0000] Configuration loaded from file: ./traefik.yml
-```
-
-#### `INFO`
-Configuration informations will be displayed.
-
-```
-INFO[0000] Configuration loaded from file: ./traefik.yml
-INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
-INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
-INFO: Fail2Ban: restricted.go:51: Bantime: 3h0m0s
-INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
-INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true}'
-INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
-INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
-INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
-INFO: Fail2Ban: restricted.go:51: Bantime: 3h0m0s
-INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
-INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3h0m0s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true}'
-INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
-```
-
-#### `DEBUG`
-Every event will be logged.
-
-Warning, all IPs will be prompted in clear text with this option.
-
-```
-INFO[0000] Configuration loaded from file: ./traefik.yml
-INFO: Fail2Ban: restricted.go:51: Whitelisted: '127.0.0.2/32'
-INFO: Fail2Ban: restricted.go:51: Blacklisted: '127.0.0.3/32'
-INFO: Fail2Ban: restricted.go:51: Bantime: 3s
-INFO: Fail2Ban: restricted.go:51: Findtime: 3h0m0s
-INFO: Fail2Ban: restricted.go:51: FailToBan Rules : '{Xbantime:3s Xfindtime:3h0m0s Xurlregexp:[localhost:5000/whoami] Xmaxretry:4 Xenabled:true}'
-INFO: Fail2Ban: restricted.go:52: Plugin: FailToBan is up and running
-DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
-DEBUG: Fail2Ban: restricted.go:51: welcome ::1
-DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
-DEBUG: Fail2Ban: restricted.go:51: welcome back ::1 for the 2 time
-DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
-DEBUG: Fail2Ban: restricted.go:51: welcome back ::1 for the 3 time
-DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
-DEBUG: Fail2Ban: restricted.go:52: ::1 is now banned temporarily
-DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
-DEBUG: Fail2Ban: restricted.go:51: ::1 is still banned since 2021-04-23T21:40:55+02:00, 5 request
-DEBUG: Fail2Ban: restricted.go:51: New request: &{GET /whoami HTTP/1.1 1 1
-DEBUG: Fail2Ban: restricted.go:52: ::1 is no longer banned
-```
-
-</details>
 
 ## Fail2ban
 We plan to use all default fail2ban configuration but at this time only a
 few features are implemented:
 ```yml
 testData:
-  logLevel: "INFO"
   rules:
     urlregexps:
     - regexp: "/no"
@@ -133,8 +64,6 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
  - `urlregexp`: a regexp list to block / allow requests with regexps on the url
- - `logLevel`: is used to show the correct level of logs (`DEBUG`, `INFO`,
-`NONE`)
 
 #### URL Regexp
 Urlregexp are used to defined witch part of your website will be either

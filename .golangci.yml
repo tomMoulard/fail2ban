@@ -61,6 +61,9 @@ linters-settings:
         disabled: true
       - name: unreachable-code
       - name: redefines-builtin-id
+  testpackage:
+    allow-packages:
+      - fail2ban
 
 issues:
   exclude-use-default: false
@@ -71,6 +74,6 @@ issues:
       linters:
         - funlen
     - path: 'fail2ban.go'
-      text: 'Function ''ServeHTTP'' has too many statements'
-    - path: 'fail2ban.go'
-      text: 'calculated cyclomatic complexity for function ServeHTTP is 16'
+      text: 'calculated cyclomatic complexity for function shouldAllow is 12'
+    - path: 'fail2ban_test.go' # false-positive
+      text: 'response body must be closed'
