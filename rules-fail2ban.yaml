@@ -5,7 +5,6 @@ http:
     fail2ban:
       plugin:
         fail2ban:
-          loglevel: INFO
           whitelist:
             ip: "127.0.0.2"
           blacklist:

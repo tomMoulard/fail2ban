@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -298,7 +297,6 @@ func TestFail2Ban(t *testing.T) {
 				nextCount.Add(1)
 			})
 
-			tt.cfg.LogLevel = logLevelDebug
 			handler, err := New(context.Background(), next, &tt.cfg, "fail2ban_test")
 			if err != nil {
 				if tt.newError != (err != nil) {
@@ -459,8 +457,6 @@ func TestShouldAllow(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			LoggerINFO.SetOutput(os.Stdout)
-			LoggerDEBUG.SetOutput(os.Stdout)
 
 			got := tt.cfg.shouldAllow(tt.remoteIP, tt.reqURL)
 			if tt.expect != got {
@@ -495,7 +491,6 @@ func TestDeadlockWebsocket(t *testing.T) {
 	})
 
 	cfg := CreateConfig()
-	cfg.LogLevel = logLevelDebug
 	cfg.Rules.Maxretry = 20
 
 	handler, err := New(context.Background(), next, cfg, "fail2ban_test")

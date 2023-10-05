@@ -8,7 +8,7 @@ lint:
 	golangci-lint run
 
 .PHONY: test
-TEST_ARGS ?= -v -cover -race
+TEST_ARGS ?= -v -cover -race -tags DEBUG
 test:
 	go test ${TEST_ARGS} ./...
 
