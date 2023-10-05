@@ -28,8 +28,6 @@ linters-settings:
         allow:
           - $gostd
           - github.com/tomMoulard/fail2ban
-          - github.com/gorilla/websocket
-          - github.com/stretchr/testify
   godox:
     keywords:
       - FIXME
