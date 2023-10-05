@@ -9,6 +9,10 @@ import (
 	"log"
 )
 
-func New(out io.Writer, prefix string, flag int) *log.Logger {
-	return log.New(out, prefix, flag)
+type Logger struct {
+	*log.Logger
+}
+
+func New(out io.Writer, prefix string, flag int) Logger {
+	return Logger{log.New(out, prefix, flag)}
 }
