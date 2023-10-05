@@ -16,7 +16,7 @@ vendor:
 	go mod vendor
 
 .PHONY: yaegi_test
-YAEGI_TEST_ARGS ?= -v -unsafe
+YAEGI_TEST_ARGS ?= -v
 yaegi_test: vendor
 	yaegi test ${YAEGI_TEST_ARGS} .
 
