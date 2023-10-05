@@ -16,6 +16,7 @@ linters:
     - exhaustruct # Not relevant
     - goerr113 # Too strict
     - gochecknoglobals
+    - gochecknoinits # useless
 
 linters-settings:
   misspell:

@@ -9,18 +9,6 @@ import (
 	"log"
 )
 
-type Logger struct {
-	logger *log.Logger
-}
-
-func New(out io.Writer, prefix string, flag int) Logger {
-	return Logger{logger: log.New(out, prefix, flag)}
-}
-
-func (l Logger) Println(v ...interface{}) {
-	l.logger.Println(v...)
-}
-
-func (l Logger) Printf(format string, v ...interface{}) {
-	l.logger.Printf(format, v...)
+func New(out io.Writer, prefix string, flag int) *log.Logger {
+	return log.New(out, prefix, flag)
 }
