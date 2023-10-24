@@ -9,7 +9,7 @@ services:
       - --log.level=DEBUG
       - --experimental.localPlugins.fail2ban-local.moduleName=github.com/tomMoulard/fail2ban
       - --experimental.plugins.fail2ban-registery.modulename=github.com/tomMoulard/fail2ban
-      - --experimental.plugins.fail2ban-registery.version=v0.6.6
+      - --experimental.plugins.fail2ban-registery.version=v0.7.1
     ports:
       - 80:80
       - 8080:8080
@@ -24,10 +24,10 @@ services:
     labels:
       traefik.http.routers.fail2ban-local.rule: Host(`fail2ban-local.localhost`)
       traefik.http.routers.fail2ban-local.middlewares: fail2ban-local
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.enabled: true
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.bantime: 3h
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.findtime: 3h
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.maxretry: 4
+      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.enabled: true
+      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.bantime: 3h
+      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.findtime: 3h
+      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.maxretry: 4
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.whitelist.ip: 127.0.0.2
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.blacklist.ip: 127.0.0.3
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.urlregexps[0].regexp: /no
