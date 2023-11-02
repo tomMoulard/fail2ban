@@ -224,23 +224,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Blacklist
-	if u.blacklist.Contains(remoteIP) {
-		LoggerDEBUG.Println(remoteIP + " is blacklisted")
-		rw.WriteHeader(http.StatusForbidden)
-
-		return
-	}
-
-	// Whitelist
-	if u.whitelist.Contains(remoteIP) {
-		LoggerDEBUG.Println(remoteIP + " is whitelisted")
-		u.next.ServeHTTP(rw, req)
-
-		return
-	}
-
-	if !u.shouldAllow(remoteIP, req.URL.String()) {
+	if !u.ShouldAllow(remoteIP, req.URL.String()) {
 		rw.WriteHeader(http.StatusForbidden)
 
 		return
@@ -249,8 +233,22 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	u.next.ServeHTTP(rw, req)
 }
 
-// shouldAllow check if the request should be allowed.
-func (u *Fail2Ban) shouldAllow(remoteIP, reqURL string) bool {
+// ShouldAllow check if the request should be allowed.
+func (u *Fail2Ban) ShouldAllow(remoteIP, reqURL string) bool {
+	// Blacklist
+	if u.blacklist.Contains(remoteIP) {
+		LoggerDEBUG.Println(remoteIP + " is blacklisted")
+
+		return false
+	}
+
+	// Whitelist
+	if u.whitelist.Contains(remoteIP) {
+		LoggerDEBUG.Println(remoteIP + " is whitelisted")
+
+		return true
+	}
+
 	// Urlregexp ban
 	u.muIP.Lock()
 	defer u.muIP.Unlock()

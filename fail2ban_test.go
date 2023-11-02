@@ -498,7 +498,7 @@ func TestShouldAllow(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := tt.cfg.shouldAllow(tt.remoteIP, tt.reqURL)
+			got := tt.cfg.ShouldAllow(tt.remoteIP, tt.reqURL)
 			if tt.expect != got {
 				t.Errorf("wanted '%t' got '%t'", tt.expect, got)
 			}

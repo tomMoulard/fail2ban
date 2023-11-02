@@ -22,3 +22,6 @@ plugins-storage
 *.swp
 test.html
 coverage.txt
+
+# WASM build file
+fail2ban.wasm
