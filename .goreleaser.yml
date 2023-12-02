@@ -1,0 +1,36 @@
+project_name: fail2ban
+
+builds:
+  - binary: plugin.wasm
+    gobinary: tinygo
+    no_unique_dist_dir: true
+    main: .
+    flags:
+      - -scheduler=none
+      - --no-debug
+      - -target=wasi
+    ldflags:
+      - ''
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^doc:'
+      - '^chore:'
+      - '^chore(deps):'
+      - '^test:'
+      - '^tests:'
+
+archives:
+  - id: fail2ban
+    name_template: '{{ .ProjectName }}_v{{ .Version }}'
+    format: zip
+    files:
+      - LICENSE
+      - .traefik.yml

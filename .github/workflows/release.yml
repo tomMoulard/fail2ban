@@ -46,25 +46,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Setup GOPATH
-        run: go env -w GOPATH=${{ github.workspace }}/go
-
-      - name: Check and get dependencies
-        run: |
-          go mod tidy
-          git diff --exit-code
-
-      - name: Build WASM Plugin
-        run: make -B fail2ban.wasm
-
-      - name: Build archive
-        run: |
-          mv fail2ban.wasm fail2ban.${{ github.ref_name }}.wasm
-
-      - name: Upload WASM Plugin asset to release
-        uses: softprops/action-gh-release@v1
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v4
         with:
-          generate_release_notes: true
-          files: |
-            ${{ github.workspace }}/go/src/github.com/${{ github.repository }}/fail2ban.${{ github.ref_name }}.wasm
-
+          version: latest
+          args: release --clean --timeout=10m
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
