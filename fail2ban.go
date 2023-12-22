@@ -18,6 +18,10 @@ import (
 	logger "github.com/tomMoulard/fail2ban/log"
 )
 
+const (
+	xRealIP = "X-Real-Ip"
+)
+
 func init() {
 	log.SetOutput(os.Stdout)
 }
@@ -45,6 +49,7 @@ type Rules struct {
 	Findtime   string      `yaml:"findtime"` // exprimate in a smart way: 3m
 	Maxretry   int         `yaml:"maxretry"`
 	Urlregexps []Urlregexp `yaml:"urlregexps"`
+	Xrealip    bool        `yaml:"xrealip"`
 }
 
 // List struct.
@@ -67,6 +72,7 @@ func CreateConfig() *Config {
 			Bantime:  "300s",
 			Findtime: "120s",
 			Enabled:  true,
+			Xrealip:  false,
 		},
 	}
 }
@@ -79,6 +85,7 @@ type RulesTransformed struct {
 	URLRegexpBan   []*regexp.Regexp
 	MaxRetry       int
 	Enabled        bool
+	Xrealip        bool
 }
 
 // TransformRule morph a Rules object into a RulesTransformed.
@@ -126,6 +133,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		URLRegexpBan:   regexpBan,
 		MaxRetry:       r.Maxretry,
 		Enabled:        r.Enabled,
+		Xrealip:        r.Xrealip,
 	}
 
 	log.Printf("FailToBan Rules : '%+v'", rules)
@@ -217,11 +225,12 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	LoggerDEBUG.Printf("New request: %+v", *req)
 
-	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err != nil {
-		LoggerDEBUG.Printf("failed to split remote address %q: %v", req.RemoteAddr, err)
+	var remoteIP string
 
-		return
+	if u.rules.Xrealip {
+		remoteIP = req.Header.Get(xRealIP)
+	} else {
+		remoteIP, _, _ = net.SplitHostPort(req.RemoteAddr)
 	}
 
 	// Blacklist

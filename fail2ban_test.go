@@ -201,6 +201,20 @@ func TestFail2Ban(t *testing.T) {
 			expectStatus: http.StatusOK,
 		},
 		{
+			name: "xrealip enabled",
+			cfg: Config{
+				Rules: Rules{
+					Enabled:  true,
+					Bantime:  "300s",
+					Findtime: "300s",
+					Maxretry: 20,
+					Xrealip:  true,
+				},
+			},
+			newError:     false,
+			expectStatus: http.StatusOK,
+		},
+		{
 			name: "rule not enabled beside being blacklisted",
 			cfg: Config{
 				Rules: Rules{

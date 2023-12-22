@@ -1,0 +1,28 @@
+# Template for configuration
+
+http:
+  routers:
+    my-router:
+      middlewares:
+        - fail2ban
+      entrypoints:
+        - http
+      service: service-whoami
+      rule: Path(`/whoami`)
+
+  services:
+    service-whoami:
+      loadBalancer:
+        servers:
+          - url: http://localhost:5000
+        passHostHeader: false
+  middlewares:
+    fail2ban:
+      plugin:
+        dev:
+          rules:
+            bantime: "3h"
+            enabled: true
+            findtime: "3h"
+            maxretry: 4
+            xrealip: true

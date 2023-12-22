@@ -53,6 +53,7 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
+    xrealip: false
 ```
 
 Where:
@@ -64,6 +65,7 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
  - `urlregexp`: a regexp list to block / allow requests with regexps on the url
+ - `xrealip`: use X-Real-Ip http header value, instead of kernel visible IP source
 
 #### URL Regexp
 Urlregexp are used to defined witch part of your website will be either
@@ -81,6 +83,7 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
+    xrealip: false
 ```
 
 By default, fail2ban will be applied.
@@ -99,6 +102,7 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
+    xrealip: false
 ```
 
 In the case where you define multiple regexp on the same url, the order of
