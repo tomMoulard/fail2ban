@@ -28,7 +28,7 @@ linters-settings:
       main:
         allow:
           - $gostd
-          - github.com/tomMoulard/fail2ban
+          - github.com/fliot/fail2ban
   godox:
     keywords:
       - FIXME

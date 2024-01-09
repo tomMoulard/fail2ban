@@ -1,6 +1,6 @@
 # Fail2ban plugin for traefik
 
-[![Build Status](https://github.com/tomMoulard/fail2ban/actions/workflows/main.yml/badge.svg)](https://github.com/tomMoulard/fail2ban/actions/workflows/main.yml)
+[![Build Status](https://github.com/fliot/fail2ban/actions/workflows/main.yml/badge.svg)](https://github.com/fliot/fail2ban/actions/workflows/main.yml)
 
 This plugin is an implementation of the fail2ban mechanism as a middleware
 plugin for Traefik.
