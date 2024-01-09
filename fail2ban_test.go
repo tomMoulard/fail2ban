@@ -520,7 +520,7 @@ func TestShouldAllow(t *testing.T) {
 	}
 }
 
-// https://github.com/tomMoulard/fail2ban/issues/67
+// https://github.com/fliot/fail2ban/issues/67
 func TestDeadlockWebsocket(t *testing.T) {
 	t.Parallel()
 

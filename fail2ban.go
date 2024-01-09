@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tomMoulard/fail2ban/files"
-	"github.com/tomMoulard/fail2ban/ipchecking"
-	logger "github.com/tomMoulard/fail2ban/log"
+	"github.com/fliot/fail2ban/files"
+	"github.com/fliot/fail2ban/ipchecking"
+	logger "github.com/fliot/fail2ban/log"
 )
 
 const (
