@@ -1,10 +1,10 @@
-displayName: Fail2Ban
+displayName: Fail2Ban/X-Real-Ip
 type: middleware
 iconPath: .assets/f2b.png
 
-import: github.com/tomMoulard/fail2ban
+import: github.com/fliot/fail2ban
 
-summary: 'Blacklist (or whitelist) IP depending on some conditions'
+summary: 'Blacklist (or whitelist) IP of X-Real-Ip requests depending on some conditions'
 
 testData:
   whitelist:
@@ -19,3 +19,4 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
+    xrealip: false

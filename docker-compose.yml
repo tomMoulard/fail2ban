@@ -7,15 +7,15 @@ services:
       - --api.insecure=true
       - --providers.docker
       - --log.level=DEBUG
-      - --experimental.localPlugins.fail2ban-local.moduleName=github.com/tomMoulard/fail2ban
-      - --experimental.plugins.fail2ban-registery.modulename=github.com/tomMoulard/fail2ban
+      - --experimental.localPlugins.fail2ban-local.moduleName=github.com/fliot/fail2ban
+      - --experimental.plugins.fail2ban-registery.modulename=github.com/fliot/fail2ban
       - --experimental.plugins.fail2ban-registery.version=v0.7.1
     ports:
       - 80:80
       - 8080:8080
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - .:/plugins-local/src/github.com/tomMoulard/fail2ban/
+      - .:/plugins-local/src/github.com/fliot/fail2ban/
     tty: true
 
   whoami:
@@ -28,6 +28,7 @@ services:
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.bantime: 3h
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.findtime: 3h
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.maxretry: 4
+      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.xrealip: false
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.whitelist.ip: 127.0.0.2
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.blacklist.ip: 127.0.0.3
       traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.urlregexps[0].regexp: /no

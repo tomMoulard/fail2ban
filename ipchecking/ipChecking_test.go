@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/tomMoulard/fail2ban/ipchecking"
+	"github.com/fliot/fail2ban/ipchecking"
 )
 
 //nolint:dupword

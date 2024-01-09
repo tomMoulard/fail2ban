@@ -201,6 +201,20 @@ func TestFail2Ban(t *testing.T) {
 			expectStatus: http.StatusOK,
 		},
 		{
+			name: "xrealip enabled",
+			cfg: Config{
+				Rules: Rules{
+					Enabled:  true,
+					Bantime:  "300s",
+					Findtime: "300s",
+					Maxretry: 20,
+					Xrealip:  true,
+				},
+			},
+			newError:     false,
+			expectStatus: http.StatusOK,
+		},
+		{
 			name: "rule not enabled beside being blacklisted",
 			cfg: Config{
 				Rules: Rules{
@@ -506,7 +520,7 @@ func TestShouldAllow(t *testing.T) {
 	}
 }
 
-// https://github.com/tomMoulard/fail2ban/issues/67
+// https://github.com/fliot/fail2ban/issues/67
 func TestDeadlockWebsocket(t *testing.T) {
 	t.Parallel()
 
