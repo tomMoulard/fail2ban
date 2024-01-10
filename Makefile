@@ -31,6 +31,11 @@ fail2ban.wasm: vendor
 		-target=wasi \
 		-tags WASM \
 		./wasm/fail2ban.wasm.go
+	# https://go.dev/blog/wasi
+	GOOS=wasip1 GOARCH=wasm go build \
+		-o fail2ban.std.wasm \
+		-tags WASM \
+		./wasm/fail2ban.wasm.go
 
 .PHONY: yaegi_test
 YAEGI_TEST_ARGS ?= -v
