@@ -40,24 +40,24 @@ var LoggerDEBUG = logger.New(os.Stdout, "DEBUG: Fail2Ban: ", log.Ldate|log.Ltime
 
 // Rules struct fail2ban config.
 type Rules struct {
-	Bantime    string      `yaml:"bantime"`  // exprimate in a smart way: 3m
-	Enabled    bool        `yaml:"enabled"`  // enable or disable the jail
-	Findtime   string      `yaml:"findtime"` // exprimate in a smart way: 3m
-	Maxretry   int         `yaml:"maxretry"`
-	Urlregexps []Urlregexp `yaml:"urlregexps"`
+	Bantime    string      `json:"bantime"    yaml:"bantime"`  // exprimate in a smart way: 3m
+	Enabled    bool        `json:"enabled"    yaml:"enabled"`  // enable or disable the jail
+	Findtime   string      `json:"findtime"   yaml:"findtime"` // exprimate in a smart way: 3m
+	Maxretry   int         `json:"maxretry"   yaml:"maxretry"`
+	Urlregexps []Urlregexp `json:"urlregexps" yaml:"urlregexps"`
 }
 
 // List struct.
 type List struct {
-	IP    []string
-	Files []string
+	IP    []string `json:"ip"    yaml:"ip"`
+	Files []string `json:"files" yaml:"files"`
 }
 
 // Config struct.
 type Config struct {
-	Blacklist List  `yaml:"blacklist"`
-	Whitelist List  `yaml:"whitelist"`
-	Rules     Rules `yaml:"port"`
+	Blacklist List  `json:"blacklist" yaml:"blacklist"`
+	Whitelist List  `json:"whitelist" yaml:"whitelist"`
+	Rules     Rules `json:"port"      yaml:"port"`
 }
 
 // CreateConfig populates the Config data object.
