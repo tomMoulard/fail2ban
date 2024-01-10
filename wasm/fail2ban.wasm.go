@@ -16,39 +16,45 @@ import (
 	"github.com/tomMoulard/fail2ban"
 )
 
-type Middleware struct {
-	middleware *fail2ban.Fail2Ban
-}
-
-var mw = &Middleware{}
-
-func init() {
-	var cfg *fail2ban.Config
-	if err := json.Unmarshal(handler.Host.GetConfig(), cfg); err != nil {
+func main() {
+	var cfg fail2ban.Config
+	if err := json.Unmarshal(handler.Host.GetConfig(), &cfg); err != nil {
 		handler.Host.Log(api.LogLevelError, fmt.Sprintf("Could not load config %v", err))
 		os.Exit(1)
 	}
 
+	mw, err := New(cfg)
+	if err != nil {
+		handler.Host.Log(api.LogLevelError, fmt.Sprintf("Could not create middleware: %v", err))
+		os.Exit(1)
+	}
+
+	handler.HandleRequestFn = mw.handleRequest
+}
+
+type Middleware struct {
+	middleware *fail2ban.Fail2Ban
+}
+
+// New creates a new middleware.
+func New(cfg fail2ban.Config) (*Middleware, error) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	})
 
-	hander, err := fail2ban.New(context.Background(), next, cfg, "fail2ban-WASM")
+	hander, err := fail2ban.New(context.Background(), next, &cfg, "fail2ban-WASM")
 	if err != nil {
-		handler.Host.Log(api.LogLevelError, fmt.Sprintf("Could create middleware: %v", err))
-		os.Exit(1)
+		return nil, fmt.Errorf("Could not create fail2ban middleware: %w", err)
 	}
 
+	var mw = &Middleware{}
 	var ok bool
-
 	mw.middleware, ok = hander.(*fail2ban.Fail2Ban)
 	if !ok {
-		handler.Host.Log(api.LogLevelError, "Could create middleware")
+		handler.Host.Log(api.LogLevelError, "Could not create middleware")
 		os.Exit(1)
 	}
-}
 
-func main() {
-	handler.HandleRequestFn = mw.handleRequest
+	return mw, nil
 }
 
 // handleRequest implements a simple request middleware.
@@ -65,8 +71,3 @@ func (mw *Middleware) handleRequest(req api.Request, resp api.Response) (next bo
 
 	return
 }
-
-// handleResponse implements a simple response middleware.
-// NOOP for this particular plugin.
-// func (mw *Middleware) handleResponse(_ uint32, _ api.Request, _ api.Response, _ bool) {
-// }

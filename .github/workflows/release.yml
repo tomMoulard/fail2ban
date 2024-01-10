@@ -46,6 +46,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      - name: Change plugin runtime to wasm
+        run: |
+          echo "runtime: wasm" >> .traefik.yml
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v4
         with:

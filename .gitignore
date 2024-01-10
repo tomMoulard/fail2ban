@@ -25,3 +25,6 @@ coverage.txt
 
 # WASM build file
 fail2ban.wasm
+
+# goreleaser release directory
+dist/

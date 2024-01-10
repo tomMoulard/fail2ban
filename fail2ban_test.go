@@ -2,11 +2,13 @@ package fail2ban
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"regexp"
 	"strings"
 	"sync/atomic"
@@ -571,5 +573,88 @@ func TestDeadlockWebsocket(t *testing.T) {
 
 	if concurentWSCount.Load() != 10 {
 		t.Errorf("wanted %d got %d", 10, concurentWSCount.Load())
+	}
+}
+
+func TestConfigMarshallUnmarshall(t *testing.T) {
+	t.Parallel()
+
+	config := Config{
+		Rules: Rules{
+			Bantime:  "3h",
+			Enabled:  true,
+			Findtime: "3h",
+			Maxretry: 4,
+			Urlregexps: []Urlregexp{
+				{
+					Mode:   "block",
+					Regexp: "/no",
+				},
+				{
+					Mode:   "allow",
+					Regexp: "/yes",
+				},
+			},
+		},
+		Blacklist: List{
+			IP: []string{"127.0.0.1"},
+		},
+		Whitelist: List{
+			IP: []string{"127.0.0.2"},
+		},
+	}
+
+	configStr, err := json.Marshal(config)
+	if err != nil {
+		t.Errorf("failed to marshal config: %q", err)
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(configStr, &cfg); err != nil {
+		t.Errorf("failed to unmarshal config: %q", err)
+	}
+
+	if !reflect.DeepEqual(cfg, config) {
+		t.Errorf("wanted %v got %v", config, cfg)
+	}
+}
+
+func TestConfigUnmarshall(t *testing.T) {
+	t.Parallel()
+
+	config := Config{
+		Rules: Rules{
+			Bantime:  "3h",
+			Enabled:  true,
+			Findtime: "3h",
+			Maxretry: 4,
+			Urlregexps: []Urlregexp{
+				{
+					Mode:   "block",
+					Regexp: "/no",
+				},
+				{
+					Mode:   "allow",
+					Regexp: "/yes",
+				},
+			},
+		},
+		Blacklist: List{
+			IP: []string{"127.0.0.3"},
+		},
+		Whitelist: List{
+			IP: []string{"127.0.0.2"},
+		},
+	}
+
+	configStr := []byte(`{"blacklist":{"ip":["127.0.0.3"]},"rules":{"bantime":"3h","enabled":true,"findtime":"3h","maxretry":4,"urlregexps":[{"mode":"block","regexp":"/no"},{"mode":"allow","regexp":"/yes"}]},"whitelist":{"ip":["127.0.0.2"]}}`)
+
+	var cfg Config
+	if err := json.Unmarshal(configStr, &cfg); err != nil {
+		t.Errorf("failed to unmarshal config: %q", err)
+	}
+
+	if !reflect.DeepEqual(cfg, config) {
+		t.Errorf("wanted %v got %v", config, cfg)
 	}
 }

@@ -15,6 +15,13 @@ test:
 vendor:
 	go mod vendor -v
 
+.PHONY: goreleaser
+goreleaser:
+	goreleaser release \
+		--snapshot \
+		--clean \
+		--timeout=10m
+
 fail2ban.wasm: vendor
 	# https://tinygo.org/getting-started/install/
 	tinygo build \
