@@ -30,7 +30,7 @@ func New(ipList []string) (*deny, error) {
 	return &deny{list: list}, nil
 }
 
-func (a *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status, error) {
+func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status, error) {
 	data := data.GetData(r)
 	if data == nil {
 		return nil, errors.New("failed to get data from request context")
@@ -38,7 +38,7 @@ func (a *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 
 	l.Printf("data: %+v", data)
 
-	if a.list.Contains(data.RemoteIP) {
+	if d.list.Contains(data.RemoteIP) {
 		l.Printf("IP %s is denied", data.RemoteIP)
 
 		return &chain.Status{Return: true}, nil

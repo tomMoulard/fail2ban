@@ -1,4 +1,4 @@
-// Package allow is a middleware
+// Package allow is a middleware that force allows requests from a list of regexps.
 package allow
 
 import (

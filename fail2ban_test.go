@@ -7,12 +7,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	"golang.org/x/net/websocket"
 )
 
@@ -373,23 +373,22 @@ func TestShouldAllow(t *testing.T) {
 		name     string
 		cfg      *Fail2Ban
 		remoteIP string
-		reqURL   string
 		expect   bool
 	}{
 		{
 			name: "first request",
 			cfg: &Fail2Ban{
-				ipViewed: map[string]IPViewed{},
+				ipViewed: map[string]ipchecking.IPViewed{},
 			},
 			expect: true,
 		},
 		{
 			name: "second request",
 			cfg: &Fail2Ban{
-				ipViewed: map[string]IPViewed{
+				ipViewed: map[string]ipchecking.IPViewed{
 					"10.0.0.0": {
-						viewed: time.Now(),
-						nb:     1,
+						Viewed: time.Now(),
+						Count:  1,
 					},
 				},
 			},
@@ -402,11 +401,11 @@ func TestShouldAllow(t *testing.T) {
 				rules: RulesTransformed{
 					Bantime: 300 * time.Second,
 				},
-				ipViewed: map[string]IPViewed{
+				ipViewed: map[string]ipchecking.IPViewed{
 					"10.0.0.0": {
-						viewed: time.Now(),
-						nb:     1,
-						denied: true,
+						Viewed: time.Now(),
+						Count:  1,
+						Denied: true,
 					},
 				},
 			},
@@ -419,11 +418,11 @@ func TestShouldAllow(t *testing.T) {
 				rules: RulesTransformed{
 					Bantime: 300 * time.Second,
 				},
-				ipViewed: map[string]IPViewed{
+				ipViewed: map[string]ipchecking.IPViewed{
 					"10.0.0.0": {
-						viewed: time.Now().Add(-600 * time.Second),
-						nb:     1,
-						denied: true,
+						Viewed: time.Now().Add(-600 * time.Second),
+						Count:  1,
+						Denied: true,
 					},
 				},
 			},
@@ -437,10 +436,10 @@ func TestShouldAllow(t *testing.T) {
 					MaxRetry: 1,
 					Findtime: 300 * time.Second,
 				},
-				ipViewed: map[string]IPViewed{
+				ipViewed: map[string]ipchecking.IPViewed{
 					"10.0.0.0": {
-						viewed: time.Now().Add(600 * time.Second),
-						nb:     1,
+						Viewed: time.Now().Add(600 * time.Second),
+						Count:  1,
 					},
 				},
 			},
@@ -454,26 +453,15 @@ func TestShouldAllow(t *testing.T) {
 					MaxRetry: 3,
 					Findtime: 300 * time.Second,
 				},
-				ipViewed: map[string]IPViewed{
+				ipViewed: map[string]ipchecking.IPViewed{
 					"10.0.0.0": {
-						viewed: time.Now().Add(600 * time.Second),
-						nb:     1,
+						Viewed: time.Now().Add(600 * time.Second),
+						Count:  1,
 					},
 				},
 			},
 			remoteIP: "10.0.0.0",
 			expect:   true,
-		},
-		{
-			name: "block regexp",
-			cfg: &Fail2Ban{
-				rules: RulesTransformed{
-					URLRegexpBan: []*regexp.Regexp{regexp.MustCompile("/test")}, // comment me.
-				},
-				ipViewed: map[string]IPViewed{},
-			},
-			reqURL: "/test",
-			expect: false,
 		},
 	}
 
@@ -481,7 +469,7 @@ func TestShouldAllow(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := test.cfg.shouldAllow(test.remoteIP, test.reqURL)
+			got := test.cfg.shouldAllow(test.remoteIP)
 			if test.expect != got {
 				t.Errorf("wanted '%t' got '%t'", test.expect, got)
 			}
