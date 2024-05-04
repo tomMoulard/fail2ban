@@ -18,7 +18,7 @@ spec:
   plugin:
     fail2ban:
       logLevel: DEBUG
-      blacklist:
+      denylist:
         ip: 127.0.0.1
 ```
 
@@ -47,16 +47,16 @@ spec:
 
 ## Configuration
 
-Please note that the whitelist and blacklist functionality described below can
+Please note that the allowlist and denylist functionality described below can
 _only_ be used _concurrently_ with Fail2ban functionality (if you are looking
-for a way to whitelist or blacklist IPs without using any of the Fail2ban
+for a way to allowlist or denylist IPs without using any of the Fail2ban
 logic, you might want to use a different plugin.)
 
-### Whitelist
-You can whitelist some IP using this:
+### Allowlist
+You can allowlist some IP using this:
 ```yml
 testData:
-  whitelist:
+  allowlist:
     files:
       - "tests/test-ipfile.txt"
     ip:
@@ -69,11 +69,11 @@ configuration.
 
 If you have a single IP, this: `ip: 127.0.0.1` should also work.
 
-### Blacklist
-Like whitelist, you can blacklist some IP using this:
+### Denylist
+Like allowlist, you can denylist some IP using this:
 ```yml
 testData:
-  blacklist:
+  denylist:
     files:
       - "tests/test-ipfile.txt"
     ip:
