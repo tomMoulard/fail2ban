@@ -138,18 +138,18 @@ func TestChainOrder(t *testing.T) {
 	a := &mockChainOrderHandler{}
 	b := &mockChainOrderHandler{}
 	c := &mockChainOrderHandler{}
-	d := &mockHandler{
+	final := &mockHandler{
 		expectedCalled: 1,
 	}
 
-	ch := New(d, a, b, c)
+	ch := New(final, a, b, c)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
 	assert.Equal(t, 0, a.status)
 	assert.Equal(t, 1, b.status)
 	assert.Equal(t, 2, c.status)
-	d.assert(t)
+	final.assert(t)
 }
 
 type mockDataHandler struct {
@@ -167,18 +167,38 @@ func (m *mockDataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) (*St
 func TestChainRequestContext(t *testing.T) {
 	t.Parallel()
 
-	a := &mockDataHandler{
+	handler := &mockDataHandler{
 		t:          t,
 		ExpectData: &data.Data{RemoteIP: "192.0.2.1"},
 	}
 
-	d := &mockHandler{
+	final := &mockHandler{
 		expectedCalled: 1,
 	}
 
-	ch := New(d, a)
+	ch := New(final, handler)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
-	d.assert(t)
+	final.assert(t)
+}
+
+func TestChainWithStatus(t *testing.T) {
+	t.Parallel()
+
+	handler := &mockChainHandler{
+		mockHandler: mockHandler{expectedCalled: 1},
+	}
+	final := &mockHandler{expectedCalled: 0}
+	status := &mockHandler{expectedCalled: 1}
+
+	ch := New(final, handler)
+	ch.WithStatus(status)
+
+	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+	ch.ServeHTTP(nil, r)
+
+	handler.assert(t)
+	final.assert(t)
+	status.assert(t)
 }

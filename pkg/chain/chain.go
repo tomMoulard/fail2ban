@@ -21,11 +21,13 @@ type ChainHandler interface {
 // Chain is a chain of handlers.
 type Chain interface {
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
+	WithStatus(status http.Handler)
 }
 
 type chain struct {
 	handlers []ChainHandler
 	final    http.Handler
+	status   *http.Handler
 }
 
 func New(final http.Handler, handlers ...ChainHandler) Chain {
@@ -33,6 +35,10 @@ func New(final http.Handler, handlers ...ChainHandler) Chain {
 		handlers: handlers,
 		final:    final,
 	}
+}
+
+func (c *chain) WithStatus(status http.Handler) {
+	c.status = &status
 }
 
 // ServeHTTP chains the handlers together, and calls the final handler at the end.
@@ -65,6 +71,12 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if s.Break {
 			break
 		}
+	}
+
+	if c.status != nil {
+		(*c.status).ServeHTTP(w, r)
+
+		return
 	}
 
 	c.final.ServeHTTP(w, r)

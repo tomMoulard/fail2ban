@@ -102,6 +102,7 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
+    statuscode: "400,401,403-499"
 ```
 
 Where:
@@ -113,6 +114,8 @@ use 'smart' strings: "4h", "2m", "1s", ...
  - `enabled`: allow to enable or disable the plugin (must be set to `true` to
 enable the plugin).
  - `urlregexp`: a regexp list to block / allow requests with regexps on the url
+ - `statuscode`: a comma separated list of status code (or range of status
+codes) to consider as a failed request.
 
 #### URL Regexp
 Urlregexp are used to defined witch part of your website will be either
@@ -125,11 +128,7 @@ backend without any check
 
 ```yml
 testData:
-  rules:
-    bantime: "3h"
-    findtime: "10m"
-    maxretry: 4
-    enabled: true
+  rules: {}
 ```
 
 By default, fail2ban will be applied.
@@ -144,10 +143,6 @@ testData:
       mode: allow
     - regexp: "/do-not-access"
       mode: block
-    bantime: "3h"
-    findtime: "10m"
-    maxretry: 4
-    enabled: true
 ```
 
 In the case where you define multiple regexp on the same url, the order of
@@ -157,6 +152,38 @@ process will be :
 
 In this example, all requests to `/do-not-access` will be denied and all
 requests to `/whoami` will be allowed without any fail2ban interaction.
+
+#### Status code
+When this configuration is set (i.e., `statuscode` is not empty), the plugin
+will wait for the request to be completed and check the status code of the
+response. If the status code is in the list of status codes, the request will
+be considered as a failed request.
+
+Note that the request is considered completed when the response is back sent to the
+plugin, therefore, the request went through the middleware, traefik, to the backend,
+and back to the middleware.
+
+<details>
+<summary>Here is a little schema to explain the process</summary>
+
+```mermaid
+sequenceDiagram
+    actor C as Client
+    participant A as Middleware
+    participant B as Backend
+    C->>A: Request
+    A->>B: Request
+    B->>A: Response
+    A->>A: Check status code
+    critical [Check status code]
+    option Invalid status code
+        A--X C: Log error
+    option valid status code
+        A->>C: Log error
+    end
+```
+
+</details>
 
 #### Schema
 First request, IP is added to the Pool, and the `findtime` timer is started:
