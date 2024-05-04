@@ -2,10 +2,55 @@
 
 [![Build Status](https://github.com/tomMoulard/fail2ban/actions/workflows/main.yml/badge.svg)](https://github.com/tomMoulard/fail2ban/actions/workflows/main.yml)
 
-This plugin is an implementation of the fail2ban mechanism as a middleware
+This plugin is an implementation of a Fail2ban instance as a middleware
 plugin for Traefik.
 
+## Middleware
+
+After installing the plugin, it can be configured through a Middleware, e.g.:
+
+```yml
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: fail2ban-test
+spec:
+  plugin:
+    fail2ban:
+      logLevel: DEBUG
+      blacklist:
+        ip: 127.0.0.1
+```
+
+<details>
+<summary>Add the middleware to an ingressroute</summary>
+
+```yml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: simplecrd
+  namespace: default
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: Host(`fail2ban.localhost`)
+    kind: Rule
+    middlewares:
+    - name: fail2ban-test
+    services:
+    ...
+```
+
+</details>
+
 ## Configuration
+
+Please note that the whitelist and blacklist functionality described below can
+_only_ be used _concurrently_ with Fail2ban functionality (if you are looking
+for a way to whitelist or blacklist IPs without using any of the Fail2ban
+logic, you might want to use a different plugin.)
 
 ### Whitelist
 You can whitelist some IP using this:
@@ -22,6 +67,8 @@ testData:
 Where you can use some IP in an array of files or directly in the
 configuration.
 
+If you have a single IP, this: `ip: 127.0.0.1` should also work.
+
 ### Blacklist
 Like whitelist, you can blacklist some IP using this:
 ```yml
@@ -37,6 +84,8 @@ testData:
 Where you can use some IP in an array of files or directly in the
 configuration.
 
+Please note that Fail2ban logs will _only_ be visible when Traefik's log level
+is set to `DEBUG`.
 
 ## Fail2ban
 We plan to use all default fail2ban configuration but at this time only a
