@@ -6,7 +6,15 @@ import (
 	"log"
 	"net/netip"
 	"strings"
+	"time"
 )
+
+// IPViewed struct.
+type IPViewed struct {
+	Viewed time.Time
+	Count  int
+	Denied bool
+}
 
 // NetIP struct that holds an NetIP IP address, and a IP network.
 // If the network is nil, the NetIP is a single IP.

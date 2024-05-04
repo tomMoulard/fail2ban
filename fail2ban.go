@@ -16,21 +16,16 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/files"
+	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
 	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
 	logger "github.com/tomMoulard/fail2ban/pkg/log"
 	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
+	uDeny "github.com/tomMoulard/fail2ban/pkg/url/deny"
 )
 
 func init() {
 	log.SetOutput(os.Stdout)
-}
-
-// IPViewed struct.
-type IPViewed struct {
-	viewed time.Time
-	nb     int
-	denied bool
 }
 
 // Urlregexp struct.
@@ -149,7 +144,7 @@ type Fail2Ban struct {
 	rules RulesTransformed
 
 	muIP     sync.Mutex
-	ipViewed map[string]IPViewed
+	ipViewed map[string]ipchecking.IPViewed
 }
 
 // ImportIP extract all ip from config sources.
@@ -233,17 +228,22 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 
 	log.Println("Plugin: FailToBan is up and running")
 
+	f2b := &Fail2Ban{
+		next:     next,
+		name:     name,
+		rules:    rules,
+		ipViewed: make(map[string]ipchecking.IPViewed),
+	}
+
+	urlDeny := uDeny.New(rules.URLRegexpBan, &f2b.muIP, &f2b.ipViewed)
+
 	return chain.New(
 		next,
 		denyHandler,
 		allowHandler,
+		urlDeny,
 		urlAllow,
-		&Fail2Ban{
-			next:     next,
-			name:     name,
-			rules:    rules,
-			ipViewed: make(map[string]IPViewed),
-		},
+		f2b,
 	), nil
 }
 
@@ -255,7 +255,7 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	if !u.shouldAllow(data.RemoteIP, req.URL.String()) {
+	if !u.shouldAllow(data.RemoteIP) {
 		return &chain.Status{Return: true}, nil
 	}
 
@@ -263,65 +263,78 @@ func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.
 }
 
 // shouldAllow check if the request should be allowed.
-func (u *Fail2Ban) shouldAllow(remoteIP, reqURL string) bool {
-	// Urlregexp ban
+func (u *Fail2Ban) shouldAllow(remoteIP string) bool {
 	u.muIP.Lock()
 	defer u.muIP.Unlock()
 
 	ip, foundIP := u.ipViewed[remoteIP]
-	urlBytes := []byte(reqURL)
-
-	for _, reg := range u.rules.URLRegexpBan {
-		if reg.Match(urlBytes) {
-			u.ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
-
-			LoggerDEBUG.Printf("Url (%q) was matched by regexpBan: %q for %q", reqURL, reg.String(), remoteIP)
-
-			return false
-		}
-	}
 
 	// Fail2Ban
 	if !foundIP {
-		u.ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+		u.ipViewed[remoteIP] = ipchecking.IPViewed{
+			Viewed: time.Now(),
+			Count:  1,
+		}
 
 		LoggerDEBUG.Printf("welcome %q", remoteIP)
 
 		return true
 	}
 
-	if ip.denied {
-		if time.Now().Before(ip.viewed.Add(u.rules.Bantime)) {
-			u.ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
+	if ip.Denied {
+		if time.Now().Before(ip.Viewed.Add(u.rules.Bantime)) {
+			u.ipViewed[remoteIP] = ipchecking.IPViewed{
+				Viewed: ip.Viewed,
+				Count:  ip.Count + 1,
+				Denied: true,
+			}
+
 			LoggerDEBUG.Printf("%q is still banned since %q, %d request",
-				remoteIP, ip.viewed.Format(time.RFC3339), ip.nb+1)
+				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
 
 			return false
 		}
 
-		u.ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+		u.ipViewed[remoteIP] = ipchecking.IPViewed{
+			Viewed: time.Now(),
+			Count:  1,
+			Denied: false,
+		}
 
 		LoggerDEBUG.Println(remoteIP + " is no longer banned")
 
 		return true
 	}
 
-	if time.Now().Before(ip.viewed.Add(u.rules.Findtime)) {
-		if ip.nb+1 >= u.rules.MaxRetry {
-			u.ipViewed[remoteIP] = IPViewed{time.Now(), ip.nb + 1, true}
+	if time.Now().Before(ip.Viewed.Add(u.rules.Findtime)) {
+		if ip.Count+1 >= u.rules.MaxRetry {
+			u.ipViewed[remoteIP] = ipchecking.IPViewed{
+				Viewed: time.Now(),
+				Count:  ip.Count + 1,
+				Denied: true,
+			}
 
 			LoggerDEBUG.Println(remoteIP + " is now banned temporarily")
 
 			return false
 		}
 
-		u.ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, false}
-		LoggerDEBUG.Printf("welcome back %q for the %d time", remoteIP, ip.nb+1)
+		u.ipViewed[remoteIP] = ipchecking.IPViewed{
+			Viewed: ip.Viewed,
+			Count:  ip.Count + 1,
+			Denied: false,
+		}
+
+		LoggerDEBUG.Printf("welcome back %q for the %d time", remoteIP, ip.Count+1)
 
 		return true
 	}
 
-	u.ipViewed[remoteIP] = IPViewed{time.Now(), 1, false}
+	u.ipViewed[remoteIP] = ipchecking.IPViewed{
+		Viewed: time.Now(),
+		Count:  1,
+		Denied: false,
+	}
 
 	LoggerDEBUG.Printf("welcome back %q", remoteIP)
 
