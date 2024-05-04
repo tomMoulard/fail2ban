@@ -13,9 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tomMoulard/fail2ban/files"
-	"github.com/tomMoulard/fail2ban/ipchecking"
-	logger "github.com/tomMoulard/fail2ban/log"
+	"github.com/tomMoulard/fail2ban/pkg/files"
+	logger "github.com/tomMoulard/fail2ban/pkg/log"
 )
 
 func init() {

@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/tomMoulard/fail2ban/files"
+	"github.com/tomMoulard/fail2ban/pkg/files"
 )
 
 func Example() {
