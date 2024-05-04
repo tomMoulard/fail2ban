@@ -22,3 +22,6 @@ plugins-storage
 *.swp
 test.html
 coverage.txt
+
+# goreleaser
+dist/
