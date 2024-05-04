@@ -10,7 +10,7 @@ plugin for Traefik.
 After installing the plugin, it can be configured through a Middleware, e.g.:
 
 ```yml
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: fail2ban-test
@@ -22,9 +22,28 @@ spec:
         ip: 127.0.0.1
 ```
 
-Don't forget to add the middleware to your Route (and since middlewares are
-checked in the same order as they are listed, make sure that the middleware is
-up in your list).
+<details>
+<summary>Add the middleware to an ingressroute</summary>
+
+```yml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: simplecrd
+  namespace: default
+spec:
+  entryPoints:
+    - web
+  routes:
+  - match: Host(`fail2ban.localhost`)
+    kind: Rule
+    middlewares:
+    - name: fail2ban-test
+    services:
+    ...
+```
+
+</details>
 
 ## Configuration
 
