@@ -404,9 +404,9 @@ func TestShouldAllow(t *testing.T) {
 				},
 				ipViewed: map[string]IPViewed{
 					"10.0.0.0": {
-						viewed:      time.Now(),
-						nb:          1,
-						blacklisted: true,
+						viewed: time.Now(),
+						nb:     1,
+						denied: true,
 					},
 				},
 			},
@@ -421,9 +421,9 @@ func TestShouldAllow(t *testing.T) {
 				},
 				ipViewed: map[string]IPViewed{
 					"10.0.0.0": {
-						viewed:      time.Now().Add(-600 * time.Second),
-						nb:          1,
-						blacklisted: true,
+						viewed: time.Now().Add(-600 * time.Second),
+						nb:     1,
+						denied: true,
 					},
 				},
 			},
@@ -473,9 +473,9 @@ func TestShouldAllow(t *testing.T) {
 				},
 				ipViewed: map[string]IPViewed{
 					"10.0.0.0": {
-						viewed:      time.Now(),
-						nb:          1,
-						blacklisted: true,
+						viewed: time.Now(),
+						nb:     1,
+						denied: true,
 					},
 				},
 			},

@@ -3,9 +3,9 @@ package fail2ban
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -13,7 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tomMoulard/fail2ban/pkg/chain"
+	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/files"
+	"github.com/tomMoulard/fail2ban/pkg/list/allow"
+	"github.com/tomMoulard/fail2ban/pkg/list/deny"
 	logger "github.com/tomMoulard/fail2ban/pkg/log"
 )
 
@@ -23,9 +27,9 @@ func init() {
 
 // IPViewed struct.
 type IPViewed struct {
-	viewed      time.Time
-	nb          int
-	blacklisted bool
+	viewed time.Time
+	nb     int
+	denied bool
 }
 
 // Urlregexp struct.
@@ -54,9 +58,14 @@ type List struct {
 
 // Config struct.
 type Config struct {
-	Blacklist List  `yaml:"blacklist"`
-	Whitelist List  `yaml:"whitelist"`
+	Denylist  List  `yaml:"denylist"`
+	Allowlist List  `yaml:"allowlist"`
 	Rules     Rules `yaml:"port"`
+
+	// deprecated
+	Blacklist List `yaml:"blacklist"`
+	// deprecated
+	Whitelist List `yaml:"whitelist"`
 }
 
 // CreateConfig populates the Config data object.
@@ -134,11 +143,9 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 
 // Fail2Ban holds the necessary components of a Traefik plugin.
 type Fail2Ban struct {
-	next      http.Handler
-	name      string
-	whitelist ipchecking.NetIPs
-	blacklist ipchecking.NetIPs
-	rules     RulesTransformed
+	next  http.Handler
+	name  string
+	rules RulesTransformed
 
 	muIP     sync.Mutex
 	ipViewed map[string]IPViewed
@@ -174,22 +181,44 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		return next, nil
 	}
 
-	whiteips, err := ImportIP(config.Whitelist)
+	allowIPs, err := ImportIP(config.Allowlist)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse allowlist IPs: %w", err)
 	}
 
-	whitelist, err := ipchecking.ParseNetIPs(whiteips)
+	if len(config.Whitelist.IP) > 0 || len(config.Whitelist.Files) > 0 {
+		log.Println("Plugin: FailToBan: 'whitelist' is deprecated, please use 'denylist' instead")
+
+		whiteips, err := ImportIP(config.Whitelist)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
+		}
+
+		allowIPs = append(allowIPs, whiteips...)
+	}
+
+	allowHandler, err := allow.New(allowIPs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
 	}
 
-	blackips, err := ImportIP(config.Blacklist)
+	denyIPs, err := ImportIP(config.Denylist)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse denylist IPs: %w", err)
 	}
 
-	blacklist, err := ipchecking.ParseNetIPs(blackips) // Do not mistake with Black Eyed Peas
+	if len(config.Blacklist.IP) > 0 || len(config.Blacklist.Files) > 0 {
+		log.Println("Plugin: FailToBan: 'blacklist' is deprecated, please use 'denylist' instead")
+
+		blackips, err := ImportIP(config.Blacklist)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
+		}
+
+		denyIPs = append(denyIPs, blackips...)
+	}
+
+	denyHandler, err := deny.New(denyIPs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
 	}
@@ -201,51 +230,32 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 
 	log.Println("Plugin: FailToBan is up and running")
 
-	return &Fail2Ban{
-		next:      next,
-		name:      name,
-		whitelist: whitelist,
-		blacklist: blacklist,
-		rules:     rules,
-		ipViewed:  make(map[string]IPViewed),
-	}, nil
+	return chain.New(
+		next,
+		denyHandler,
+		allowHandler,
+		&Fail2Ban{
+			next:     next,
+			name:     name,
+			rules:    rules,
+			ipViewed: make(map[string]IPViewed),
+		},
+	), nil
 }
 
 // ServeHTTP iterates over every headers to match the ones specified in the
 // configuration and return nothing if regexp failed.
-func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	LoggerDEBUG.Printf("New request: %+v", *req)
-
-	remoteIP, _, err := net.SplitHostPort(req.RemoteAddr)
-	if err != nil {
-		LoggerDEBUG.Printf("failed to split remote address %q: %v", req.RemoteAddr, err)
-
-		return
+func (u *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.Status, error) {
+	data := data.GetData(req)
+	if data == nil {
+		return nil, errors.New("failed to get data from request context")
 	}
 
-	// Blacklist
-	if u.blacklist.Contains(remoteIP) {
-		LoggerDEBUG.Println(remoteIP + " is blacklisted")
-		rw.WriteHeader(http.StatusForbidden)
-
-		return
+	if !u.shouldAllow(data.RemoteIP, req.URL.String()) {
+		return &chain.Status{Return: true}, nil
 	}
 
-	// Whitelist
-	if u.whitelist.Contains(remoteIP) {
-		LoggerDEBUG.Println(remoteIP + " is whitelisted")
-		u.next.ServeHTTP(rw, req)
-
-		return
-	}
-
-	if !u.shouldAllow(remoteIP, req.URL.String()) {
-		rw.WriteHeader(http.StatusForbidden)
-
-		return
-	}
-
-	u.next.ServeHTTP(rw, req)
+	return nil, nil
 }
 
 // shouldAllow check if the request should be allowed.
@@ -285,7 +295,7 @@ func (u *Fail2Ban) shouldAllow(remoteIP, reqURL string) bool {
 		return true
 	}
 
-	if ip.blacklisted {
+	if ip.denied {
 		if time.Now().Before(ip.viewed.Add(u.rules.Bantime)) {
 			u.ipViewed[remoteIP] = IPViewed{ip.viewed, ip.nb + 1, true}
 			LoggerDEBUG.Printf("%q is still banned since %q, %d request",
