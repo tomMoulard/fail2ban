@@ -465,25 +465,6 @@ func TestShouldAllow(t *testing.T) {
 			expect:   true,
 		},
 		{
-			name: "allow regexp",
-			cfg: &Fail2Ban{
-				rules: RulesTransformed{
-					Bantime:        300 * time.Second,
-					URLRegexpAllow: []*regexp.Regexp{regexp.MustCompile("/test")}, // comment me.
-				},
-				ipViewed: map[string]IPViewed{
-					"10.0.0.0": {
-						viewed: time.Now(),
-						nb:     1,
-						denied: true,
-					},
-				},
-			},
-			remoteIP: "10.0.0.0",
-			reqURL:   "/test",
-			expect:   true,
-		},
-		{
 			name: "block regexp",
 			cfg: &Fail2Ban{
 				rules: RulesTransformed{

@@ -15,7 +15,7 @@ import (
 )
 
 // l debug logger. noop by default.
-var l = logger.New(os.Stdout, "DEBUG: allow: ", log.Ldate|log.Ltime|log.Lshortfile)
+var l = logger.New(os.Stdout, "DEBUG: list allow: ", log.Ldate|log.Ltime|log.Lshortfile)
 
 type allow struct {
 	list ipchecking.NetIPs

@@ -16,9 +16,10 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/files"
-	"github.com/tomMoulard/fail2ban/pkg/list/allow"
-	"github.com/tomMoulard/fail2ban/pkg/list/deny"
+	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
+	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
 	logger "github.com/tomMoulard/fail2ban/pkg/log"
+	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
 )
 
 func init() {
@@ -197,7 +198,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		allowIPs = append(allowIPs, whiteips...)
 	}
 
-	allowHandler, err := allow.New(allowIPs)
+	allowHandler, err := lAllow.New(allowIPs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
 	}
@@ -218,7 +219,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		denyIPs = append(denyIPs, blackips...)
 	}
 
-	denyHandler, err := deny.New(denyIPs)
+	denyHandler, err := lDeny.New(denyIPs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
 	}
@@ -228,12 +229,15 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
+	urlAllow := uAllow.New(rules.URLRegexpAllow)
+
 	log.Println("Plugin: FailToBan is up and running")
 
 	return chain.New(
 		next,
 		denyHandler,
 		allowHandler,
+		urlAllow,
 		&Fail2Ban{
 			next:     next,
 			name:     name,
@@ -274,15 +278,6 @@ func (u *Fail2Ban) shouldAllow(remoteIP, reqURL string) bool {
 			LoggerDEBUG.Printf("Url (%q) was matched by regexpBan: %q for %q", reqURL, reg.String(), remoteIP)
 
 			return false
-		}
-	}
-
-	// Urlregexp allow
-	for _, reg := range u.rules.URLRegexpAllow {
-		if reg.Match(urlBytes) {
-			LoggerDEBUG.Printf("Url (%q) was matched by regexpAllow: %q for %q", reqURL, reg.String(), remoteIP)
-
-			return true
 		}
 	}
 
