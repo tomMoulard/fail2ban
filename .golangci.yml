@@ -14,9 +14,13 @@ linters:
     - varnamelen # Not relevant
     - lll # not relevant
     - exhaustruct # Not relevant
-    - goerr113 # Too strict
+    - err113 # deprecated
     - gochecknoglobals
     - gochecknoinits # useless
+    - gomnd # deprecated
+    - execinquery # deprecated
+    - ireturn # Not relevant
+    - nilnil # Not relevant
 
 linters-settings:
   misspell:
@@ -54,6 +58,7 @@ linters-settings:
       - name: receiver-naming
       - name: time-naming
       - name: unexported-return
+        disabled: true
       - name: indent-error-flow
       - name: errorf
       - name: empty-block
