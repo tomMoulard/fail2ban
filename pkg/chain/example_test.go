@@ -34,7 +34,7 @@ func Example() {
 	c := chain.New(&PongHandler{}, h)
 
 	// Create a new request.
-	req := httptest.NewRequest("GET", "http://example.com", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
 
 	// Create a new response recorder.
 	rec := httptest.NewRecorder()

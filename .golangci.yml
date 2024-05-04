@@ -21,6 +21,7 @@ linters:
     - execinquery # deprecated
     - ireturn # Not relevant
     - nilnil # Not relevant
+    - testpackage # Too strict
 
 linters-settings:
   misspell:
@@ -30,9 +31,9 @@ linters-settings:
   depguard:
     rules:
       main:
-        allow:
-          - $gostd
-          - github.com/tomMoulard/fail2ban
+        deny:
+          - pkg: "github.com/instana/testify"
+            desc: not allowed
   godox:
     keywords:
       - FIXME
@@ -80,6 +81,6 @@ issues:
       linters:
         - funlen
     - path: 'fail2ban.go'
-      text: 'calculated cyclomatic complexity for function shouldAllow is 12'
+      text: 'calculated cyclomatic complexity for function New is 13'
     - path: 'fail2ban_test.go' # false-positive
       text: 'response body must be closed'

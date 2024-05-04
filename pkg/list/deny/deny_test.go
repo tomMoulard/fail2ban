@@ -1,6 +1,7 @@
 package deny
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -38,7 +39,7 @@ func TestDeny(t *testing.T) {
 			require.NoError(t, err)
 
 			recorder := &httptest.ResponseRecorder{}
-			req := httptest.NewRequest("GET", "https://example.com/foo", nil)
+			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
 			req, err = data.ServeHTTP(recorder, req)
 			require.NoError(t, err)
 
