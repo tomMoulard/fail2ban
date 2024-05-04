@@ -37,21 +37,20 @@ func TestGetFileContent(t *testing.T) {
 			err:      "error opening file: open test-file-2.txt: no such file or directory",
 		},
 	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			text1, err := files.GetFileContent(tt.fileName)
+			text1, err := files.GetFileContent(test.fileName)
 			if err != nil {
-				if tt.err != err.Error() {
-					t.Errorf("GetFileContent() = %q, want %q", err.Error(), tt.err)
+				if test.err != err.Error() {
+					t.Errorf("GetFileContent() = %q, want %q", err.Error(), test.err)
 				}
 
 				return
 			}
 
-			file, err := os.Open(tt.fileName)
+			file, err := os.Open(test.fileName)
 			if err != nil {
 				t.Fatal(err)
 			}

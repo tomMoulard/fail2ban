@@ -139,14 +139,13 @@ func TestNetIPParseNetIP(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ipchecking.ParseNetIP(tt.stringIP)
-			if tt.res != (err != nil) {
-				t.Errorf("ParseNetIP() = %v, want %v", err, tt.res)
+			_, err := ipchecking.ParseNetIP(test.stringIP)
+			if test.res != (err != nil) {
+				t.Errorf("ParseNetIP() = %v, want %v", err, test.res)
 			}
 		})
 	}
@@ -185,19 +184,18 @@ func TestNetIPParseNetIPs(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ipchecking.ParseNetIPs(tt.ips)
-			if tt.expectErr != (err != nil) {
-				t.Errorf("ParseNetIPs() = %v, want %v", err, tt.expectErr)
+			got, err := ipchecking.ParseNetIPs(test.ips)
+			if test.expectErr != (err != nil) {
+				t.Errorf("ParseNetIPs() = %v, want %v", err, test.expectErr)
 			}
 
 			for i, gotIP := range got {
-				if tt.expectedIPs[i] != gotIP.String() {
-					t.Errorf("ParseNetIPs() = %q, want %q", gotIP.String(), tt.expectedIPs[i])
+				if test.expectedIPs[i] != gotIP.String() {
+					t.Errorf("ParseNetIPs() = %q, want %q", gotIP.String(), test.expectedIPs[i])
 				}
 			}
 		})
@@ -296,14 +294,13 @@ func TestNetIPContains(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			r := tt.testedIP.Contains(tt.stringIP)
-			if tt.res != r {
-				t.Errorf("Contains() = %v, want %v", r, tt.res)
+			r := test.testedIP.Contains(test.stringIP)
+			if test.res != r {
+				t.Errorf("Contains() = %v, want %v", r, test.res)
 			}
 		})
 	}
@@ -378,14 +375,13 @@ func TestNetIPsContains(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			r := ips.Contains(tt.stringIP)
-			if tt.res != r {
-				t.Errorf("Contains() = %v, want %v", r, tt.res)
+			r := ips.Contains(test.stringIP)
+			if test.res != r {
+				t.Errorf("Contains() = %v, want %v", r, test.res)
 			}
 		})
 	}
@@ -429,19 +425,18 @@ func TestNetIPString(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			r := tt.stringIP.String()
-			if tt.expectIsEqual {
-				if r != tt.testedIP {
-					t.Errorf("String() = %q, want %q", r, tt.testedIP)
+			r := test.stringIP.String()
+			if test.expectIsEqual {
+				if r != test.testedIP {
+					t.Errorf("String() = %q, want %q", r, test.testedIP)
 				}
 			} else {
-				if r == tt.testedIP {
-					t.Errorf("String() = %q, want not %q", r, tt.testedIP)
+				if r == test.testedIP {
+					t.Errorf("String() = %q, want not %q", r, test.testedIP)
 				}
 			}
 		})

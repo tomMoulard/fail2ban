@@ -1,0 +1,39 @@
+before:
+  hooks:
+    - go mod download
+builds:
+  - skip: true
+archives:
+  - format_overrides:
+      - goos: windows
+        format: zip
+release:
+  github: {}
+  prerelease: auto
+  mode: append
+  footer: "**Full Changelog**: https://github.com/tomMoulard/fail2ban/compare/{{ .PreviousTag }}...{{ .Tag }}"
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Documentation"
+      regexp: '^.*?doc(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - Merge branch
+      - Merge pull request
+      - Merge remote-tracking branch
+      - chore
+      - go mod tidy
+      - merge conflict
+      - test
+      - typo

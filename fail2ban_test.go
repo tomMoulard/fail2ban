@@ -42,19 +42,19 @@ func TestTransformRules(t *testing.T) {
 			expect: RulesTransformed{},
 		},
 	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, e := TransformRule(tt.send)
-			if e != nil && (tt.err == nil || e.Error() != tt.err.Error()) {
+			got, e := TransformRule(test.send)
+			if e != nil && (test.err == nil || e.Error() != test.err.Error()) {
 				t.Errorf("TransformRule_err: wanted %q got %q",
-					tt.err, e)
+					test.err, e)
 			}
-			if tt.expect.Bantime == got.Bantime {
+
+			if test.expect.Bantime == got.Bantime {
 				t.Errorf("TransformRule: wanted '%+v' got '%+v'",
-					tt.expect, got)
+					test.expect, got)
 			}
 		})
 	}
@@ -129,21 +129,22 @@ func TestImportIP(t *testing.T) {
 			err:     errors.New("error when getting file content: error opening file: open tests/idontexist.txt: no such file or directory"),
 		},
 	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, e := ImportIP(tt.list)
+			got, e := ImportIP(test.list)
 			t.Logf("%+v", got)
-			if e != nil && e.Error() != tt.err.Error() {
-				t.Errorf("wanted %q got %q", tt.err, e)
-			}
-			if len(got) != len(tt.strWant) {
-				t.Errorf("wanted '%d' got '%d'", len(tt.strWant), len(got))
+
+			if e != nil && e.Error() != test.err.Error() {
+				t.Errorf("wanted %q got %q", test.err, e)
 			}
 
-			for i, elt := range tt.strWant {
+			if len(got) != len(test.strWant) {
+				t.Errorf("wanted '%d' got '%d'", len(test.strWant), len(got))
+			}
+
+			for i, elt := range test.strWant {
 				if got[i] != elt {
 					t.Errorf("wanted %q got %q", elt, got[i])
 				}
@@ -159,13 +160,13 @@ func TestFail2Ban(t *testing.T) {
 	tests := []struct {
 		name         string
 		url          string
-		cfg          Config
+		cfg          *Config
 		newError     bool
 		expectStatus int
 	}{
 		{
 			name: "no bantime",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Findtime: "300s",
@@ -177,7 +178,7 @@ func TestFail2Ban(t *testing.T) {
 		},
 		{
 			name: "no findtime",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Bantime:  "300s",
@@ -189,7 +190,7 @@ func TestFail2Ban(t *testing.T) {
 		},
 		{
 			name: "rule enabled",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Bantime:  "300s",
@@ -202,7 +203,7 @@ func TestFail2Ban(t *testing.T) {
 		},
 		{
 			name: "rule not enabled beside being blacklisted",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled: false,
 				},
@@ -216,7 +217,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "bad regexp",
 			url:  "/test",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Bantime:  "300s",
@@ -235,7 +236,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "invalid Regexp mode",
 			url:  "/test",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Bantime:  "300s",
@@ -255,7 +256,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "url whitelisted",
 			url:  "/test",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Bantime:  "300s",
@@ -275,7 +276,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "url blacklisted",
 			url:  "/test",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Bantime:  "300s",
@@ -294,7 +295,7 @@ func TestFail2Ban(t *testing.T) {
 		},
 		{
 			name: "whitelist",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Bantime:  "300s",
@@ -310,7 +311,7 @@ func TestFail2Ban(t *testing.T) {
 		},
 		{
 			name: "blacklist",
-			cfg: Config{
+			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
 					Bantime:  "300s",
@@ -326,9 +327,8 @@ func TestFail2Ban(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
 			nextCount := atomic.Int32{}
@@ -337,26 +337,29 @@ func TestFail2Ban(t *testing.T) {
 				nextCount.Add(1)
 			})
 
-			handler, err := New(context.Background(), next, &tt.cfg, "fail2ban_test")
+			handler, err := New(context.Background(), next, test.cfg, "fail2ban_test")
 			if err != nil {
-				if tt.newError != (err != nil) {
-					t.Errorf("newError: wanted '%t' got '%t'", tt.newError, err != nil)
+				if test.newError != (err != nil) {
+					t.Errorf("newError: wanted '%t' got '%t'", test.newError, err != nil)
 				}
 
 				return
 			}
 
 			url := "/"
-			if tt.url != "" {
-				url = tt.url
+			if test.url != "" {
+				url = test.url
 			}
+
 			req := httptest.NewRequest(http.MethodGet, url, nil)
 			req.RemoteAddr = remoteAddr + ":1234"
-			for i := 0; i < 10; i++ {
+
+			for range 10 {
 				rw := httptest.NewRecorder()
 				handler.ServeHTTP(rw, req)
-				if rw.Code != tt.expectStatus {
-					t.Fatalf("code: got %d, expected %d", rw.Code, tt.expectStatus)
+
+				if rw.Code != test.expectStatus {
+					t.Fatalf("code: got %d, expected %d", rw.Code, test.expectStatus)
 				}
 			}
 		})
@@ -493,14 +496,13 @@ func TestShouldAllow(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := tt.cfg.shouldAllow(tt.remoteIP, tt.reqURL)
-			if tt.expect != got {
-				t.Errorf("wanted '%t' got '%t'", tt.expect, got)
+			got := test.cfg.shouldAllow(test.remoteIP, test.reqURL)
+			if test.expect != got {
+				t.Errorf("wanted '%t' got '%t'", test.expect, got)
 			}
 		})
 	}
@@ -536,7 +538,7 @@ func TestDeadlockWebsocket(t *testing.T) {
 	wsURL := "ws" + strings.TrimPrefix(s.URL, "http")
 	conns := make([]*websocket.Conn, 10)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		ws, err := websocket.Dial(wsURL, "", "http://localhost")
 		if err != nil {
 			t.Fatal(err)
@@ -549,7 +551,7 @@ func TestDeadlockWebsocket(t *testing.T) {
 
 	close(writeChan)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		msg := fmt.Sprintf("hello %d", i)
 
 		n, err := conns[i].Write([]byte(msg))
