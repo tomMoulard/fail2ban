@@ -14,4 +14,4 @@ mkdir ci/inside_ci
 
 ./ci/scripts/rules.sh local-banned
 
-./ci/scripts/rules.sh local-whited
+./ci/scripts/rules.sh local-allowd

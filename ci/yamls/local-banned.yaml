@@ -20,7 +20,7 @@ http:
     fail2ban:
       plugin:
         dev:
-          blacklist:
+          denylist:
             ip:
               - "127.0.0.1"
           rules:

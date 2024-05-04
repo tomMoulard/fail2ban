@@ -202,12 +202,12 @@ func TestFail2Ban(t *testing.T) {
 			expectStatus: http.StatusOK,
 		},
 		{
-			name: "rule not enabled beside being blacklisted",
+			name: "rule not enabled beside being denylisted",
 			cfg: &Config{
 				Rules: Rules{
 					Enabled: false,
 				},
-				Blacklist: List{
+				Denylist: List{
 					IP: []string{remoteAddr},
 				},
 			},
@@ -251,10 +251,10 @@ func TestFail2Ban(t *testing.T) {
 				},
 			},
 			newError:     false,
-			expectStatus: http.StatusOK, // request not blacklisted
+			expectStatus: http.StatusOK, // request not denylisted
 		},
 		{
-			name: "url whitelisted",
+			name: "url allowlisted",
 			url:  "/test",
 			cfg: &Config{
 				Rules: Rules{
@@ -274,7 +274,7 @@ func TestFail2Ban(t *testing.T) {
 			expectStatus: http.StatusOK,
 		},
 		{
-			name: "url blacklisted",
+			name: "url denylisted",
 			url:  "/test",
 			cfg: &Config{
 				Rules: Rules{
@@ -294,7 +294,7 @@ func TestFail2Ban(t *testing.T) {
 			expectStatus: http.StatusForbidden,
 		},
 		{
-			name: "whitelist",
+			name: "allowlist",
 			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
@@ -302,7 +302,7 @@ func TestFail2Ban(t *testing.T) {
 					Findtime: "300s",
 					Maxretry: 20,
 				},
-				Whitelist: List{
+				Allowlist: List{
 					IP: []string{remoteAddr},
 				},
 			},
@@ -310,7 +310,7 @@ func TestFail2Ban(t *testing.T) {
 			expectStatus: http.StatusOK,
 		},
 		{
-			name: "blacklist",
+			name: "denylist",
 			cfg: &Config{
 				Rules: Rules{
 					Enabled:  true,
@@ -318,7 +318,7 @@ func TestFail2Ban(t *testing.T) {
 					Findtime: "300s",
 					Maxretry: 20,
 				},
-				Blacklist: List{
+				Denylist: List{
 					IP: []string{remoteAddr},
 				},
 			},
@@ -397,16 +397,16 @@ func TestShouldAllow(t *testing.T) {
 			expect:   true,
 		},
 		{
-			name: "blacklisted request",
+			name: "denylisted request",
 			cfg: &Fail2Ban{
 				rules: RulesTransformed{
 					Bantime: 300 * time.Second,
 				},
 				ipViewed: map[string]IPViewed{
 					"10.0.0.0": {
-						viewed:      time.Now(),
-						nb:          1,
-						blacklisted: true,
+						viewed: time.Now(),
+						nb:     1,
+						denied: true,
 					},
 				},
 			},
@@ -421,9 +421,9 @@ func TestShouldAllow(t *testing.T) {
 				},
 				ipViewed: map[string]IPViewed{
 					"10.0.0.0": {
-						viewed:      time.Now().Add(-600 * time.Second),
-						nb:          1,
-						blacklisted: true,
+						viewed: time.Now().Add(-600 * time.Second),
+						nb:     1,
+						denied: true,
 					},
 				},
 			},
@@ -473,9 +473,9 @@ func TestShouldAllow(t *testing.T) {
 				},
 				ipViewed: map[string]IPViewed{
 					"10.0.0.0": {
-						viewed:      time.Now(),
-						nb:          1,
-						blacklisted: true,
+						viewed: time.Now(),
+						nb:     1,
+						denied: true,
 					},
 				},
 			},
