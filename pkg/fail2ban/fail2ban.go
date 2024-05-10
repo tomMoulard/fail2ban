@@ -84,7 +84,8 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 				Denied: true,
 			}
 
-			l.Println(remoteIP + " is now banned temporarily")
+			l.Printf("%q is banned for %d>=%d request",
+				remoteIP, ip.Count+1, u.rules.MaxRetry)
 
 			return false
 		}

@@ -9,10 +9,11 @@ import (
 
 // Source: https://github.com/traefik/traefik/blob/05d2c86074a21d482945b9994d85e3b66de0480d/pkg/middlewares/customerrors/custom_errors.go
 
-// codeCatcher is a response writer that detects as soon as possible
-// whether the response is a code within the ranges of codes it watches for.
+// codeCatcher is a response writer that detects as soon as possible whether
+// the response is a code within the ranges of codes it watches for.
 // If it is, it simply drops the data from the response.
-// Otherwise, it forwards it directly to the original client (its responseWriter) without any buffering.
+// Otherwise, it forwards the data directly to the original client.
+// If the backend does not call WriteHeader, we consider it's a 200.
 type codeCatcher struct {
 	headerMap          http.Header
 	code               int
@@ -20,12 +21,19 @@ type codeCatcher struct {
 	caughtFilteredCode bool
 	responseWriter     http.ResponseWriter
 	headersSent        bool
+
+	// bytes is used to store the response body in case of a filtered code that
+	// is allowed.
+	bytes []byte
+	// allowedRequest is there in case of flush when the caughtFilteredCode is
+	// set, but the request should be forwarded.
+	allowedRequest bool
 }
 
 func newCodeCatcher(rw http.ResponseWriter, httpCodeRanges HTTPCodeRanges) *codeCatcher {
 	return &codeCatcher{
 		headerMap:      make(http.Header),
-		code:           http.StatusOK, // If backend does not call WriteHeader on us, we consider it's a 200.
+		code:           http.StatusOK,
 		responseWriter: rw,
 		httpCodeRanges: httpCodeRanges,
 	}
@@ -47,8 +55,9 @@ func (cc *codeCatcher) getCode() int {
 	return cc.code
 }
 
-// isFilteredCode returns whether the codeCatcher received a response code among the ones it is watching,
-// and for which the response should be deferred to the fail2ban handler.
+// isFilteredCode returns whether the codeCatcher received a response code
+// among the ones it is watching, and for which the response should be deferred
+// to the fail2ban handler.
 func (cc *codeCatcher) isFilteredCode() bool {
 	return cc.caughtFilteredCode
 }
@@ -60,10 +69,14 @@ func (cc *codeCatcher) Write(buf []byte) (int, error) {
 
 	if cc.caughtFilteredCode {
 		// We don't care about the contents of the response,
-		// since we want to serve the ones from the error page,
-		// so we just drop them.
+		// since we want to serve the forbidden page,
+		// so we just save them for later if needed.
+		cc.bytes = append(cc.bytes, buf...)
+
 		return len(buf), nil
 	}
+
+	l.Printf("Write: buf: %q, code: %d", buf, cc.code)
 
 	i, err := cc.responseWriter.Write(buf)
 	if err != nil {
@@ -73,12 +86,15 @@ func (cc *codeCatcher) Write(buf []byte) (int, error) {
 	return i, nil
 }
 
-// WriteHeader is, in the specific case of 1xx status codes, a direct call to the wrapped ResponseWriter, without marking headers as sent,
-// allowing so further calls.
+// WriteHeader is, in the specific case of 1xx status codes, a direct call to
+// the wrapped ResponseWriter, without marking headers as sent, allowing so
+// further calls.
 func (cc *codeCatcher) WriteHeader(code int) {
 	if cc.headersSent || cc.caughtFilteredCode {
 		return
 	}
+
+	l.Printf("Write header: code: %d", code)
 
 	// Handling informational headers.
 	if code >= 100 && code <= 199 {
@@ -133,12 +149,14 @@ func (cc *codeCatcher) Flush() {
 	// Otherwise, cc.code is actually a 200 here.
 	cc.WriteHeader(cc.code)
 
+	l.Printf("Flush: code: %d, caughtFilteredCode: %t", cc.code, cc.caughtFilteredCode)
+
 	// We don't care about the contents of the response,
-	// since we want to serve the ones from the error page,
+	// since we want to serve the forbidden page,
 	// so we just don't flush.
 	// (e.g., To prevent superfluous WriteHeader on request with a
 	// `Transfert-Encoding: chunked` header).
-	if cc.caughtFilteredCode {
+	if cc.caughtFilteredCode && !cc.allowedRequest {
 		return
 	}
 

@@ -1,6 +1,7 @@
 package status
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,18 +19,21 @@ import (
 func TestStatus(t *testing.T) {
 	t.Parallel()
 
+	body := "Hello, world!"
+
 	tests := []struct {
 		name             string
 		codeRanges       string
-		statusCode       int
 		ips              map[string]ipchecking.IPViewed
+		respStatusCode   int
 		expectedStatus   int
 		expectedIPViewed map[string]ipchecking.IPViewed
+		expectedBody     string
 	}{
 		{
-			name:       "already denied", // should not happen
-			codeRanges: "400-499",
-			statusCode: http.StatusBadRequest,
+			name:           "already denied", // should not happen as it should already be blocked
+			codeRanges:     "400-499",
+			respStatusCode: http.StatusBadRequest,
 			ips: map[string]ipchecking.IPViewed{
 				"192.0.2.1": {
 					Viewed: utime.Now(),
@@ -44,16 +48,17 @@ func TestStatus(t *testing.T) {
 					Denied: true,
 				},
 			},
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:       "denied next time",
-			codeRanges: "400-499",
-			statusCode: http.StatusBadRequest,
+			name:           "is being denied",
+			codeRanges:     "400-499",
+			respStatusCode: http.StatusBadRequest,
 			ips: map[string]ipchecking.IPViewed{
 				"192.0.2.1": {
 					Viewed: utime.Now(),
 					Count:  42,
+					Denied: false,
 				},
 			},
 			expectedIPViewed: map[string]ipchecking.IPViewed{
@@ -63,13 +68,13 @@ func TestStatus(t *testing.T) {
 					Denied: true,
 				},
 			},
-			expectedStatus: http.StatusBadRequest,
+			expectedStatus: http.StatusForbidden,
 		},
 		{
-			name:       "not denied in limits",
-			codeRanges: "400-499",
-			statusCode: http.StatusBadRequest,
-			ips:        map[string]ipchecking.IPViewed{},
+			name:           "not denied in limits",
+			codeRanges:     "400-499",
+			respStatusCode: http.StatusBadRequest,
+			ips:            map[string]ipchecking.IPViewed{},
 			expectedIPViewed: map[string]ipchecking.IPViewed{
 				"192.0.2.1": {
 					Viewed: utime.Now(),
@@ -78,14 +83,16 @@ func TestStatus(t *testing.T) {
 				},
 			},
 			expectedStatus: http.StatusBadRequest,
+			expectedBody:   body,
 		},
 		{
-			name:             "not denied",
+			name:             "not denied out of limits",
 			codeRanges:       "400-499",
-			statusCode:       http.StatusOK,
+			respStatusCode:   http.StatusOK,
 			ips:              map[string]ipchecking.IPViewed{},
 			expectedIPViewed: map[string]ipchecking.IPViewed{},
 			expectedStatus:   http.StatusOK,
+			expectedBody:     body,
 		},
 	}
 
@@ -94,9 +101,12 @@ func TestStatus(t *testing.T) {
 			t.Parallel()
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				require.NotZero(t, test.statusCode)
-				w.WriteHeader(test.statusCode)
-				t.Logf("status code: %d", test.statusCode)
+				require.NotZero(t, test.respStatusCode)
+				w.WriteHeader(test.respStatusCode)
+				t.Logf("status code: %d", test.respStatusCode)
+
+				_, err := w.Write([]byte(body))
+				require.NoError(t, err)
 			})
 
 			f2b := fail2ban.New(rules.RulesTransformed{
@@ -113,11 +123,15 @@ func TestStatus(t *testing.T) {
 			req, err = data.ServeHTTP(recorder, req)
 			require.NoError(t, err)
 
+			var b bytes.Buffer
+			recorder = &httptest.ResponseRecorder{Body: &b}
 			d.ServeHTTP(recorder, req)
 			t.Logf("recorder: %+v", recorder)
 
 			assert.Equal(t, test.expectedIPViewed, f2b.IPs)
 			assert.Equal(t, test.expectedStatus, recorder.Code)
+			require.NotNil(t, recorder.Body)
+			assert.Equal(t, test.expectedBody, recorder.Body.String())
 		})
 	}
 }

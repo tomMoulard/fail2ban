@@ -47,13 +47,27 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	catcher := newCodeCatcher(w, s.codeRanges)
 	s.next.ServeHTTP(catcher, r)
-	w.WriteHeader(catcher.getCode())
 
 	l.Printf("catcher: %+v", *catcher)
 
 	if !catcher.isFilteredCode() {
+		w.WriteHeader(catcher.getCode())
+
 		return
 	}
 
-	s.f2b.ShouldAllow(data.RemoteIP)
+	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
+	if !catcher.allowedRequest {
+		l.Printf("IP %s is banned", data.RemoteIP)
+		w.WriteHeader(http.StatusForbidden)
+
+		return
+	}
+
+	l.Printf("IP %s is allowed", data.RemoteIP)
+	w.WriteHeader(catcher.getCode())
+
+	if _, err := w.Write(catcher.bytes); err != nil {
+		l.Printf("failed to write to response: %v", err)
+	}
 }
