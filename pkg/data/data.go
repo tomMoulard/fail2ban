@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 
 	logger "github.com/tomMoulard/fail2ban/pkg/log"
 )
@@ -23,15 +24,31 @@ type Data struct {
 	RemoteIP string
 }
 
-// ServeHTTP sets data in the request context, to be extracted with GetData.
-func ServeHTTP(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to split remote address %q: %w", r.RemoteAddr, err)
+// extractClientIP attempts to extract the client IP address from the request headers, prioritizing the X-Forwarded-For header.
+func extractClientIP(r *http.Request) string {
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+	if xForwardedFor != "" {
+		// If X-Forwarded-For header is present, take the first IP from the list
+		parts := strings.Split(xForwardedFor, ",")
+		return strings.TrimSpace(parts[0])
 	}
 
+	// Fallback to remote address from the connection
+	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		l.Printf("failed to split remote address %q: %s", r.RemoteAddr, err)
+		return ""
+	}
+
+	return remoteIP
+}
+
+// ServeHTTP sets data in the request context, to be extracted with GetData.
+func ServeHTTP(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
+	clientIP := extractClientIP(r)
+
 	data := &Data{
-		RemoteIP: remoteIP,
+		RemoteIP: clientIP,
 	}
 
 	l.Printf("data: %+v", data)

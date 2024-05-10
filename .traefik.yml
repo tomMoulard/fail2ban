@@ -7,6 +7,12 @@ import: github.com/tomMoulard/fail2ban
 summary: 'Fail2ban for Traefik'
 
 testData:
+  sourceCriterion:
+    ipStrategy:
+      depth: 1
+      excludedIPs:
+        - "127.0.0.1/32"
+        - "::1/128"
   allowlist:
     # allow requests from ::1 or 127.0.0.1
     ip: "::1,127.0.0.1"
