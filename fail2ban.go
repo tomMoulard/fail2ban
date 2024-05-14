@@ -15,7 +15,6 @@ import (
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/files"
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
 	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
@@ -152,12 +151,12 @@ func ImportIP(list List) ([]string, error) {
 	var rlist []string
 
 	for _, ip := range list.Files {
-		content, err := files.GetFileContent(ip)
+		content, err := os.ReadFile(ip)
 		if err != nil {
 			return nil, fmt.Errorf("error when getting file content: %w", err)
 		}
 
-		rlist = append(rlist, strings.Split(content, "\n")...)
+		rlist = append(rlist, strings.Split(string(content), "\n")...)
 		if len(rlist) > 1 {
 			rlist = rlist[:len(rlist)-1]
 		}

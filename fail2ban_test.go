@@ -126,7 +126,7 @@ func TestImportIP(t *testing.T) {
 				Files: []string{"tests/idontexist.txt"},
 			},
 			strWant: []string{},
-			err:     errors.New("error when getting file content: error opening file: open tests/idontexist.txt: no such file or directory"),
+			err:     errors.New("error when getting file content: open tests/idontexist.txt: no such file or directory"),
 		},
 	}
 	for _, test := range tests {
