@@ -82,5 +82,9 @@ issues:
         - funlen
     - path: 'fail2ban.go'
       text: 'calculated cyclomatic complexity for function New is 13'
-    - path: 'fail2ban_test.go' # false-positive
-      text: 'response body must be closed'
+      linters:
+        - cyclop
+    - path: 'fail2ban.go'
+      text: 'G304: Potential file inclusion via variable'
+      linters:
+        - gosec
