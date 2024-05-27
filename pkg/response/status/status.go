@@ -3,9 +3,7 @@ package status
 
 import (
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/tomMoulard/fail2ban/pkg/data"
@@ -14,7 +12,7 @@ import (
 )
 
 // l debug logger. noop by default.
-var l = logger.New(os.Stdout, "DEBUG: status: ", log.Ldate|log.Ltime|log.Lshortfile)
+var l = logger.New("status")
 
 type status struct {
 	next       http.Handler
@@ -36,9 +34,11 @@ func New(next http.Handler, statusCode string, f2b *fail2ban.Fail2Ban) (*status,
 }
 
 func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	l.Printf("status handler")
+
 	data := data.GetData(r)
 	if data == nil {
-		l.Println("data is nil")
+		l.Print("data is nil")
 
 		return
 	}

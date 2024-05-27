@@ -2,8 +2,6 @@
 package fail2ban
 
 import (
-	"log"
-	"os"
 	"sync"
 	"time"
 
@@ -14,7 +12,7 @@ import (
 )
 
 // l debug logger. noop by default.
-var l = logger.New(os.Stdout, "DEBUG: fail2ban: ", log.Ldate|log.Ltime|log.Lshortfile)
+var l = logger.New("fail2ban")
 
 // Fail2Ban is a fail2ban implementation.
 type Fail2Ban struct {

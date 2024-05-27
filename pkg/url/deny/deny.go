@@ -3,9 +3,7 @@ package deny
 
 import (
 	"errors"
-	"log"
 	"net/http"
-	"os"
 	"regexp"
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
@@ -17,7 +15,7 @@ import (
 )
 
 // l debug logger. noop by default.
-var l = logger.New(os.Stdout, "DEBUG: url deny: ", log.Ldate|log.Ltime|log.Lshortfile)
+var l = logger.New("url deny")
 
 type deny struct {
 	regs []*regexp.Regexp

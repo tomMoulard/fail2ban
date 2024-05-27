@@ -4,16 +4,14 @@ package data
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
-	"os"
 
 	logger "github.com/tomMoulard/fail2ban/pkg/log"
 )
 
 // l debug logger. noop by default.
-var l = logger.New(os.Stdout, "DEBUG: data: ", log.Ldate|log.Ltime|log.Lshortfile)
+var l = logger.New("data")
 
 type key string
 
