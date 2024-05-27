@@ -101,12 +101,12 @@ func TestStatus(t *testing.T) {
 			t.Parallel()
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				require.NotZero(t, test.respStatusCode)
+				assert.NotZero(t, test.respStatusCode)
 				w.WriteHeader(test.respStatusCode)
 				t.Logf("status code: %d", test.respStatusCode)
 
 				_, err := w.Write([]byte(body))
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			})
 
 			f2b := fail2ban.New(rules.RulesTransformed{
