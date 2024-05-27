@@ -4,14 +4,15 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
 	"github.com/tomMoulard/fail2ban/pkg/utils/time"
 )
 
@@ -48,9 +49,8 @@ func TestDeny(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			muIP := sync.Mutex{}
-			ipViewed := make(map[string]ipchecking.IPViewed)
-			d := New(test.regs, &muIP, &ipViewed)
+			f2b := fail2ban.New(rules.RulesTransformed{})
+			d := New(test.regs, f2b)
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
@@ -60,7 +60,7 @@ func TestDeny(t *testing.T) {
 			got, err := d.ServeHTTP(recorder, req)
 			require.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, got)
-			assert.Equal(t, test.expectedIPViewed, ipViewed)
+			assert.Equal(t, test.expectedIPViewed, f2b.IPs)
 		})
 	}
 }

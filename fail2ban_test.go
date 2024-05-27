@@ -10,9 +10,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
 	"golang.org/x/net/websocket"
 )
 
@@ -21,43 +20,6 @@ func TestDummy(t *testing.T) {
 
 	cfg := CreateConfig()
 	t.Log(cfg)
-}
-
-func TestTransformRules(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name   string
-		send   Rules
-		expect RulesTransformed
-		err    error
-	}{
-		{
-			name: "dummy",
-			send: Rules{
-				Bantime:  "300s",
-				Findtime: "120s",
-				Enabled:  true,
-			},
-			expect: RulesTransformed{},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got, e := TransformRule(test.send)
-			if e != nil && (test.err == nil || e.Error() != test.err.Error()) {
-				t.Errorf("TransformRule_err: wanted %q got %q",
-					test.err, e)
-			}
-
-			if test.expect.Bantime == got.Bantime {
-				t.Errorf("TransformRule: wanted '%+v' got '%+v'",
-					test.expect, got)
-			}
-		})
-	}
 }
 
 func TestImportIP(t *testing.T) {
@@ -167,7 +129,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "no bantime",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Findtime: "300s",
 					Maxretry: 20,
@@ -179,7 +141,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "no findtime",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
 					Maxretry: 20,
@@ -191,7 +153,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "rule enabled",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
@@ -204,7 +166,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "rule not enabled beside being denylisted",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled: false,
 				},
 				Denylist: List{
@@ -218,12 +180,12 @@ func TestFail2Ban(t *testing.T) {
 			name: "bad regexp",
 			url:  "/test",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
 					Maxretry: 10,
-					Urlregexps: []Urlregexp{
+					Urlregexps: []rules.Urlregexp{
 						{
 							Regexp: "/(test",
 							Mode:   "allow",
@@ -237,12 +199,12 @@ func TestFail2Ban(t *testing.T) {
 			name: "invalid Regexp mode",
 			url:  "/test",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
 					Maxretry: 20,
-					Urlregexps: []Urlregexp{
+					Urlregexps: []rules.Urlregexp{
 						{
 							Regexp: "/test",
 							Mode:   "not-an-actual-mode",
@@ -257,12 +219,12 @@ func TestFail2Ban(t *testing.T) {
 			name: "url allowlisted",
 			url:  "/test",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
 					Maxretry: 10,
-					Urlregexps: []Urlregexp{
+					Urlregexps: []rules.Urlregexp{
 						{
 							Regexp: "/test",
 							Mode:   "allow",
@@ -277,12 +239,12 @@ func TestFail2Ban(t *testing.T) {
 			name: "url denylisted",
 			url:  "/test",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
 					Maxretry: 10,
-					Urlregexps: []Urlregexp{
+					Urlregexps: []rules.Urlregexp{
 						{
 							Regexp: "/test",
 							Mode:   "block",
@@ -296,7 +258,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "allowlist",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
@@ -312,7 +274,7 @@ func TestFail2Ban(t *testing.T) {
 		{
 			name: "denylist",
 			cfg: &Config{
-				Rules: Rules{
+				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
@@ -361,117 +323,6 @@ func TestFail2Ban(t *testing.T) {
 				if rw.Code != test.expectStatus {
 					t.Fatalf("code: got %d, expected %d", rw.Code, test.expectStatus)
 				}
-			}
-		})
-	}
-}
-
-func TestShouldAllow(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name     string
-		cfg      *Fail2Ban
-		remoteIP string
-		expect   bool
-	}{
-		{
-			name: "first request",
-			cfg: &Fail2Ban{
-				ipViewed: map[string]ipchecking.IPViewed{},
-			},
-			expect: true,
-		},
-		{
-			name: "second request",
-			cfg: &Fail2Ban{
-				ipViewed: map[string]ipchecking.IPViewed{
-					"10.0.0.0": {
-						Viewed: time.Now(),
-						Count:  1,
-					},
-				},
-			},
-			remoteIP: "10.0.0.0",
-			expect:   true,
-		},
-		{
-			name: "denylisted request",
-			cfg: &Fail2Ban{
-				rules: RulesTransformed{
-					Bantime: 300 * time.Second,
-				},
-				ipViewed: map[string]ipchecking.IPViewed{
-					"10.0.0.0": {
-						Viewed: time.Now(),
-						Count:  1,
-						Denied: true,
-					},
-				},
-			},
-			remoteIP: "10.0.0.0",
-			expect:   false,
-		},
-		{
-			name: "should unblock request", // since no request during bantime
-			cfg: &Fail2Ban{
-				rules: RulesTransformed{
-					Bantime: 300 * time.Second,
-				},
-				ipViewed: map[string]ipchecking.IPViewed{
-					"10.0.0.0": {
-						Viewed: time.Now().Add(-600 * time.Second),
-						Count:  1,
-						Denied: true,
-					},
-				},
-			},
-			remoteIP: "10.0.0.0",
-			expect:   true,
-		},
-		{
-			name: "should block request", // since too much request during findtime
-			cfg: &Fail2Ban{
-				rules: RulesTransformed{
-					MaxRetry: 1,
-					Findtime: 300 * time.Second,
-				},
-				ipViewed: map[string]ipchecking.IPViewed{
-					"10.0.0.0": {
-						Viewed: time.Now().Add(600 * time.Second),
-						Count:  1,
-					},
-				},
-			},
-			remoteIP: "10.0.0.0",
-			expect:   false,
-		},
-		{
-			name: "should check request",
-			cfg: &Fail2Ban{
-				rules: RulesTransformed{
-					MaxRetry: 3,
-					Findtime: 300 * time.Second,
-				},
-				ipViewed: map[string]ipchecking.IPViewed{
-					"10.0.0.0": {
-						Viewed: time.Now().Add(600 * time.Second),
-						Count:  1,
-					},
-				},
-			},
-			remoteIP: "10.0.0.0",
-			expect:   true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
-
-			got := test.cfg.shouldAllow(test.remoteIP)
-			if test.expect != got {
-				t.Errorf("wanted '%t' got '%t'", test.expect, got)
 			}
 		})
 	}

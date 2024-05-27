@@ -12,12 +12,14 @@ linters:
     - ireturn # Not relevant
     - nilnil # Not relevant
     - testpackage # Too strict
+    - cyclop # duplicate of gocyclo
 
 linters-settings:
   misspell:
     locale: US
   funlen:
     lines: -1
+    statements: 120
   depguard:
     rules:
       main:

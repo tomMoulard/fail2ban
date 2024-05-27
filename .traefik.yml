@@ -19,3 +19,4 @@ testData:
     findtime: "10m"
     maxretry: 4
     enabled: true
+    statuscode: "400,401,403-499"

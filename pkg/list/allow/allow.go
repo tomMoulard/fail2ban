@@ -4,9 +4,7 @@ package allow
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
@@ -15,7 +13,7 @@ import (
 )
 
 // l debug logger. noop by default.
-var l = logger.New(os.Stdout, "DEBUG: list allow: ", log.Ldate|log.Ltime|log.Lshortfile)
+var l = logger.New("list allow")
 
 type allow struct {
 	list ipchecking.NetIPs

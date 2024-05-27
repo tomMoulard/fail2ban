@@ -8,9 +8,14 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/data"
 )
 
+// Status is a status that can be returned by a handler.
 type Status struct {
+	// Return is a flag that tells the chain to return. If Return is true, the
+	// chain will return a 403 (e.g., the ip is in the denylist)
 	Return bool
-	Break  bool
+	// Break is a flag that tells the chain to break. If Break is true, the chain
+	// will stop (e.g., the ip is in the allowlist)
+	Break bool
 }
 
 // ChainHandler is a handler that can be chained.
@@ -21,18 +26,26 @@ type ChainHandler interface {
 // Chain is a chain of handlers.
 type Chain interface {
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
+	WithStatus(status http.Handler)
 }
 
 type chain struct {
 	handlers []ChainHandler
 	final    http.Handler
+	status   *http.Handler
 }
 
+// New creates a new chain.
 func New(final http.Handler, handlers ...ChainHandler) Chain {
 	return &chain{
 		handlers: handlers,
 		final:    final,
 	}
+}
+
+// WithStatus sets the status handler.
+func (c *chain) WithStatus(status http.Handler) {
+	c.status = &status
 }
 
 // ServeHTTP chains the handlers together, and calls the final handler at the end.
@@ -65,6 +78,12 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if s.Break {
 			break
 		}
+	}
+
+	if c.status != nil {
+		(*c.status).ServeHTTP(w, r)
+
+		return
 	}
 
 	c.final.ServeHTTP(w, r)

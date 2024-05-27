@@ -3,34 +3,30 @@ package deny
 
 import (
 	"errors"
-	"log"
 	"net/http"
-	"os"
 	"regexp"
-	"sync"
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	logger "github.com/tomMoulard/fail2ban/pkg/log"
 	"github.com/tomMoulard/fail2ban/pkg/utils/time"
 )
 
 // l debug logger. noop by default.
-var l = logger.New(os.Stdout, "DEBUG: url deny: ", log.Ldate|log.Ltime|log.Lshortfile)
+var l = logger.New("url deny")
 
 type deny struct {
 	regs []*regexp.Regexp
 
-	muIP     *sync.Mutex
-	ipViewed *map[string]ipchecking.IPViewed
+	f2b *fail2ban.Fail2Ban
 }
 
-func New(regs []*regexp.Regexp, muIP *sync.Mutex, ipViewed *map[string]ipchecking.IPViewed) *deny {
+func New(regs []*regexp.Regexp, f2b *fail2ban.Fail2Ban) *deny {
 	return &deny{
-		regs:     regs,
-		muIP:     muIP,
-		ipViewed: ipViewed,
+		regs: regs,
+		f2b:  f2b,
 	}
 }
 
@@ -42,14 +38,14 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 
 	l.Printf("data: %+v", data)
 
-	d.muIP.Lock()
-	defer d.muIP.Unlock()
+	d.f2b.MuIP.Lock()
+	defer d.f2b.MuIP.Unlock()
 
-	ip := (*d.ipViewed)[data.RemoteIP]
+	ip := d.f2b.IPs[data.RemoteIP]
 
 	for _, reg := range d.regs {
 		if reg.MatchString(r.URL.String()) {
-			(*d.ipViewed)[data.RemoteIP] = ipchecking.IPViewed{
+			d.f2b.IPs[data.RemoteIP] = ipchecking.IPViewed{
 				Viewed: time.Now(),
 				Count:  ip.Count + 1,
 				Denied: true,

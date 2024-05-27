@@ -2,9 +2,7 @@
 package allow
 
 import (
-	"log"
 	"net/http"
-	"os"
 	"regexp"
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
@@ -12,7 +10,7 @@ import (
 )
 
 // l debug logger. noop by default.
-var l = logger.New(os.Stdout, "DEBUG: url allow: ", log.Ldate|log.Ltime|log.Lshortfile)
+var l = logger.New("url allow")
 
 type allow struct {
 	regs []*regexp.Regexp
