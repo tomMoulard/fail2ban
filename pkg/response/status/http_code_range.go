@@ -2,7 +2,6 @@ package status
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -43,7 +42,11 @@ func NewHTTPCodeRanges(strBlocks []string) (HTTPCodeRanges, error) {
 
 // Contains tests whether the passed status code is within one of its HTTP code ranges.
 func (h HTTPCodeRanges) Contains(statusCode int) bool {
-	return slices.ContainsFunc(h, func(block [2]int) bool {
-		return statusCode >= block[0] && statusCode <= block[1]
-	})
+	for ranges := range h {
+		if statusCode >= h[ranges][0] && statusCode <= h[ranges][1] {
+			return true
+		}
+	}
+
+	return false
 }
