@@ -13,6 +13,7 @@ linters:
     - nilnil # Not relevant
     - testpackage # Too strict
     - cyclop # duplicate of gocyclo
+    - exportloopref # deprecated
 
 linters-settings:
   misspell:
@@ -80,3 +81,15 @@ issues:
       text: 'G304: Potential file inclusion via variable'
       linters:
         - gosec
+    - text: 'use of `fmt.Printf` forbidden' # FIXME: add revert this change ASAP
+      linters:
+        - forbidigo
+    - text: 'use of `fmt.Print` forbidden' # FIXME: add revert this change ASAP
+      linters:
+        - forbidigo
+    - text: 'use of `fmt.Println` forbidden' # FIXME: add revert this change ASAP
+      linters:
+        - forbidigo
+
+output:
+  show-stats: true
