@@ -44,6 +44,6 @@ func Example() {
 	fmt.Println(rec.Body.String())
 
 	// Output:
-	// data: &{RemoteIP:192.0.2.1}
+	// data: &{RemoteIP:192.0.2.1}data: &{RemoteIP:192.0.2.1}
 	// pong
 }
