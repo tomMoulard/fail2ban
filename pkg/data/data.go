@@ -6,12 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-
-	logger "github.com/tomMoulard/fail2ban/pkg/log"
 )
-
-// l debug logger. noop by default.
-var l = logger.New("data")
 
 type key string
 
@@ -32,7 +27,7 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
 		RemoteIP: remoteIP,
 	}
 
-	l.Printf("data: %+v", data)
+	fmt.Printf("data: %+v", data)
 
 	return r.WithContext(context.WithValue(r.Context(), contextDataKey, data)), nil
 }

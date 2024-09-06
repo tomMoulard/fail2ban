@@ -9,11 +9,7 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	logger "github.com/tomMoulard/fail2ban/pkg/log"
 )
-
-// l debug logger. noop by default.
-var l = logger.New("list allow")
 
 type allow struct {
 	list ipchecking.NetIPs
@@ -34,15 +30,15 @@ func (a *allow) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	l.Printf("data: %+v", data)
+	fmt.Printf("data: %+v", data)
 
 	if a.list.Contains(data.RemoteIP) {
-		l.Printf("IP %s is allowed", data.RemoteIP)
+		fmt.Printf("IP %s is allowed", data.RemoteIP)
 
 		return &chain.Status{Break: true}, nil
 	}
 
-	l.Printf("IP %s not is allowed", data.RemoteIP)
+	fmt.Printf("IP %s not is allowed", data.RemoteIP)
 
 	return nil, nil
 }

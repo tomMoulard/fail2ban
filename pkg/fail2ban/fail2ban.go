@@ -2,17 +2,14 @@
 package fail2ban
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	logger "github.com/tomMoulard/fail2ban/pkg/log"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
 	utime "github.com/tomMoulard/fail2ban/pkg/utils/time"
 )
-
-// l debug logger. noop by default.
-var l = logger.New("fail2ban")
 
 // Fail2Ban is a fail2ban implementation.
 type Fail2Ban struct {
@@ -44,7 +41,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 			Count:  1,
 		}
 
-		l.Printf("welcome %q", remoteIP)
+		fmt.Printf("welcome %q", remoteIP)
 
 		return true
 	}
@@ -57,7 +54,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 				Denied: true,
 			}
 
-			l.Printf("%q is still banned since %q, %d request",
+			fmt.Printf("%q is still banned since %q, %d request",
 				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
 
 			return false
@@ -69,7 +66,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 			Denied: false,
 		}
 
-		l.Println(remoteIP + " is no longer banned")
+		fmt.Println(remoteIP + " is no longer banned")
 
 		return true
 	}
@@ -82,7 +79,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 				Denied: true,
 			}
 
-			l.Printf("%q is banned for %d>=%d request",
+			fmt.Printf("%q is banned for %d>=%d request",
 				remoteIP, ip.Count+1, u.rules.MaxRetry)
 
 			return false
@@ -94,7 +91,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 			Denied: false,
 		}
 
-		l.Printf("welcome back %q for the %d time", remoteIP, ip.Count+1)
+		fmt.Printf("welcome back %q for the %d time", remoteIP, ip.Count+1)
 
 		return true
 	}
@@ -105,7 +102,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		Denied: false,
 	}
 
-	l.Printf("welcome back %q", remoteIP)
+	fmt.Printf("welcome back %q", remoteIP)
 
 	return true
 }

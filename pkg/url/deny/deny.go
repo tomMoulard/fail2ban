@@ -3,6 +3,7 @@ package deny
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 
@@ -10,12 +11,8 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	logger "github.com/tomMoulard/fail2ban/pkg/log"
 	"github.com/tomMoulard/fail2ban/pkg/utils/time"
 )
-
-// l debug logger. noop by default.
-var l = logger.New("url deny")
 
 type deny struct {
 	regs []*regexp.Regexp
@@ -36,7 +33,7 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	l.Printf("data: %+v", data)
+	fmt.Printf("data: %+v", data)
 
 	d.f2b.MuIP.Lock()
 	defer d.f2b.MuIP.Unlock()
@@ -51,7 +48,7 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 				Denied: true,
 			}
 
-			l.Printf("Url (%q) was matched by regexpBan: %q", r.URL.String(), reg.String())
+			fmt.Printf("Url (%q) was matched by regexpBan: %q", r.URL.String(), reg.String())
 
 			return &chain.Status{Return: true}, nil
 		}

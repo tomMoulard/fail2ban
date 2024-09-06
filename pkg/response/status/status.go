@@ -8,11 +8,7 @@ import (
 
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
-	logger "github.com/tomMoulard/fail2ban/pkg/log"
 )
-
-// l debug logger. noop by default.
-var l = logger.New("status")
 
 type status struct {
 	next       http.Handler
@@ -34,21 +30,21 @@ func New(next http.Handler, statusCode string, f2b *fail2ban.Fail2Ban) (*status,
 }
 
 func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	l.Printf("status handler")
+	fmt.Printf("status handler")
 
 	data := data.GetData(r)
 	if data == nil {
-		l.Print("data is nil")
+		fmt.Print("data is nil")
 
 		return
 	}
 
-	l.Printf("data: %+v", data)
+	fmt.Printf("data: %+v", data)
 
 	catcher := newCodeCatcher(w, s.codeRanges)
 	s.next.ServeHTTP(catcher, r)
 
-	l.Printf("catcher: %+v", *catcher)
+	fmt.Printf("catcher: %+v", *catcher)
 
 	if !catcher.isFilteredCode() {
 		w.WriteHeader(catcher.getCode())
@@ -58,16 +54,16 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
-		l.Printf("IP %s is banned", data.RemoteIP)
+		fmt.Printf("IP %s is banned", data.RemoteIP)
 		w.WriteHeader(http.StatusForbidden)
 
 		return
 	}
 
-	l.Printf("IP %s is allowed", data.RemoteIP)
+	fmt.Printf("IP %s is allowed", data.RemoteIP)
 	w.WriteHeader(catcher.getCode())
 
 	if _, err := w.Write(catcher.bytes); err != nil {
-		l.Printf("failed to write to response: %v", err)
+		fmt.Printf("failed to write to response: %v", err)
 	}
 }
