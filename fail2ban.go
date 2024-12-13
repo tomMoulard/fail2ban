@@ -13,14 +13,12 @@ import (
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/cloudflare"
-	"github.com/tomMoulard/fail2ban/pkg/dashboard"
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
 	f2bHandler "github.com/tomMoulard/fail2ban/pkg/fail2ban/handler"
 	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
 	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
 	"github.com/tomMoulard/fail2ban/pkg/persistence"
-	"github.com/tomMoulard/fail2ban/pkg/provider"
 	"github.com/tomMoulard/fail2ban/pkg/response/status"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
 	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
@@ -107,13 +105,12 @@ func ImportIP(list List) ([]string, error) {
 
 // Fail2Ban struct.
 type Fail2Ban struct {
-	next     http.Handler
-	name     string
-	config   *Config
-	f2b      *fail2ban.Fail2Ban
-	cf       *cloudflare.Client
-	chain    http.Handler
-	provider *provider.Provider
+	next   http.Handler
+	name   string
+	config *Config
+	f2b    *fail2ban.Fail2Ban
+	cf     *cloudflare.Client
+	chain  http.Handler
 }
 
 func setupPersistence(ctx context.Context, path string) ([]persistence.BlockedIP, error) {
@@ -214,9 +211,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return next, nil
 	}
 
-	// Create provider config
-	providerConfig := provider.CreateConfig()
-
 	var blocks []persistence.BlockedIP
 
 	persistedBlocks, err := setupPersistence(ctx, config.PersistencePath)
@@ -282,41 +276,18 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		c.WithStatus(statusCodeHandler)
 	}
 
-	// Create dashboard handler
-	dashboardHandler, err := dashboard.New(f2b, cf)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dashboard handler: %w", err)
-	}
-
-	// Create provider
-	dashboardProvider, err := provider.New(ctx, providerConfig, dashboardHandler, name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dashboard provider: %w", err)
-	}
-
-	if err := dashboardProvider.Init(); err != nil {
-		return nil, fmt.Errorf("failed to initialize dashboard provider: %w", err)
-	}
-
 	return &Fail2Ban{
-		next:     next,
-		name:     name,
-		config:   config,
-		f2b:      f2b,
-		cf:       cf,
-		chain:    c,
-		provider: dashboardProvider,
+		next:   next,
+		name:   name,
+		config: config,
+		f2b:    f2b,
+		cf:     cf,
+		chain:  c,
 	}, nil
 }
 
 // Close implements the io.Closer interface.
 func (f *Fail2Ban) Close() error {
-	if f.provider != nil {
-		if err := f.provider.Stop(); err != nil {
-			log.Printf("Failed to stop dashboard provider: %v", err)
-		}
-	}
-
 	if f.cf != nil {
 		f.cf.Close()
 	}
@@ -327,13 +298,4 @@ func (f *Fail2Ban) Close() error {
 // ServeHTTP implements the http.Handler interface.
 func (f *Fail2Ban) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.chain.ServeHTTP(w, r)
-}
-
-func (f *Fail2Ban) GetDashboardHandler() (http.Handler, error) {
-	handler, err := dashboard.New(f.f2b, f.cf)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dashboard handler: %w", err)
-	}
-
-	return handler, nil
 }
