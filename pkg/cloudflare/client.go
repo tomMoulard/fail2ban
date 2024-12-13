@@ -24,10 +24,13 @@ type Client struct {
 	retryDelay  time.Duration
 	blockedIPs  sync.Map // map[string]time.Time
 	stopCleanup chan struct{}
+	workQueue   chan func() // Add work queue for async operations
 }
 
 func NewClient(ctx context.Context, apiToken, zoneID string, maxRetries int, retryDelay time.Duration) *Client {
 	log.Printf("[Cloudflare] Initializing client with maxRetries=%d, retryDelay=%v", maxRetries, retryDelay)
+
+	const workQueueBufferSize = 100
 
 	c := &Client{
 		apiToken:    apiToken,
@@ -36,7 +39,11 @@ func NewClient(ctx context.Context, apiToken, zoneID string, maxRetries int, ret
 		maxRetries:  maxRetries,
 		retryDelay:  retryDelay,
 		stopCleanup: make(chan struct{}),
+		workQueue:   make(chan func(), workQueueBufferSize), // Buffer size for async operations
 	}
+
+	// Start worker goroutine to process API calls
+	go c.processWorkQueue(ctx)
 
 	go c.cleanupBlockedIPs(ctx)
 	log.Printf("[Cloudflare] Starting cleanup goroutine with interval=%v, timeout=%v", CleanupInterval, CleanupTimeout)
@@ -47,7 +54,21 @@ func NewClient(ctx context.Context, apiToken, zoneID string, maxRetries int, ret
 const (
 	CleanupInterval = 1 * time.Minute
 	CleanupTimeout  = 10 * time.Second
+	MaxBanTimeout   = 24 * time.Hour
 )
+
+func (c *Client) processWorkQueue(ctx context.Context) {
+	for {
+		select {
+		case work := <-c.workQueue:
+			work()
+		case <-ctx.Done():
+			return
+		case <-c.stopCleanup:
+			return
+		}
+	}
+}
 
 func (c *Client) cleanupBlockedIPs(ctx context.Context) {
 	ticker := time.NewTicker(CleanupInterval)
@@ -62,51 +83,67 @@ func (c *Client) cleanupBlockedIPs(ctx context.Context) {
 			unblocked := 0
 
 			c.blockedIPs.Range(func(key, value interface{}) bool {
-				// Create a new context with timeout for each operation
-				cleanupCtx, cancel := context.WithTimeout(ctx, CleanupTimeout)
-				defer cancel()
+				select {
+				case <-ctx.Done():
+					return false
+				default:
+					ip, ok := key.(string)
+					if !ok {
+						log.Printf("[Cloudflare] Invalid key type in blockedIPs: %T", key)
 
-				ip, ok := key.(string)
-				if !ok {
-					log.Printf("invalid key type in blockedIPs: %T", key)
-
-					return true
-				}
-
-				banUntil, ok := value.(time.Time)
-				if !ok {
-					log.Printf("invalid value type in blockedIPs for IP %s: %T", ip, value)
-
-					return true
-				}
-
-				blocked++
-				timeLeft := time.Until(banUntil)
-				log.Printf("[Cloudflare] Checking IP %s - ban expires in %v", ip, timeLeft)
-
-				if time.Now().After(banUntil) {
-					log.Printf("[Cloudflare] Unblocking IP %s (ban expired)", ip)
-
-					if err := c.UnblockIP(cleanupCtx, ip); err != nil {
-						log.Printf("failed to unblock IP %s in Cloudflare: %v", ip, err)
+						return true
 					}
 
-					c.blockedIPs.Delete(ip)
+					banUntil, ok := value.(time.Time)
+					if !ok {
+						log.Printf("[Cloudflare] Invalid value type in blockedIPs for IP %s: %T", ip, value)
 
-					unblocked++
+						return true
+					}
+
+					blocked++
+					timeLeft := time.Until(banUntil)
+					log.Printf("[Cloudflare] Checking IP %s - ban expires in %v", ip, timeLeft.Round(time.Second))
+
+					if time.Now().After(banUntil) {
+						log.Printf("[Cloudflare] Unblocking IP %s (ban expired)", ip)
+
+						// Remove from local map before queueing the unblock
+						c.blockedIPs.Delete(ip)
+
+						unblocked++
+
+						// Queue the unblock operation with a new background context
+						cleanupCtx := ctx
+						c.workQueue <- func() {
+							// Create a new context for the unblock operation
+							unblockCtx, cancel := context.WithTimeout(cleanupCtx, CleanupTimeout)
+							defer cancel()
+
+							if err := c.UnblockIP(unblockCtx, ip); err != nil {
+								log.Printf("[Cloudflare] Failed to unblock IP %s: %v", ip, err)
+
+								return
+							}
+
+							log.Printf("[Cloudflare] Successfully unblocked IP %s", ip)
+						}
+					}
+
+					return true
 				}
-
-				return true
 			})
 
-			log.Printf("[Cloudflare] Cleanup complete - checked %d IPs, unblocked %d", blocked, unblocked)
+			log.Printf("[Cloudflare] Cleanup complete - checked %d IPs, scheduled %d for unblock",
+				blocked, unblocked)
 
 		case <-c.stopCleanup:
 			log.Printf("[Cloudflare] Cleanup goroutine stopped")
 
 			return
+
 		case <-ctx.Done():
-			log.Printf("[Cloudflare] Cleanup goroutine canceled")
+			log.Printf("[Cloudflare] Cleanup goroutine canceled: %v", ctx.Err())
 
 			return
 		}
@@ -199,55 +236,67 @@ func (c *Client) checkResponse(resp *http.Response) error {
 }
 
 func (c *Client) BlockIP(ctx context.Context, ip string, banDuration time.Duration) error {
-	log.Printf("[Cloudflare] Blocking IP %s for %v", ip, banDuration)
+	// Store in local map immediately
 	c.blockedIPs.Store(ip, time.Now().Add(banDuration))
 
-	rule := AccessRule{
-		Mode: "block",
-		Configuration: struct {
-			Target string `json:"target"`
-			Value  string `json:"value"`
-		}{
-			Target: "ip",
-			Value:  ip,
-		},
-		Notes: fmt.Sprintf("Blocked by Traefik fail2ban plugin (duration: %s)", banDuration),
-	}
-
-	body, err := json.Marshal(rule)
-	if err != nil {
-		return fmt.Errorf("failed to marshal rule: %w", err)
-	}
-
-	log.Printf("[Cloudflare] Sending block request: %s", string(body))
-
-	req, err := http.NewRequestWithContext(ctx,
-		http.MethodPost,
-		fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules", c.baseURL, c.zoneID),
-		bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := c.doWithRetry(ctx, req)
-	if err != nil {
-		return fmt.Errorf("failed to execute request: %w", err)
-	}
-
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+	// Queue the API call
+	c.workQueue <- func() {
+		rule := AccessRule{
+			Mode: "block",
+			Configuration: struct {
+				Target string `json:"target"`
+				Value  string `json:"value"`
+			}{
+				Target: "ip",
+				Value:  ip,
+			},
+			Notes: fmt.Sprintf("Blocked by Traefik fail2ban plugin (duration: %s)", banDuration),
 		}
-	}()
 
-	return c.checkResponse(resp)
+		body, err := json.Marshal(rule)
+		if err != nil {
+			log.Printf("[Cloudflare] Failed to marshal rule: %v", err)
+
+			return
+		}
+
+		log.Printf("[Cloudflare] Sending block request: %s", string(body))
+
+		req, err := http.NewRequestWithContext(ctx,
+			http.MethodPost,
+			fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules", c.baseURL, c.zoneID),
+			bytes.NewReader(body))
+		if err != nil {
+			log.Printf("[Cloudflare] Failed to create request: %v", err)
+
+			return
+		}
+
+		req.Header.Set("Authorization", "Bearer "+c.apiToken)
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.doWithRetry(ctx, req)
+		if err != nil {
+			log.Printf("[Cloudflare] Failed to execute request: %v", err)
+
+			return
+		}
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				log.Printf("[Cloudflare] Failed to close response body: %v", err)
+			}
+		}()
+
+		if err := c.checkResponse(resp); err != nil {
+			log.Printf("[Cloudflare] API request failed: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func (c *Client) UnblockIP(ctx context.Context, ip string) error {
-	log.Printf("[Cloudflare] Attempting to unblock IP %s", ip)
+	log.Printf("[Cloudflare] Starting unblock process for IP %s", ip)
 
 	// First get the rule ID for this IP
 	req, err := http.NewRequestWithContext(ctx,
@@ -266,12 +315,6 @@ func (c *Client) UnblockIP(ctx context.Context, ip string) error {
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
 
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
-		}
-	}()
-
 	var result struct {
 		Result []struct {
 			ID string `json:"id"`
@@ -279,41 +322,35 @@ func (c *Client) UnblockIP(ctx context.Context, ip string) error {
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			log.Printf("[Cloudflare] Failed to close response body: %v", closeErr)
+		}
+
 		return fmt.Errorf("failed to decode response: %w", err)
 	}
 
+	if err := resp.Body.Close(); err != nil {
+		log.Printf("[Cloudflare] Failed to close response body: %v", err)
+	}
+
 	if len(result.Result) == 0 {
-		log.Printf("[Cloudflare] IP %s not found in firewall rules", ip)
+		log.Printf("[Cloudflare] No rules found for IP %s", ip)
 
-		return nil // IP not blocked
+		return nil
 	}
 
-	log.Printf("[Cloudflare] Found rule %s for IP %s, deleting", result.Result[0].ID, ip)
+	// Remove each rule found for this IP
+	for _, rule := range result.Result {
+		log.Printf("[Cloudflare] Removing rule %s for IP %s", rule.ID, ip)
 
-	// Delete the rule
-	req, err = http.NewRequestWithContext(ctx,
-		http.MethodDelete,
-		fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules/%s",
-			c.baseURL, c.zoneID, result.Result[0].ID),
-		nil)
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
-
-	resp, err = c.doWithRetry(ctx, req)
-	if err != nil {
-		return fmt.Errorf("failed to execute request: %w", err)
-	}
-
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+		if err := c.removeFirewallRule(ctx, rule.ID); err != nil {
+			return fmt.Errorf("failed to remove rule %s: %w", rule.ID, err)
 		}
-	}()
 
-	return c.checkResponse(resp)
+		log.Printf("[Cloudflare] Successfully removed rule %s for IP %s", rule.ID, ip)
+	}
+
+	return nil
 }
 
 func (c *Client) LoadExistingBlocks(ctx context.Context) ([]persistence.BlockedIP, error) {
@@ -363,15 +400,34 @@ func (c *Client) LoadExistingBlocks(ctx context.Context) ([]persistence.BlockedI
 		// Try to extract ban duration from the notes
 		banDuration := c.extractBanDuration(rule.Notes)
 		if banDuration == 0 {
-			log.Printf("[Cloudflare] Could not determine ban duration for IP %s, skipping", rule.Configuration.Value)
+			log.Printf("[Cloudflare] Could not determine ban duration for IP %s, using default %s",
+				rule.Configuration.Value, MaxBanTimeout)
 
-			continue
+			banDuration = MaxBanTimeout // Default duration if we can't parse it
 		}
 
 		// Store in the sync.Map for cleanup
 		banUntil := rule.CreatedOn.Add(banDuration)
-		c.blockedIPs.Store(rule.Configuration.Value, banUntil)
+		if time.Now().After(banUntil) {
+			log.Printf("[Cloudflare] IP %s ban has already expired, scheduling immediate cleanup",
+				rule.Configuration.Value)
 
+			// Create a closure to capture the rule ID
+			ruleID := rule.ID // Capture rule.ID in a new variable
+
+			// Schedule immediate cleanup for expired bans
+			c.workQueue <- func() {
+				cleanupCtx, cancel := context.WithTimeout(ctx, CleanupTimeout) // Use parent context
+				defer cancel()
+				if err := c.removeFirewallRule(cleanupCtx, ruleID); err != nil {
+					log.Printf("[Cloudflare] Failed to remove expired rule %s: %v", ruleID, err)
+				}
+			}
+
+			continue
+		}
+
+		c.blockedIPs.Store(rule.Configuration.Value, banUntil)
 		blocks = append(blocks, persistence.BlockedIP{
 			IP:       rule.Configuration.Value,
 			BannedAt: rule.CreatedOn,
@@ -379,9 +435,34 @@ func (c *Client) LoadExistingBlocks(ctx context.Context) ([]persistence.BlockedI
 		})
 	}
 
-	log.Printf("[Cloudflare] Loaded %d existing blocks", len(blocks))
-
 	return blocks, nil
+}
+
+// Add new helper function to handle rule removal.
+func (c *Client) removeFirewallRule(ctx context.Context, ruleID string) error {
+	req, err := http.NewRequestWithContext(ctx,
+		http.MethodDelete,
+		fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules/%s",
+			c.baseURL, c.zoneID, ruleID),
+		nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+
+	resp, err := c.doWithRetry(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("[Cloudflare] Failed to close response body: %v", err)
+		}
+	}()
+
+	return c.checkResponse(resp)
 }
 
 func (c *Client) extractBanDuration(notes string) time.Duration {
