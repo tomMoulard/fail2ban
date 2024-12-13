@@ -5,7 +5,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -170,11 +172,14 @@ type AccessRule struct {
 type CloudflareError struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
+	Error   string `json:"error"`
 }
 
 type CloudflareResponse struct {
-	Success bool              `json:"success"`
-	Errors  []CloudflareError `json:"errors"`
+	Success  bool              `json:"success"`
+	Errors   []CloudflareError `json:"errors"`
+	Result   json.RawMessage   `json:"result"`
+	Messages []string          `json:"messages"`
 }
 
 func (c *Client) doWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
@@ -196,15 +201,31 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request) (*http.Resp
 			continue
 		}
 
-		// Don't retry on client errors (4xx)
+		// Log rate limit headers if present
+		if rl := resp.Header.Get("Ratelimit-Remaining"); rl != "" {
+			log.Printf("[Cloudflare] Rate limit remaining: %s", rl)
+		}
+
+		// Don't retry on client errors (4xx) except rate limits
+		const HTTPTooManyRequests = 429
 		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+			if resp.StatusCode == HTTPTooManyRequests {
+				if err := resp.Body.Close(); err != nil {
+					log.Printf("[Cloudflare] Failed to close response body: %v", err)
+				}
+
+				lastErr = errors.New("rate limited")
+
+				continue
+			}
+
 			return resp, nil
 		}
 
 		// Retry on server errors (5xx)
 		if resp.StatusCode >= http.StatusInternalServerError {
 			if err := resp.Body.Close(); err != nil {
-				log.Printf("failed to close response body: %v", err)
+				log.Printf("[Cloudflare] Failed to close response body: %v", err)
 			}
 
 			lastErr = fmt.Errorf("server error: %d", resp.StatusCode)
@@ -219,20 +240,48 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request) (*http.Resp
 }
 
 func (c *Client) checkResponse(resp *http.Response) error {
-	if resp.StatusCode == http.StatusOK {
-		var cfResp CloudflareResponse
-		if err := json.NewDecoder(resp.Body).Decode(&cfResp); err != nil {
-			return fmt.Errorf("failed to decode response: %w", err)
-		}
+	var cfResp CloudflareResponse
 
-		if !cfResp.Success {
-			return fmt.Errorf("cloudflare API error: %v", cfResp.Errors)
-		}
-
-		return nil
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	// Try to decode as JSON first
+	if err := json.Unmarshal(body, &cfResp); err != nil {
+		// If we got HTML instead of JSON, there might be an issue with authentication or headers
+		if strings.Contains(string(body), "<html>") {
+			log.Printf("[Cloudflare] Received HTML response instead of JSON. This usually indicates an authentication issue or missing headers")
+			log.Printf("[Cloudflare] Please verify:\n" +
+				"1. API Token permissions (Zone > Firewall Services > Edit)\n" +
+				"2. Zone ID is correct\n" +
+				"3. API Token is valid")
+		}
+
+		return fmt.Errorf("failed to decode response (status %d): %w\nBody: %s",
+			resp.StatusCode, err, string(body))
+	}
+
+	if !cfResp.Success {
+		return fmt.Errorf("cloudflare API error (status %d): %v\nBody: %s",
+			resp.StatusCode, cfResp.Errors, string(body))
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+// Add helper function to redact sensitive headers.
+func redactHeaders(headers http.Header) http.Header {
+	redacted := headers.Clone()
+	if auth := redacted.Get("Authorization"); auth != "" {
+		redacted.Set("Authorization", "Bearer [REDACTED]")
+	}
+
+	return redacted
 }
 
 func (c *Client) BlockIP(ctx context.Context, ip string, banDuration time.Duration) error {
@@ -272,8 +321,14 @@ func (c *Client) BlockIP(ctx context.Context, ip string, banDuration time.Durati
 			return
 		}
 
+		// Add all required headers
 		req.Header.Set("Authorization", "Bearer "+c.apiToken)
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("User-Agent", "traefik-fail2ban/1.0")
+
+		// Log request details with redacted headers
+		log.Printf("[Cloudflare] Making request to %s with headers: %v", req.URL, redactHeaders(req.Header))
 
 		resp, err := c.doWithRetry(ctx, req)
 		if err != nil {
@@ -281,14 +336,24 @@ func (c *Client) BlockIP(ctx context.Context, ip string, banDuration time.Durati
 
 			return
 		}
+
 		defer func() {
 			if err := resp.Body.Close(); err != nil {
 				log.Printf("[Cloudflare] Failed to close response body: %v", err)
 			}
 		}()
 
+		// Log response headers with redacted information
+		log.Printf("[Cloudflare] Response status: %s, headers: %v", resp.Status, redactHeaders(resp.Header))
+
 		if err := c.checkResponse(resp); err != nil {
 			log.Printf("[Cloudflare] API request failed: %v", err)
+
+			// Check if token is valid
+			if resp.StatusCode == http.StatusUnauthorized {
+				log.Printf("[Cloudflare] Authentication failed. Please check your API token permissions. " +
+					"Required permissions: Zone:Firewall Services:Edit")
+			}
 		}
 	}
 
