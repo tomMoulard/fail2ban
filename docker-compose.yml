@@ -1,41 +1,69 @@
 services:
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.2
     command:
       - --api.insecure=true
       - --providers.docker
       - --log.level=DEBUG
       - --accesslog
-      - --experimental.localPlugins.fail2ban-local.moduleName=github.com/tomMoulard/fail2ban
-      - --experimental.plugins.fail2ban-registery.modulename=github.com/tomMoulard/fail2ban
-      - --experimental.plugins.fail2ban-registery.version=v0.7.1
+      - --experimental.localPlugins.fail2ban.moduleName=github.com/tomMoulard/fail2ban
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=tech@les-vikings.fr
+      - --certificatesresolvers.letsencrypt.acme.storage=/data/acme.json
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # - --providers.fail2ban.endpoint=internal
     ports:
-      - 80:80
+      - 42888:443
       - 8080:8080
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/plugins-local/src/github.com/tomMoulard/fail2ban/
+      - le-data:/data
     tty: true
+    labels:
+      traefik.http.routers.api.rule: PathPrefix(`/api`)
+      traefik.http.routers.api.entrypoints: traefik
+      traefik.http.routers.api.service: api@internal
+      # Dashboard route
+      traefik.http.routers.fail2ban-dashboard.rule: PathPrefix(`/api/fail2ban`)
+      traefik.http.routers.fail2ban-dashboard.entrypoints: traefik
+      traefik.http.routers.fail2ban-dashboard.service: api@internal
 
   whoami:
     image: traefik/whoami # https://github.com/traefik/whoami
     command: >-
       -name whoami -verbose true
     labels:
-      traefik.http.routers.fail2ban-local.rule: Host(`fail2ban-local.localhost`)
-      traefik.http.routers.fail2ban-local.middlewares: fail2ban-local
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.enabled: true
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.bantime: 3h
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.findtime: 3h
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.maxretry: 4
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.allowlist.ip: 127.0.0.2
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.denylist.ip: 127.0.0.3
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.urlregexps[0].regexp: /no
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.urlregexps[0].mode: block
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.urlregexps[1].regexp: /yes
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.urlregexps[1].mode: allow
-      traefik.http.middlewares.fail2ban-local.plugin.fail2ban-local.rules.statuscode: "400,401,403-499"
+      traefik.http.routers.fail2ban.rule: Host(`traefik-test.drakkar.pro`)
+      traefik.http.routers.fail2ban.entrypoints: websecure
+      traefik.http.routers.fail2ban.middlewares: fail2ban
+      traefik.http.routers.fail2ban.tls: true
+      traefik.tls.stores.default.defaultgeneratedcert.resolver: myresolver
+      traefik.tls.stores.default.defaultgeneratedcert.domain.main: traefik-test.drakkar.pro
+      # traefik.http.routers.fail2ban.tls.certresolver: letsencrypt
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.enabled: true
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.bantime: 1m
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.findtime: 1m
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.maxretry: 1
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.allowlist.ip: 127.0.0.2
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.denylist.ip: 127.0.0.3
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.urlregexps[0].regexp: /no
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.urlregexps[0].mode: block
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.urlregexps[1].regexp: /yes
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.urlregexps[1].mode: allow
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.rules.statuscode: '400,401,403-499'
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.cloudflare.enabled: true
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.cloudflare.apiToken: 'sJ7mpe_ykEH2Wc29TbkYIxY7iK_RROXowhEJnOiJ'
+      traefik.http.middlewares.fail2ban.plugin.fail2ban.cloudflare.zoneId: '79462d5d2be0c4d252c5f9f087e571e4'
+      # Optional: Add authentication
+      # traefik.http.routers.fail2ban-dashboard.middlewares: fail2ban-auth
 
-      traefik.http.routers.fail2ban-registery.rule: Host(`fail2ban-registery.localhost`)
-      traefik.http.routers.fail2ban-registery.middlewares: fail2ban-registery
-      traefik.http.middlewares.fail2ban-registery.plugin.fail2ban-registery.enabled: true
+      # Optional: Basic auth middleware
+      # traefik.http.middlewares.fail2ban-auth.basicauth.users: admin:$$apr1$$H6uskkkW$$IgXLP6ewTrSuBkTrqE8wj/
+
+      # traefik.http.routers.fail2ban-registery.rule: Host(`traefik-test.drakkar.pro`)
+      # traefik.http.routers.fail2ban-registery.middlewares: fail2ban-registery
+
+volumes:
+  le-data:

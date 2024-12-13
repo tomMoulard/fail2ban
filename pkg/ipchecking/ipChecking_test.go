@@ -7,7 +7,6 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 )
 
-//nolint:dupword
 func Example() {
 	// Parse multiple IPs/CIDRS
 	ips, err := ipchecking.ParseNetIPs([]string{

@@ -7,9 +7,16 @@ import: github.com/tomMoulard/fail2ban
 summary: 'Fail2ban for Traefik'
 
 testData:
+  cloudflare:
+    enabled: false  # disabled by default
+    apiToken: "your-cloudflare-api-token"
+    zoneId: "your-cloudflare-zone-id"
+    ipHeader: "CF-Connecting-IP"  # or "X-Forwarded-For"
+    maxRetries: 3
+    retryDelay: 1
   allowlist:
-    # allow requests from ::1 or 127.0.0.1
-    ip: "::1,127.0.0.1"
+    # Allow local and Cloudflare IPs
+    ip: "::1,127.0.0.1,173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22"
   denylist:
     # do not allow requests from 192.168.0.0/24
     ip: "192.168.0.0/24"

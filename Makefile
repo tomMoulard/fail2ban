@@ -7,8 +7,7 @@ all: spell lint build test
 ci: inst tidy all vulncheck
 
 .PHONY: lint
-lint:
-	goreleaser check
+lint: ## Run the linters
 	golangci-lint run
 
 .PHONY: test
@@ -16,12 +15,20 @@ TEST_ARGS ?= -v -cover -race -tags DEBUG,TEST
 test:
 	go test ${TEST_ARGS} ./...
 
-vendor:
-	go mod vendor -v
+vendor: ## Update vendor directory
+	go mod tidy
+	go mod vendor
 
 .PHONY: clean
 clean:
 	$(RM) -r ./vendor
+
+.PHONY: clean-vendor
+clean-vendor: ## Remove vendor directory
+	rm -rf vendor
+
+.PHONY: update-deps
+update-deps: clean-vendor vendor ## Update dependencies and vendor directory
 
 .PHONY: yaegi_test
 YAEGI_TEST_ARGS ?= -v
@@ -38,7 +45,7 @@ tidy:
 	cd tools && go mod tidy
 
 spell:
-	misspell -error -locale=US -w **.md
+	misspell-fixer **.md
 
 inst:
 	cd tools && go install $(shell cd tools && go list -e -f '{{ join .Imports " " }}' -tags=tools)

@@ -132,7 +132,7 @@ func TestFail2Ban(t *testing.T) {
 				Rules: rules.Rules{
 					Enabled:  true,
 					Findtime: "300s",
-					Maxretry: 20,
+					MaxRetry: 2,
 				},
 			},
 			newError:     true,
@@ -144,7 +144,7 @@ func TestFail2Ban(t *testing.T) {
 				Rules: rules.Rules{
 					Enabled:  true,
 					Bantime:  "300s",
-					Maxretry: 20,
+					MaxRetry: 2,
 				},
 			},
 			newError:     true,
@@ -157,7 +157,7 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
-					Maxretry: 20,
+					MaxRetry: 2,
 				},
 			},
 			newError:     false,
@@ -184,7 +184,7 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
-					Maxretry: 10,
+					MaxRetry: 10,
 					Urlregexps: []rules.Urlregexp{
 						{
 							Regexp: "/(test",
@@ -203,7 +203,7 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
-					Maxretry: 20,
+					MaxRetry: 2,
 					Urlregexps: []rules.Urlregexp{
 						{
 							Regexp: "/test",
@@ -223,7 +223,7 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
-					Maxretry: 10,
+					MaxRetry: 10,
 					Urlregexps: []rules.Urlregexp{
 						{
 							Regexp: "/test",
@@ -243,7 +243,7 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
-					Maxretry: 10,
+					MaxRetry: 10,
 					Urlregexps: []rules.Urlregexp{
 						{
 							Regexp: "/test",
@@ -262,7 +262,7 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
-					Maxretry: 20,
+					MaxRetry: 2,
 				},
 				Allowlist: List{
 					IP: []string{remoteAddr},
@@ -278,7 +278,7 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Bantime:  "300s",
 					Findtime: "300s",
-					Maxretry: 20,
+					MaxRetry: 2,
 				},
 				Denylist: List{
 					IP: []string{remoteAddr},
@@ -345,7 +345,7 @@ func TestDeadlockWebsocket(t *testing.T) {
 	})
 
 	cfg := CreateConfig()
-	cfg.Rules.Maxretry = 20
+	cfg.Rules.MaxRetry = 20
 
 	handler, err := New(context.Background(), next, cfg, "fail2ban_test")
 	if err != nil {

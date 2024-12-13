@@ -3,7 +3,7 @@
 [![Build Status](https://github.com/tomMoulard/fail2ban/actions/workflows/main.yml/badge.svg)](https://github.com/tomMoulard/fail2ban/actions/workflows/main.yml)
 
 This plugin is an implementation of a Fail2ban instance as a middleware
-plugin for Traefik.
+plugin for Traefik. It can optionally integrate with Cloudflare's firewall to block IPs at the edge.
 
 ## Middleware
 
@@ -22,28 +22,59 @@ spec:
         ip: 127.0.0.1
 ```
 
-<details>
-<summary>Add the middleware to an ingressroute</summary>
+## Cloudflare Integration
+
+The plugin can optionally use Cloudflare's API to block IPs at the edge. When enabled, IPs will be blocked using Cloudflare's firewall rules instead of just locally.
+
+To use this feature, you need to:
+1. Create a Cloudflare API token with the `Zone:Firewall Services` permission
+2. Get your Zone ID from the Cloudflare dashboard
+3. Configure the plugin with your Cloudflare credentials
+
+Example configuration with Cloudflare:
 
 ```yml
 apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
+kind: Middleware
 metadata:
-  name: simplecrd
-  namespace: default
+  name: fail2ban-cloudflare
 spec:
-  entryPoints:
-    - web
-  routes:
-  - match: Host(`fail2ban.localhost`)
-    kind: Rule
-    middlewares:
-    - name: fail2ban-test
-    services:
-    ...
+  plugin:
+    fail2ban:
+      cloudflare:
+        enabled: true
+        apiToken: "your-cloudflare-api-token"
+        zoneId: "your-cloudflare-zone-id"
+        ipHeader: "CF-Connecting-IP"  # or "X-Forwarded-For"
+        maxRetries: 3  # number of retries for API calls
+        retryDelay: 1  # delay between retries in seconds
+      allowlist:
+        # Important: When using Cloudflare, make sure to allowlist their IPs
+        ip: "173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22"
+      rules:
+        bantime: "3h"
+        findtime: "10m"
+        maxretry: 4
+        enabled: true
 ```
 
-</details>
+### Cloudflare Configuration Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `enabled` | Enable Cloudflare integration | `false` |
+| `apiToken` | Cloudflare API token | `""` |
+| `zoneId` | Cloudflare Zone ID | `""` |
+| `ipHeader` | Header to get real IP from (`CF-Connecting-IP` or `X-Forwarded-For`) | `"CF-Connecting-IP"` |
+| `maxRetries` | Maximum number of retries for API calls | `3` |
+| `retryDelay` | Delay between retries in seconds | `1` |
+
+### Important Notes
+
+1. When using Cloudflare integration, you must allowlist Cloudflare's IP ranges to prevent blocking their IPs.
+2. The `ipHeader` setting is important as requests will come from Cloudflare's IPs. Use `CF-Connecting-IP` (recommended) or `X-Forwarded-For`.
+3. API calls include retries with exponential backoff to handle temporary failures.
+4. If the Cloudflare API calls fail, the plugin will log the error but continue operating locally.
 
 ## Configuration
 
