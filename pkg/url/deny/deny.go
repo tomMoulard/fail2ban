@@ -33,7 +33,7 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	fmt.Printf("data: %+v", data)
+	fmt.Printf("data: %+v\n", data)
 
 	d.f2b.MuIP.Lock()
 	defer d.f2b.MuIP.Unlock()
@@ -48,7 +48,7 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 				Denied: true,
 			}
 
-			fmt.Printf("Url (%q) was matched by regexpBan: %q", r.URL.String(), reg.String())
+			fmt.Printf("Url (%q) was matched by regexpBan: %q\n", r.URL.String(), reg.String())
 
 			return &chain.Status{Return: true}, nil
 		}

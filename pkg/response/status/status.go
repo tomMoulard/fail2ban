@@ -64,6 +64,6 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(catcher.getCode())
 
 	if _, err := w.Write(catcher.bytes); err != nil {
-		fmt.Printf("failed to write to response: %v", err)
+		fmt.Printf("failed to write to response: %v\n", err)
 	}
 }

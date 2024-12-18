@@ -2,7 +2,7 @@
 package chain
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/tomMoulard/fail2ban/pkg/data"
@@ -52,7 +52,7 @@ func (c *chain) WithStatus(status http.Handler) {
 func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r, err := data.ServeHTTP(w, r)
 	if err != nil {
-		log.Printf("data.ServeHTTP error: %v", err)
+		fmt.Printf("data.ServeHTTP error: %v\n", err)
 
 		return
 	}
@@ -60,7 +60,7 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, handler := range c.handlers {
 		s, err := handler.ServeHTTP(w, r)
 		if err != nil {
-			log.Printf("handler.ServeHTTP error: %v", err)
+			fmt.Printf("handler.ServeHTTP error: %v\n", err)
 
 			break
 		}

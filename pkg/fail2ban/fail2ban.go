@@ -4,7 +4,6 @@ package fail2ban
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -25,6 +24,8 @@ type Fail2Ban struct {
 
 // New creates a new Fail2Ban.
 func New(rules rules.RulesTransformed, cf *cloudflare.Client) *Fail2Ban {
+	fmt.Printf("Plugin: FailToBan is up and running\n")
+
 	return &Fail2Ban{
 		rules: rules,
 		cf:    cf,
@@ -46,7 +47,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 			Count:  1,
 		}
 
-		fmt.Printf("welcome %q", remoteIP)
+		fmt.Printf("welcome %q\n", remoteIP)
 
 		return true
 	}
@@ -59,7 +60,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 				Denied: true,
 			}
 
-			fmt.Printf("%q is still banned since %q, %d request",
+			fmt.Printf("%q is still banned since %q, %d request\n",
 				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
 
 			return false
@@ -68,7 +69,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		// Unblock in Cloudflare
 		if u.cf != nil {
 			if err := u.cf.UnblockIP(context.Background(), remoteIP); err != nil {
-				log.Printf("failed to unblock IP in Cloudflare: %v", err)
+				fmt.Printf("failed to unblock IP in Cloudflare: %v\n", err)
 			}
 		}
 
@@ -93,7 +94,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		Denied: false,
 	}
 
-	fmt.Printf("welcome back %q", remoteIP)
+	fmt.Printf("welcome back %q\n", remoteIP)
 
 	return true
 }
@@ -103,7 +104,7 @@ func (u *Fail2Ban) handleFindtimeExceeded(remoteIP string, ip ipchecking.IPViewe
 		// Block in Cloudflare if enabled
 		if u.cf != nil {
 			if err := u.cf.BlockIP(context.Background(), remoteIP, u.rules.Bantime); err != nil {
-				log.Printf("failed to block IP in Cloudflare: %v", err)
+				fmt.Printf("failed to block IP in Cloudflare: %v\n", err)
 			}
 		}
 
@@ -113,7 +114,7 @@ func (u *Fail2Ban) handleFindtimeExceeded(remoteIP string, ip ipchecking.IPViewe
 			Denied: true,
 		}
 
-		fmt.Printf("%q is banned for %d>=%d request",
+		fmt.Printf("%q is banned for %d>=%d request\n",
 			remoteIP, ip.Count+1, u.rules.MaxRetry)
 
 		return false
@@ -125,7 +126,7 @@ func (u *Fail2Ban) handleFindtimeExceeded(remoteIP string, ip ipchecking.IPViewe
 		Denied: false,
 	}
 
-	fmt.Printf("welcome back %q for the %d time", remoteIP, ip.Count+1)
+	fmt.Printf("welcome back %q for the %d time\n", remoteIP, ip.Count+1)
 
 	return true
 }
@@ -141,7 +142,7 @@ func (u *Fail2Ban) RestoreBlock(ip string, bannedAt, banUntil time.Time) {
 		Denied: true,
 	}
 
-	log.Printf("Restored block for IP %s until %s", ip, banUntil)
+	fmt.Printf("Restored block for IP %s until %s\n", ip, banUntil)
 }
 
 func (u *Fail2Ban) RangeBlocks(fn func(ip string, bannedAt time.Time, banUntil time.Time)) {

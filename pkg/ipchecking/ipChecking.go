@@ -3,7 +3,6 @@ package ipchecking
 
 import (
 	"fmt"
-	"log"
 	"net/netip"
 	"strings"
 	"time"
@@ -73,7 +72,7 @@ func (ip NetIP) String() string {
 func (ip NetIP) Contains(i string) bool {
 	rip, err := netip.ParseAddr(i)
 	if err != nil {
-		log.Printf("%s is not a valid IP or IP/Net: %s", i, err.Error())
+		fmt.Printf("%s is not a valid IP or IP/Net: %s\n", i, err.Error())
 
 		return false
 	}
@@ -91,7 +90,7 @@ type NetIPs []NetIP
 func (netIPs NetIPs) Contains(ip string) bool {
 	rip, err := netip.ParseAddr(ip)
 	if err != nil {
-		log.Printf("failed to parse %q: %s", ip, err.Error())
+		fmt.Printf("failed to parse %q: %s\n", ip, err.Error())
 
 		return false
 	}

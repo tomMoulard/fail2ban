@@ -3,7 +3,6 @@ package rules
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"time"
 )
@@ -75,7 +74,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 			continue
 		}
 
-		log.Println("Warning: using deprecated 'urlregexps' format, please use 'urlregexpban' and 'urlregexpallow' instead")
+		fmt.Printf("Warning: using deprecated 'urlregexps' format, please use 'urlregexpban' and 'urlregexpallow' instead\n")
 
 		re, err := regexp.Compile(rg.Regexp)
 		if err != nil {
@@ -88,7 +87,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		case "block":
 			regexpBan = append(regexpBan, re)
 		default:
-			log.Printf("mode %q is not known, the rule %q cannot not be applied", rg.Mode, rg.Regexp)
+			fmt.Printf("mode %q is not known, the rule %q cannot not be applied\n", rg.Mode, rg.Regexp)
 		}
 	}
 

@@ -2,6 +2,7 @@ package status
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -103,7 +104,7 @@ func TestStatus(t *testing.T) {
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.NotZero(t, test.respStatusCode)
 				w.WriteHeader(test.respStatusCode)
-				t.Logf("status code: %d", test.respStatusCode)
+				fmt.Printf("status code: %d\n", test.respStatusCode)
 
 				_, err := w.Write([]byte(body))
 				assert.NoError(t, err)
@@ -126,7 +127,7 @@ func TestStatus(t *testing.T) {
 			var b bytes.Buffer
 			recorder = &httptest.ResponseRecorder{Body: &b}
 			d.ServeHTTP(recorder, req)
-			t.Logf("recorder: %+v", recorder)
+			fmt.Printf("recorder: %+v\n", recorder)
 
 			assert.Equal(t, test.expectedIPViewed, f2b.IPs)
 			assert.Equal(t, test.expectedStatus, recorder.Code)
