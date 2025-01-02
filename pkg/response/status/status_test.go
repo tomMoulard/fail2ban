@@ -2,6 +2,7 @@ package status
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -20,6 +21,7 @@ import (
 func TestStatus(t *testing.T) {
 	t.Parallel()
 
+	ctx := context.Background()
 	body := "Hello, world!"
 
 	tests := []struct {
@@ -110,11 +112,11 @@ func TestStatus(t *testing.T) {
 				assert.NoError(t, err)
 			})
 
-			f2b := fail2ban.New(rules.RulesTransformed{
+			f2b := fail2ban.New(ctx, rules.RulesTransformed{
 				MaxRetry: 1,
 				Findtime: 300 * time.Second,
 				Bantime:  300 * time.Second,
-			}, nil)
+			}, nil, nil)
 			f2b.IPs = test.ips
 			d, err := New(next, test.codeRanges, f2b)
 			require.NoError(t, err)
@@ -134,5 +136,25 @@ func TestStatus(t *testing.T) {
 			require.NotNil(t, recorder.Body)
 			assert.Equal(t, test.expectedBody, recorder.Body.String())
 		})
+	}
+}
+
+func TestNew(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	transformedRules, err := rules.TransformRule(rules.Rules{
+		Bantime:  "300s",
+		Findtime: "120s",
+		Enabled:  true,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	f2b := fail2ban.New(ctx, transformedRules, nil, nil)
+	if f2b == nil {
+		t.Error("fail2ban instance should not be nil")
 	}
 }

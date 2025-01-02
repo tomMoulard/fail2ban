@@ -77,9 +77,13 @@ func TestBlockIP(t *testing.T) {
 				baseURL:  server.URL,
 			}
 
-			err := client.BlockIP(context.Background(), tt.ip, tt.banDuration)
+			ruleID, err := client.BlockIP(context.Background(), tt.ip, tt.banDuration)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("BlockIP() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr && ruleID == "" {
+				t.Error("BlockIP() returned empty rule ID")
 			}
 		})
 	}

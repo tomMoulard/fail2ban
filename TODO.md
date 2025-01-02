@@ -1,0 +1,6 @@
+- [ ] Update README.md with all the options related to Cloudflare
+- [ ] Handle setting Cloudflare API token from a Kubernetes secret
+- [ ] Check which Cloudflare permissions are needed for the API token
+- [ ] Check that multiple instances of the middleware don't conflict with each other
+- [ ] Store the start ban time in the blocked IPs file to compute the ban end time and set it in Cloudflare
+- [ ] Publish to Github and make a PR to the original author

@@ -9,20 +9,18 @@ import (
 
 // Urlregexp struct.
 type Urlregexp struct {
-	Regexp string `yaml:"regexp"`
-	Mode   string `yaml:"mode"`
+	Regexp string `json:"regexp" toml:"regexp" yaml:"regexp"`
+	Mode   string `json:"mode"   toml:"mode"   yaml:"mode"`
 }
 
 // Rules struct fail2ban config.
 type Rules struct {
-	Bantime        string      `json:"bantime"        label:"Ban duration"            toml:"bantime"        yaml:"bantime"`
-	Findtime       string      `json:"findtime"       label:"Detection window"        toml:"findtime"       yaml:"findtime"`
-	MaxRetry       int         `json:"maxretry"       label:"Max retries before ban"  toml:"maxretry"       yaml:"maxretry"`
-	Enabled        bool        `json:"enabled"        label:"Enable fail2ban"         toml:"enabled"        yaml:"enabled"`
-	StatusCode     string      `json:"statuscode"     label:"Status codes to monitor" toml:"statuscode"     yaml:"statuscode"`
-	URLRegexpBan   []string    `json:"urlregexpban"   label:"URLs to ban (regexp)"    toml:"urlregexpban"   yaml:"urlregexpban"`
-	URLRegexpAllow []string    `json:"urlregexpallow" label:"URLs to allow (regexp)"  toml:"urlregexpallow" yaml:"urlregexpallow"`
-	Urlregexps     []Urlregexp `json:"-"              toml:"-"                        yaml:"urlregexps"`
+	Bantime    string      `json:"bantime"    label:"Ban duration"            toml:"bantime"    yaml:"bantime"`
+	Findtime   string      `json:"findtime"   label:"Detection window"        toml:"findtime"   yaml:"findtime"`
+	MaxRetry   int         `json:"maxretry"   label:"Max retries before ban"  toml:"maxretry"   yaml:"maxretry"`
+	Enabled    bool        `json:"enabled"    label:"Enable fail2ban"         toml:"enabled"    yaml:"enabled"`
+	StatusCode string      `json:"statuscode" label:"Status codes to monitor" toml:"statuscode" yaml:"statuscode"`
+	Urlregexps []Urlregexp `json:"urlregexps" label:"URL regexps"             toml:"urlregexps" yaml:"urlregexps"`
 }
 
 // RulesTransformed transformed Rules struct.
@@ -48,26 +46,8 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		return RulesTransformed{}, fmt.Errorf("failed to parse findtime duration: %w", err)
 	}
 
-	regexpAllow := make([]*regexp.Regexp, 0, len(r.URLRegexpAllow)+len(r.Urlregexps))
-	regexpBan := make([]*regexp.Regexp, 0, len(r.URLRegexpBan)+len(r.Urlregexps))
-
-	for _, pattern := range r.URLRegexpBan {
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			return RulesTransformed{}, fmt.Errorf("failed to compile ban regexp %q: %w", pattern, err)
-		}
-
-		regexpBan = append(regexpBan, re)
-	}
-
-	for _, pattern := range r.URLRegexpAllow {
-		re, err := regexp.Compile(pattern)
-		if err != nil {
-			return RulesTransformed{}, fmt.Errorf("failed to compile allow regexp %q: %w", pattern, err)
-		}
-
-		regexpAllow = append(regexpAllow, re)
-	}
+	regexpAllow := make([]*regexp.Regexp, 0, len(r.Urlregexps))
+	regexpBan := make([]*regexp.Regexp, 0, len(r.Urlregexps))
 
 	for _, rg := range r.Urlregexps {
 		if len(rg.Regexp) == 0 {

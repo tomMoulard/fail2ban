@@ -13,6 +13,7 @@ type IPViewed struct {
 	Viewed time.Time
 	Count  int
 	Denied bool
+	RuleID string // Cloudflare rule ID
 }
 
 // NetIP struct that holds an NetIP IP address, and a IP network.

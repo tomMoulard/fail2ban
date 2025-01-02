@@ -115,7 +115,7 @@ func TestImportIP(t *testing.T) {
 	}
 }
 
-func TestFail2Ban(t *testing.T) {
+func TestNew(t *testing.T) {
 	t.Parallel()
 
 	remoteAddr := "10.0.0.0"
@@ -300,10 +300,8 @@ func TestFail2Ban(t *testing.T) {
 			})
 
 			handler, err := New(context.Background(), next, test.cfg, "fail2ban_test")
-			if err != nil {
-				if test.newError != (err != nil) {
-					t.Errorf("newError: wanted '%t' got '%t'", test.newError, err != nil)
-				}
+			if (err != nil) != test.newError {
+				t.Errorf("New() error = %v, wantErr %v", err, test.newError)
 
 				return
 			}

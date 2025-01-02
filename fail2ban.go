@@ -11,18 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/cloudflare"
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
-	f2bHandler "github.com/tomMoulard/fail2ban/pkg/fail2ban/handler"
-	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
-	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
 	"github.com/tomMoulard/fail2ban/pkg/persistence"
-	"github.com/tomMoulard/fail2ban/pkg/response/status"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
-	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
-	uDeny "github.com/tomMoulard/fail2ban/pkg/url/deny"
 )
 
 func init() {
@@ -47,17 +40,12 @@ type CloudflareConfig struct {
 
 // Config struct.
 type Config struct {
-	Denylist   List             `json:"denylist"   toml:"denylist"   yaml:"denylist"`
-	Allowlist  List             `json:"allowlist"  toml:"allowlist"  yaml:"allowlist"`
-	Rules      rules.Rules      `json:"rules"      toml:"rules"      yaml:"rules"`
-	Cloudflare CloudflareConfig `json:"cloudflare" toml:"cloudflare" yaml:"cloudflare"`
-	// Path to store blocked IPs (optional)
-	PersistencePath string `json:"persistencePath" toml:"persistencePath" yaml:"persistencePath"`
-
-	// deprecated
-	Blacklist List `json:"blacklist" toml:"blacklist" yaml:"blacklist"`
-	// deprecated
-	Whitelist List `json:"whitelist" toml:"whitelist" yaml:"whitelist"`
+	Denylist        List             `json:"denylist"        toml:"denylist"        yaml:"denylist"`
+	Allowlist       List             `json:"allowlist"       toml:"allowlist"       yaml:"allowlist"`
+	Rules           rules.Rules      `json:"rules"           toml:"rules"           yaml:"rules"`
+	IPHeader        string           `json:"ipHeader"        toml:"ipHeader"        yaml:"ipHeader"`
+	Cloudflare      CloudflareConfig `json:"cloudflare"      toml:"cloudflare"      yaml:"cloudflare"`
+	PersistencePath string           `json:"persistencePath" toml:"persistencePath" yaml:"persistencePath"`
 }
 
 const (
@@ -73,9 +61,9 @@ func CreateConfig() *Config {
 			Findtime: "120s",
 			Enabled:  true,
 		},
+		IPHeader: "CF-Connecting-IP",
 		Cloudflare: CloudflareConfig{
 			Enabled:    false,
-			IPHeader:   "CF-Connecting-IP",
 			MaxRetries: DefaultMaxRetries,
 			RetryDelay: DefaultRetryDelay,
 		},
@@ -103,177 +91,135 @@ func ImportIP(list List) ([]string, error) {
 	return rlist, nil
 }
 
-// Fail2Ban struct.
-type Fail2Ban struct {
-	next   http.Handler
-	name   string
-	config *Config
-	f2b    *fail2ban.Fail2Ban
-	cf     *cloudflare.Client
-	chain  http.Handler
-}
-
-func setupPersistence(ctx context.Context, path string) ([]persistence.BlockedIP, error) {
+func setupPersistence(ctx context.Context, path string) (persistence.Store, []persistence.BlockedIP, error) {
 	if path == "" {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	store := persistence.NewFileStore(path)
 
 	blocks, err := store.Load(ctx)
 	if err != nil {
-		log.Printf("Failed to load blocked IPs from persistence: %v", err)
-
-		return nil, fmt.Errorf("failed to load blocked IPs from persistence: %w", err)
+		if !os.IsNotExist(err) {
+			return nil, nil, fmt.Errorf("failed to load blocked IPs from persistence: %w", err)
+		}
+		// If file doesn't exist, return empty store
+		return store, nil, nil
 	}
 
-	log.Printf("Loaded %d blocked IPs from persistence", len(blocks))
+	fmt.Printf("Loaded %d blocked IPs from persistence", len(blocks))
 
-	return blocks, nil
+	return store, blocks, nil
 }
 
 func setupCloudflare(ctx context.Context, config *Config) (*cloudflare.Client, []persistence.BlockedIP, error) {
 	if !config.Cloudflare.Enabled {
+		fmt.Println("[Cloudflare] Integration disabled")
+
 		return nil, nil, nil
 	}
 
-	if config.Cloudflare.APIToken == "" || config.Cloudflare.ZoneID == "" {
-		return nil, nil, errors.New("cloudflare integration enabled but missing required configuration")
+	if config.Cloudflare.APIToken == "" {
+		return nil, nil, errors.New("cloudflare API token is required when Cloudflare integration is enabled")
 	}
 
-	cf := cloudflare.NewClient(
-		ctx,
-		config.Cloudflare.APIToken,
-		config.Cloudflare.ZoneID,
-		config.Cloudflare.MaxRetries,
-		time.Duration(config.Cloudflare.RetryDelay)*time.Second,
-	)
+	if config.Cloudflare.ZoneID == "" {
+		return nil, nil, errors.New("cloudflare Zone ID is required when Cloudflare integration is enabled")
+	}
 
-	data.SetConfig(data.Config{
-		IPHeader: config.Cloudflare.IPHeader,
-	})
+	fmt.Printf("[Cloudflare] Setting up client with token=%s..., zoneID=%s\n",
+		config.Cloudflare.APIToken[:4], config.Cloudflare.ZoneID)
 
-	// Load existing blocks from Cloudflare
+	fmt.Println("[Cloudflare] Integration enabled and configured")
+
+	maxRetries := config.Cloudflare.MaxRetries
+	if maxRetries == 0 {
+		maxRetries = DefaultMaxRetries
+	}
+
+	retryDelay := time.Duration(config.Cloudflare.RetryDelay) * time.Second
+	if retryDelay == 0 {
+		retryDelay = DefaultRetryDelay * time.Second
+	}
+
+	transformedRules, err := rules.TransformRule(config.Rules)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to transform rules: %w", err)
+	}
+
+	cf := cloudflare.NewClient(ctx, config.Cloudflare.APIToken, config.Cloudflare.ZoneID,
+		maxRetries, retryDelay, transformedRules)
+
+	// Test the client by loading existing blocks
 	blocks, err := cf.LoadExistingBlocks(ctx)
 	if err != nil {
-		log.Printf("Failed to load blocks from Cloudflare: %v", err)
-
-		return cf, nil, fmt.Errorf("failed to load blocks from Cloudflare: %w", err)
+		return nil, nil, fmt.Errorf("failed to test Cloudflare client: %w", err)
 	}
-
-	log.Printf("Loaded %d blocks from Cloudflare", len(blocks))
 
 	return cf, blocks, nil
 }
 
-func setupIPLists(config *Config) ([]string, []string, error) {
-	allowIPs, err := ImportIP(config.Allowlist)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse allowlist IPs: %w", err)
-	}
-
-	if len(config.Whitelist.IP) > 0 || len(config.Whitelist.Files) > 0 {
-		log.Println("Plugin: FailToBan: 'whitelist' is deprecated, please use 'allowlist' instead")
-
-		whiteips, err := ImportIP(config.Whitelist)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
-		}
-
-		allowIPs = append(allowIPs, whiteips...)
-	}
-
-	denyIPs, err := ImportIP(config.Denylist)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse denylist IPs: %w", err)
-	}
-
-	if len(config.Blacklist.IP) > 0 || len(config.Blacklist.Files) > 0 {
-		log.Println("Plugin: FailToBan: 'blacklist' is deprecated, please use 'denylist' instead")
-
-		blackips, err := ImportIP(config.Blacklist)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
-		}
-
-		denyIPs = append(denyIPs, blackips...)
-	}
-
-	return allowIPs, denyIPs, nil
-}
-
-// New instantiates and returns the required components used to handle a HTTP
-// request.
+// New creates a new fail2ban plugin instance.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	if !config.Rules.Enabled {
-		log.Println("Plugin: FailToBan is disabled")
+		fmt.Println("Plugin: FailToBan is disabled")
 
 		return next, nil
 	}
 
-	var blocks []persistence.BlockedIP
+	// Configure data package with IP header
+	data.SetConfig(data.Config{
+		IPHeader: config.IPHeader,
+	})
 
-	persistedBlocks, err := setupPersistence(ctx, config.PersistencePath)
-	if err == nil && persistedBlocks != nil {
-		blocks = append(blocks, persistedBlocks...)
+	if config.Cloudflare.Enabled && config.IPHeader == "" {
+		// Use Cloudflare's header as fallback if no custom header is set
+		data.SetConfig(data.Config{
+			IPHeader: "CF-Connecting-IP",
+		})
 	}
 
-	cf, cfBlocks, err := setupCloudflare(ctx, config)
+	transformedRules, err := rules.TransformRule(config.Rules)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to transform rules: %w", err)
 	}
 
-	if cfBlocks != nil {
-		blocks = append(blocks, cfBlocks...)
-	}
+	store, persistedBlocks, err := setupPersistence(ctx, config.PersistencePath)
 
-	allowIPs, denyIPs, err := setupIPLists(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to setup persistence: %w", err)
 	}
 
-	allowHandler, err := lAllow.New(allowIPs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
+	var cf *cloudflare.Client
+
+	var cfBlocks []persistence.BlockedIP
+
+	var cfErr error
+
+	if config.Cloudflare.Enabled {
+		cf, cfBlocks, cfErr = setupCloudflare(ctx, config)
+
+		if cfErr != nil {
+			return nil, fmt.Errorf("failed to setup Cloudflare: %w", cfErr)
+		}
+
+		fmt.Printf("[Cloudflare] Successfully initialized client and loaded %d existing blocks\n", len(cfBlocks))
 	}
 
-	denyHandler, err := lDeny.New(denyIPs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
-	}
+	f2b := fail2ban.New(ctx, transformedRules, cf, store)
 
-	rules, err := rules.TransformRule(config.Rules)
-	if err != nil {
-		return nil, fmt.Errorf("error when Transforming rules: %w", err)
-	}
+	// Load existing blocks from persistence
+	if persistedBlocks != nil {
+		fmt.Printf("Loaded %d blocked IPs from persistence", len(persistedBlocks))
 
-	log.Println("Plugin: FailToBan is up and running")
-
-	f2b := fail2ban.New(rules, cf)
-
-	// Restore blocked IPs
-	for _, block := range blocks {
-		if time.Now().Before(block.BanUntil) {
-			f2b.RestoreBlock(block.IP, block.BannedAt, block.BanUntil)
+		for _, block := range persistedBlocks {
+			f2b.RestoreBlock(ctx, block.IP, block.BannedAt, block.BanUntil, block.RuleID)
 		}
 	}
 
-	c := chain.New(
-		next,
-		denyHandler,
-		allowHandler,
-		uDeny.New(rules.URLRegexpBan, f2b),
-		uAllow.New(rules.URLRegexpAllow),
-		f2bHandler.New(f2b),
-	)
-
-	if rules.StatusCode != "" {
-		statusCodeHandler, err := status.New(next, rules.StatusCode, f2b)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create status handler: %w", err)
-		}
-
-		c.WithStatus(statusCodeHandler)
+	// Restore Cloudflare blocks
+	for _, block := range cfBlocks {
+		f2b.RestoreBlock(ctx, block.IP, block.BannedAt, block.BanUntil, block.RuleID)
 	}
 
 	return &Fail2Ban{
@@ -282,20 +228,45 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		config: config,
 		f2b:    f2b,
 		cf:     cf,
-		chain:  c,
 	}, nil
 }
 
-// Close implements the io.Closer interface.
-func (f *Fail2Ban) Close() error {
-	if f.cf != nil {
-		f.cf.Close()
-	}
-
-	return nil
+// Fail2Ban struct.
+type Fail2Ban struct {
+	next   http.Handler
+	name   string
+	config *Config
+	f2b    *fail2ban.Fail2Ban
+	cf     *cloudflare.Client
 }
 
-// ServeHTTP implements the http.Handler interface.
-func (f *Fail2Ban) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	f.chain.ServeHTTP(w, r)
+func (f *Fail2Ban) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+
+	// Use data package to get the real IP
+	req, err := data.ServeHTTP(rw, req.WithContext(ctx))
+	if err != nil {
+		fmt.Printf("Failed to process request data: %v\n", err)
+		rw.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	d := data.GetData(req)
+	if d == nil {
+		fmt.Println("No request data available")
+		rw.WriteHeader(http.StatusInternalServerError)
+
+		return
+	}
+
+	remoteIP := d.RemoteIP
+
+	if !f.f2b.ShouldAllow(ctx, remoteIP) {
+		rw.WriteHeader(http.StatusForbidden)
+
+		return
+	}
+
+	f.next.ServeHTTP(rw, req)
 }

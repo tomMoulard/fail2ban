@@ -27,7 +27,7 @@ spec:
 The plugin can optionally use Cloudflare's API to block IPs at the edge. When enabled, IPs will be blocked using Cloudflare's firewall rules instead of just locally.
 
 To use this feature, you need to:
-1. Create a Cloudflare API token with the `Zone:Firewall Services` permission
+1. Create a Cloudflare API token with the `Zone:Permissions:Access: Apps and Policies: Edit` permission
 2. Get your Zone ID from the Cloudflare dashboard
 3. Configure the plugin with your Cloudflare credentials
 
@@ -48,6 +48,7 @@ spec:
         ipHeader: "CF-Connecting-IP"  # or "X-Forwarded-For"
         maxRetries: 3  # number of retries for API calls
         retryDelay: 1  # delay between retries in seconds
+      persistencePath: "/data/blocked-ips.json"
       allowlist:
         # Important: When using Cloudflare, make sure to allowlist their IPs
         ip: "173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22"

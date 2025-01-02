@@ -4,6 +4,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
@@ -26,7 +27,12 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.S
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	if !h.f2b.ShouldAllow(data.RemoteIP) {
+	remoteIP := req.RemoteAddr
+	if strings.Contains(remoteIP, ":") {
+		remoteIP = strings.Split(remoteIP, ":")[0]
+	}
+
+	if !h.f2b.ShouldAllow(req.Context(), remoteIP) {
 		return &chain.Status{Return: true}, nil
 	}
 

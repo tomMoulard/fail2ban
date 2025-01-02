@@ -9,13 +9,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/netip"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	"github.com/tomMoulard/fail2ban/pkg/persistence"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
+)
+
+const (
+	CleanupInterval = 1 * time.Minute
+	CleanupTimeout  = 10 * time.Second
+	MaxBanTimeout   = 24 * time.Hour
+	DefaultTimeout  = 10 * time.Second
+	BlockQueueSize  = 100
 )
 
 type Client struct {
@@ -26,13 +34,35 @@ type Client struct {
 	retryDelay  time.Duration
 	blockedIPs  sync.Map // map[string]time.Time
 	stopCleanup chan struct{}
-	workQueue   chan func() // Add work queue for async operations
+	blockQueue  chan blockRequest
+	rules       rules.RulesTransformed
 }
 
-func NewClient(ctx context.Context, apiToken, zoneID string, maxRetries int, retryDelay time.Duration) *Client {
+type blockRequest struct {
+	ip          string
+	banDuration time.Duration
+	resultChan  chan blockResult
+}
+
+type blockResult struct {
+	ruleID string
+	err    error
+}
+
+// Interface defines the methods that a Cloudflare client must implement.
+type Interface interface {
+	BlockIP(ctx context.Context, ip string, banDuration time.Duration) (string, error)
+	UnblockIP(ctx context.Context, ip string) error
+	LoadExistingBlocks(ctx context.Context) ([]persistence.BlockedIP, error)
+	GetBlockedIP(ip string) (interface{}, bool)
+	RangeBlocks(fn func(ip string, banUntil time.Time))
+	Close()
+}
+
+func NewClient(ctx context.Context, apiToken, zoneID string, maxRetries int, retryDelay time.Duration, rules rules.RulesTransformed) *Client {
 	fmt.Printf("[Cloudflare] Initializing client with maxRetries=%d, retryDelay=%v\n", maxRetries, retryDelay)
 
-	const workQueueBufferSize = 100
+	const queueBufferSize = 100
 
 	c := &Client{
 		apiToken:    apiToken,
@@ -41,11 +71,12 @@ func NewClient(ctx context.Context, apiToken, zoneID string, maxRetries int, ret
 		maxRetries:  maxRetries,
 		retryDelay:  retryDelay,
 		stopCleanup: make(chan struct{}),
-		workQueue:   make(chan func(), workQueueBufferSize), // Buffer size for async operations
+		blockQueue:  make(chan blockRequest, queueBufferSize),
+		rules:       rules,
 	}
 
-	// Start worker goroutine to process API calls
-	go c.processWorkQueue(ctx)
+	// Start worker goroutine to process block requests
+	go c.processBlockQueue(ctx)
 
 	go c.cleanupBlockedIPs(ctx)
 	fmt.Printf("[Cloudflare] Starting cleanup goroutine with interval=%v, timeout=%v\n", CleanupInterval, CleanupTimeout)
@@ -53,20 +84,34 @@ func NewClient(ctx context.Context, apiToken, zoneID string, maxRetries int, ret
 	return c
 }
 
-const (
-	CleanupInterval = 1 * time.Minute
-	CleanupTimeout  = 10 * time.Second
-	MaxBanTimeout   = 24 * time.Hour
-)
-
-func (c *Client) processWorkQueue(ctx context.Context) {
+func (c *Client) processBlockQueue(ctx context.Context) {
 	for {
 		select {
-		case work := <-c.workQueue:
-			work()
+		case req := <-c.blockQueue:
+			fmt.Printf("[Cloudflare] Processing block request for IP %s\n", req.ip)
+
+			// Create a new context with timeout for this operation
+			timeoutCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
+			ruleID, err := c.doBlockIP(timeoutCtx, req.ip, req.banDuration)
+			req.resultChan <- blockResult{
+				ruleID: ruleID,
+				err:    err,
+			}
+			close(req.resultChan)
+
+			if err != nil {
+				fmt.Printf("[Cloudflare] Failed to block IP %s: %v\n", req.ip, err)
+			} else {
+				fmt.Printf("[Cloudflare] Successfully blocked IP %s with rule ID %s\n", req.ip, ruleID)
+				// Store the block in memory
+				c.blockedIPs.Store(req.ip, time.Now().Add(req.banDuration))
+			}
+
+			cancel()
+
 		case <-ctx.Done():
-			return
-		case <-c.stopCleanup:
+			fmt.Printf("[Cloudflare] Block queue processor shutting down\n")
+
 			return
 		}
 	}
@@ -96,8 +141,13 @@ func (c *Client) cleanupBlockedIPs(ctx context.Context) {
 						return true
 					}
 
-					banUntil, ok := value.(time.Time)
-					if !ok {
+					var banUntil time.Time
+					switch v := value.(type) {
+					case time.Time:
+						banUntil = v
+					case ipchecking.IPViewed:
+						banUntil = v.Viewed.Add(c.rules.Bantime)
+					default:
 						fmt.Printf("[Cloudflare] Invalid value type in blockedIPs for IP %s: %T\n", ip, value)
 
 						return true
@@ -115,21 +165,16 @@ func (c *Client) cleanupBlockedIPs(ctx context.Context) {
 
 						unblocked++
 
-						// Queue the unblock operation with a new background context
-						cleanupCtx := ctx
-						c.workQueue <- func() {
-							// Create a new context for the unblock operation
-							unblockCtx, cancel := context.WithTimeout(cleanupCtx, CleanupTimeout)
+						// Create a new context for the unblock operation
+						unblockCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
+
+						go func(ip string) {
 							defer cancel()
 
 							if err := c.UnblockIP(unblockCtx, ip); err != nil {
 								fmt.Printf("[Cloudflare] Failed to unblock IP %s: %v\n", ip, err)
-
-								return
 							}
-
-							fmt.Printf("[Cloudflare] Successfully unblocked IP %s\n", ip)
-						}
+						}(ip)
 					}
 
 					return true
@@ -161,12 +206,14 @@ func (c *Client) Close() {
 }
 
 type AccessRule struct {
-	Mode          string `json:"mode"`
+	ID            string `json:"id"`
 	Configuration struct {
 		Target string `json:"target"`
 		Value  string `json:"value"`
 	} `json:"configuration"`
-	Notes string `json:"notes"`
+	Mode      string    `json:"mode"`
+	Notes     string    `json:"notes"`
+	CreatedOn time.Time `json:"createdOn"`
 }
 
 type CloudflareError struct {
@@ -239,12 +286,12 @@ func (c *Client) doWithRetry(ctx context.Context, req *http.Request) (*http.Resp
 	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
 }
 
-func (c *Client) checkResponse(resp *http.Response) error {
+func (c *Client) checkResponse(resp *http.Response) (*CloudflareResponse, error) {
 	var cfResp CloudflareResponse
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	// Try to decode as JSON first
@@ -258,380 +305,319 @@ func (c *Client) checkResponse(resp *http.Response) error {
 				"3. API Token is valid\n")
 		}
 
-		return fmt.Errorf("failed to decode response (status %d): %w\nBody: %s",
+		return nil, fmt.Errorf("failed to decode response (status %d): %w\nBody: %s",
 			resp.StatusCode, err, string(body))
 	}
 
 	if !cfResp.Success {
-		return fmt.Errorf("cloudflare API error (status %d): %v\nBody: %s",
+		return nil, fmt.Errorf("cloudflare API error (status %d): %v\nBody: %s",
 			resp.StatusCode, cfResp.Errors, string(body))
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body))
 	}
 
-	return nil
+	return &cfResp, nil
 }
 
-// Add helper function to redact sensitive headers.
-func redactHeaders(headers http.Header) http.Header {
-	redacted := headers.Clone()
-	if auth := redacted.Get("Authorization"); auth != "" {
-		redacted.Set("Authorization", "Bearer [REDACTED]")
+func (c *Client) BlockIP(ctx context.Context, ip string, banDuration time.Duration) (string, error) {
+	fmt.Printf("[Cloudflare] Attempting to block IP %s for duration %v\n", ip, banDuration)
+
+	// Check if IP is already blocked
+	if _, exists := c.blockedIPs.Load(ip); exists {
+		fmt.Printf("[Cloudflare] IP %s is already blocked\n", ip)
+
+		return "", nil
 	}
 
-	return redacted
-}
-
-func detectIPVersion(ip string) (string, error) {
-	addr, err := netip.ParseAddr(ip)
+	// Create the access rule directly
+	ruleID, err := c.doBlockIP(ctx, ip, banDuration)
 	if err != nil {
-		return "", fmt.Errorf("invalid IP address %q: %w", ip, err)
+		return "", fmt.Errorf("failed to create block rule: %w", err)
 	}
 
-	if addr.Is6() {
-		return "ip6", nil
-	}
+	// Store in memory after successful API call
+	c.blockedIPs.Store(ip, ipchecking.IPViewed{
+		Viewed: time.Now(),
+		Count:  1,
+		Denied: true,
+		RuleID: ruleID,
+	})
 
-	return "ip", nil
+	return ruleID, nil
 }
 
-func (c *Client) BlockIP(ctx context.Context, ip string, banDuration time.Duration) error {
-	// Validate IP and detect version first
-	target, err := detectIPVersion(ip)
+// New helper function to do the actual blocking.
+func (c *Client) doBlockIP(ctx context.Context, ip string, banDuration time.Duration) (string, error) {
+	fmt.Printf("[Cloudflare] Creating block rule for IP %s (duration: %v)\n", ip, banDuration)
+
+	banUntil := time.Now().Add(banDuration)
+
+	// Create the access rule
+	data := map[string]interface{}{
+		"mode": "block",
+		"configuration": map[string]string{
+			"target": "ip",
+			"value":  ip,
+		},
+		"notes": "Blocked by Traefik fail2ban plugin - ban until " + banUntil.Format(time.RFC3339),
+	}
+
+	body, err := json.Marshal(data)
 	if err != nil {
-		return fmt.Errorf("invalid IP address: %w", err)
+		return "", fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	// Store in local map immediately
-	c.blockedIPs.Store(ip, time.Now().Add(banDuration))
+	url := fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules", c.baseURL, c.zoneID)
 
-	// Queue the API call
-	c.workQueue <- func() {
-		rule := AccessRule{
-			Mode: "block",
-			Configuration: struct {
-				Target string `json:"target"`
-				Value  string `json:"value"`
-			}{
-				Target: target, // Use detected IP version
-				Value:  ip,
-			},
-			Notes: fmt.Sprintf("Blocked by Traefik fail2ban plugin (duration: %s)", banDuration),
-		}
-
-		body, err := json.Marshal(rule)
-		if err != nil {
-			fmt.Printf("[Cloudflare] Failed to marshal rule: %v\n", err)
-
-			return
-		}
-
-		fmt.Printf("[Cloudflare] Sending block request: %s\n", string(body))
-
-		req, err := http.NewRequestWithContext(ctx,
-			http.MethodPost,
-			fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules", c.baseURL, c.zoneID),
-			bytes.NewReader(body))
-		if err != nil {
-			fmt.Printf("[Cloudflare] Failed to create request: %v\n", err)
-
-			return
-		}
-
-		// Add all required headers
-		req.Header.Set("Authorization", "Bearer "+c.apiToken)
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept", "*/*")
-		req.Header.Set("User-Agent", "traefik-fail2ban/1.0")
-
-		// Log request details with redacted headers
-		fmt.Printf("[Cloudflare] Making request to %s with headers: %v\n", req.URL, redactHeaders(req.Header))
-
-		resp, err := c.doWithRetry(ctx, req)
-		if err != nil {
-			fmt.Printf("[Cloudflare] Failed to execute request: %v\n", err)
-
-			return
-		}
-
-		defer func() {
-			if err := resp.Body.Close(); err != nil {
-				fmt.Printf("[Cloudflare] Failed to close response body: %v\n", err)
-			}
-		}()
-
-		// Log response headers with redacted information
-		fmt.Printf("[Cloudflare] Response status: %s, headers: %v\n", resp.Status, redactHeaders(resp.Header))
-
-		if err := c.checkResponse(resp); err != nil {
-			fmt.Printf("[Cloudflare] API request failed: %v\n", err)
-
-			// Check if token is valid
-			if resp.StatusCode == http.StatusUnauthorized {
-				fmt.Printf("[Cloudflare] Authentication failed. Please check your API token permissions. " +
-					"Required permissions: Zone:Firewall Services:Edit\n")
-			}
-		}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(body))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
-	return nil
+	c.addHeaders(req)
+
+	resp, err := c.doWithRetry(ctx, req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("[Cloudflare] Error closing response body: %v", err)
+		}
+	}()
+
+	cfResp, err := c.checkResponse(resp)
+	if err != nil {
+		return "", fmt.Errorf("API request failed: %w", err)
+	}
+
+	var result struct {
+		ID string `json:"id"`
+	}
+
+	if err := json.Unmarshal(cfResp.Result, &result); err != nil {
+		return "", fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	fmt.Printf("[Cloudflare] Successfully created block rule %s for IP %s\n", result.ID, ip)
+
+	return result.ID, nil
 }
 
+// UnblockIP removes an IP from Cloudflare's firewall rules.
 func (c *Client) UnblockIP(ctx context.Context, ip string) error {
-	fmt.Printf("[Cloudflare] Starting unblock process for IP %s\n", ip)
+	// Try to get the rule ID from our local state first
+	var ruleID string
 
-	// First get the rule ID for this IP
-	req, err := http.NewRequestWithContext(ctx,
-		http.MethodGet,
-		fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules?configuration.target=ip&configuration.value=%s",
-			c.baseURL, c.zoneID, ip),
-		nil)
+	var ipv ipchecking.IPViewed
+
+	if val, _ := c.blockedIPs.Load(ip); val != nil {
+		ipv, _ = val.(ipchecking.IPViewed)
+		if ipv.RuleID != "" {
+			ruleID = ipv.RuleID
+		}
+	}
+
+	if ruleID == "" {
+		// Fallback to listing rules if we don't have the ID cached
+		rules, err := c.listRules(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list rules: %w", err)
+		}
+
+		for _, rule := range rules {
+			if rule.Configuration.Value == ip {
+				ruleID = rule.ID
+
+				break
+			}
+		}
+
+		if ruleID == "" {
+			fmt.Printf("[Cloudflare] No rule found for IP %s", ip)
+
+			return nil
+		}
+	}
+
+	// Remove from local state before attempting to delete from Cloudflare
+	c.blockedIPs.Delete(ip)
+
+	// Delete the rule
+	url := fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules/%s",
+		c.baseURL, c.zoneID, ruleID)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	c.addHeaders(req)
 
 	resp, err := c.doWithRetry(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to execute request: %w", err)
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 
-	var result struct {
-		Result []struct {
-			ID string `json:"id"`
-		} `json:"result"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			fmt.Printf("[Cloudflare] Failed to close response body: %v\n", closeErr)
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			fmt.Printf("[Cloudflare] Error closing response body: %v", err)
 		}
+	}()
 
-		return fmt.Errorf("failed to decode response: %w", err)
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+
+		return fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
 	}
 
-	if err := resp.Body.Close(); err != nil {
-		fmt.Printf("[Cloudflare] Failed to close response body: %v\n", err)
-	}
-
-	if len(result.Result) == 0 {
-		fmt.Printf("[Cloudflare] No rules found for IP %s\n", ip)
-
-		return nil
-	}
-
-	// Remove each rule found for this IP
-	for _, rule := range result.Result {
-		fmt.Printf("[Cloudflare] Removing rule %s for IP %s\n", rule.ID, ip)
-
-		if err := c.removeFirewallRule(ctx, rule.ID); err != nil {
-			return fmt.Errorf("failed to remove rule %s: %w", rule.ID, err)
-		}
-
-		fmt.Printf("[Cloudflare] Successfully removed rule %s for IP %s\n", rule.ID, ip)
-	}
+	fmt.Printf("[Cloudflare] Successfully unblocked IP %s (rule ID: %s)", ip, ruleID)
 
 	return nil
 }
 
-func (c *Client) LoadExistingBlocks(ctx context.Context) ([]persistence.BlockedIP, error) {
-	fmt.Printf("[Cloudflare] Loading existing blocks\n")
+// listRules returns all firewall rules.
+func (c *Client) listRules(ctx context.Context) ([]AccessRule, error) {
+	url := fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules", c.baseURL, c.zoneID)
 
-	// We'll need to make two requests - one for IPv4 and one for IPv6
-	var allBlocks []persistence.BlockedIP
-
-	for _, target := range []string{"ip", "ip6"} {
-		req, err := http.NewRequestWithContext(ctx,
-			http.MethodGet,
-			fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules?configuration.target=%s&mode=block&notes=%s",
-				c.baseURL, c.zoneID, target, url.QueryEscape("Blocked by Traefik fail2ban plugin")),
-			nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %w", err)
-		}
-
-		req.Header.Set("Authorization", "Bearer "+c.apiToken)
-
-		resp, err := c.doWithRetry(ctx, req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to execute request: %w", err)
-		}
-
-		defer func() {
-			if err := resp.Body.Close(); err != nil {
-				fmt.Printf("failed to close response body: %v\n", err)
-			}
-		}()
-
-		var result struct {
-			Result []struct {
-				ID            string    `json:"id"`
-				CreatedOn     time.Time `json:"createdOn"`
-				ModifiedOn    time.Time `json:"modifiedOn"`
-				Configuration struct {
-					Value string `json:"value"`
-				} `json:"configuration"`
-				Notes string `json:"notes"`
-			} `json:"result"`
-		}
-
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			return nil, fmt.Errorf("failed to decode response: %w", err)
-		}
-
-		// Add the blocks from this request to allBlocks
-		blocks, err := c.processBlocksResponse(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-
-		allBlocks = append(allBlocks, blocks...)
-	}
-
-	return allBlocks, nil
-}
-
-// Add new helper function to handle rule removal.
-func (c *Client) removeFirewallRule(ctx context.Context, ruleID string) error {
-	req, err := http.NewRequestWithContext(ctx,
-		http.MethodDelete,
-		fmt.Sprintf("%s/zones/%s/firewall/access_rules/rules/%s",
-			c.baseURL, c.zoneID, ruleID),
-		nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	c.addHeaders(req)
 
 	resp, err := c.doWithRetry(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to execute request: %w", err)
+		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			fmt.Printf("[Cloudflare] Failed to close response body: %v\n", err)
-		}
-	}()
-
-	return c.checkResponse(resp)
-}
-
-func (c *Client) processBlocksResponse(ctx context.Context, req *http.Request) ([]persistence.BlockedIP, error) {
-	req.Header.Set("Authorization", "Bearer "+c.apiToken)
-
-	resp, err := c.doWithRetry(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute request: %w", err)
-	}
-
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			fmt.Printf("failed to close response body: %v\n", err)
+			fmt.Printf("[Cloudflare] Error closing response body: %v", err)
 		}
 	}()
 
 	var result struct {
-		Result []struct {
-			ID            string    `json:"id"`
-			CreatedOn     time.Time `json:"createdOn"`
-			ModifiedOn    time.Time `json:"modifiedOn"`
-			Configuration struct {
-				Value string `json:"value"`
-			} `json:"configuration"`
-			Notes string `json:"notes"`
-		} `json:"result"`
+		Result []AccessRule `json:"result"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	blocks := make([]persistence.BlockedIP, 0, len(result.Result))
+	return result.Result, nil
+}
 
-	for _, rule := range result.Result {
-		// Try to extract ban duration from the notes
-		banDuration := c.extractBanDuration(rule.Notes)
-		if banDuration == 0 {
-			fmt.Printf("[Cloudflare] Could not determine ban duration for IP %s, using default %s\n",
-				rule.Configuration.Value, MaxBanTimeout)
+func (c *Client) LoadExistingBlocks(ctx context.Context) ([]persistence.BlockedIP, error) {
+	fmt.Printf("[Cloudflare] Loading existing blocks\n")
 
-			banDuration = MaxBanTimeout // Default duration if we can't parse it
+	// Get existing rules
+	rules, err := c.listRules(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list rules: %w", err)
+	}
+
+	// Pre-allocate blocks slice with estimated capacity
+	blocks := make([]persistence.BlockedIP, 0, len(rules))
+
+	for _, rule := range rules {
+		// Skip non-fail2ban rules
+		if !strings.Contains(rule.Notes, "Blocked by Traefik fail2ban plugin") {
+			continue
 		}
 
-		// Store in the sync.Map for cleanup
-		banUntil := rule.CreatedOn.Add(banDuration)
-		if time.Now().After(banUntil) {
-			fmt.Printf("[Cloudflare] IP %s ban has already expired, scheduling immediate cleanup\n",
-				rule.Configuration.Value)
+		banUntil := c.extractBanTime(rule.Notes)
+		if banUntil.IsZero() {
+			// If we can't parse the ban time, remove the rule
+			fmt.Printf("[Cloudflare] Removing rule with invalid ban time: %s\n", rule.ID)
 
-			// Create a closure to capture the rule ID
-			ruleID := rule.ID // Capture rule.ID in a new variable
+			unblockCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
+			err := c.UnblockIP(unblockCtx, rule.Configuration.Value)
 
-			// Schedule immediate cleanup for expired bans
-			c.workQueue <- func() {
-				cleanupCtx, cancel := context.WithTimeout(ctx, CleanupTimeout) // Use parent context
+			go func(ip string) {
 				defer cancel()
-				if err := c.removeFirewallRule(cleanupCtx, ruleID); err != nil {
-					fmt.Printf("[Cloudflare] Failed to remove expired rule %s: %v\n", ruleID, err)
+
+				if err != nil {
+					fmt.Printf("[Cloudflare] Failed to unblock IP %s: %v\n", ip, err)
 				}
-			}
+			}(rule.Configuration.Value)
 
 			continue
 		}
 
-		c.blockedIPs.Store(rule.Configuration.Value, banUntil)
+		// Always add to blocks list, even if expired
 		blocks = append(blocks, persistence.BlockedIP{
 			IP:       rule.Configuration.Value,
-			BannedAt: rule.CreatedOn,
 			BanUntil: banUntil,
+			RuleID:   rule.ID,
 		})
+
+		// Only store in memory if the ban hasn't expired
+		if time.Now().Before(banUntil) {
+			c.blockedIPs.Store(rule.Configuration.Value, ipchecking.IPViewed{
+				Viewed: time.Now(),
+				Count:  1,
+				Denied: true,
+				RuleID: rule.ID,
+			})
+		} else {
+			// Remove expired blocks
+			unblockCtx, cancel := context.WithTimeout(ctx, DefaultTimeout)
+			defer cancel()
+
+			if err := c.UnblockIP(unblockCtx, rule.Configuration.Value); err != nil {
+				fmt.Printf("[Cloudflare] Failed to unblock expired IP %s: %v\n", rule.Configuration.Value, err)
+			}
+		}
 	}
+
+	fmt.Printf("[Cloudflare] Loaded %d blocks (including expired)\n", len(blocks))
 
 	return blocks, nil
 }
 
-func (c *Client) extractBanDuration(notes string) time.Duration {
-	// Extract duration from note format: "Blocked by Traefik fail2ban plugin (duration: 3h0m0s)"
-	start := strings.Index(notes, "(duration: ")
-
+func (c *Client) extractBanTime(notes string) time.Time {
+	// Extract time from note format: "Blocked by Traefik fail2ban plugin - ban until 2006-01-02T15:04:05Z"
+	start := strings.Index(notes, "ban until ")
 	if start == -1 {
-		return 0
+		return time.Time{}
 	}
 
-	start += len("(duration: ")
+	// Add 10 to skip over "ban until "
+	timeStr := strings.TrimSpace(notes[start+10:])
+	t, err := time.Parse(time.RFC3339, timeStr)
 
-	end := strings.Index(notes[start:], ")")
-
-	if end == -1 {
-		return 0
-	}
-
-	durationStr := notes[start : start+end]
-
-	duration, err := time.ParseDuration(durationStr)
 	if err != nil {
-		fmt.Printf("[Cloudflare] Failed to parse duration %q: %v\n", durationStr, err)
+		fmt.Printf("[Cloudflare] Failed to parse ban time %q: %v\n", timeStr, err)
 
-		return 0
+		return time.Time{}
 	}
 
-	return duration
+	return t
 }
 
 func (c *Client) RangeBlocks(fn func(ip string, banUntil time.Time)) {
 	c.blockedIPs.Range(func(key, value interface{}) bool {
 		ip, ok := key.(string)
 		if !ok {
+			fmt.Printf("[Cloudflare] Invalid key type in blockedIPs: %T\n", key)
+
 			return true
 		}
 
-		banUntil, ok := value.(time.Time)
-		if !ok {
+		var banUntil time.Time
+		switch v := value.(type) {
+		case time.Time:
+			banUntil = v
+		case ipchecking.IPViewed:
+			banUntil = v.Viewed.Add(c.rules.Bantime)
+		default:
+			fmt.Printf("[Cloudflare] Invalid value type in blockedIPs for IP %s: %T\n", ip, value)
+
 			return true
 		}
 
@@ -639,4 +625,17 @@ func (c *Client) RangeBlocks(fn func(ip string, banUntil time.Time)) {
 
 		return true
 	})
+}
+
+// addHeaders adds the required headers for Cloudflare API requests.
+func (c *Client) addHeaders(req *http.Request) {
+	req.Header.Set("Authorization", "Bearer "+c.apiToken)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "traefik-fail2ban/1.0")
+}
+
+// GetBlockedIP returns the blocked IP information if it exists.
+func (c *Client) GetBlockedIP(ip string) (interface{}, bool) {
+	return c.blockedIPs.Load(ip)
 }
