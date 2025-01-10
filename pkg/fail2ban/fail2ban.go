@@ -272,6 +272,12 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 		u.MuIP.Unlock()
 
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					fmt.Printf("[Fail2Ban] Recovered from panic in blocking goroutine: %v\n", r)
+				}
+			}()
+
 			// Handle Cloudflare block
 			blockCtx, cancel := context.WithTimeout(context.Background(), CloudflareTimeout)
 			ruleID, err := u.handleCloudflareBlock(blockCtx, remoteIP)
@@ -290,7 +296,7 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 			}
 
 			// Always persist the block, even if Cloudflare fails
-			persistCtx, cancel := context.WithTimeout(context.Background(), PersistenceTimeout)
+			persistCtx, cancel := context.WithTimeout(context.Background(), PersistenceTimeout*2)
 			defer cancel()
 
 			fmt.Printf("[Fail2Ban] Store is nil: %v\n", u.store == nil)
@@ -303,16 +309,8 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 				}
 
 				fmt.Printf("[Fail2Ban] Attempting to persist block for IP %s\n", remoteIP)
-				// Try to save directly first
-				blocks := []persistence.BlockedIP{block}
-				if err := u.store.Save(persistCtx, blocks); err != nil {
-					fmt.Printf("[Fail2Ban] Failed to save blocks directly: %v\n", err)
-					// Fallback to AddIP
-					if err := u.store.AddIP(persistCtx, block); err != nil {
-						fmt.Printf("[Fail2Ban] Failed to persist block for IP %s: %v\n", remoteIP, err)
-					}
-				} else {
-					fmt.Printf("[Fail2Ban] Successfully persisted block for IP %s\n", remoteIP)
+				if err := u.store.AddIP(persistCtx, block); err != nil {
+					fmt.Printf("[Fail2Ban] Failed to add block: %v\n", err)
 				}
 			}
 		}()

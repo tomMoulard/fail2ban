@@ -48,11 +48,15 @@ func NewFileStore(path string) *FileStore {
 	// Create file with empty array if it doesn't exist
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		fmt.Printf("[Persistence] Creating initial file at %s\n", path)
-		if err := os.WriteFile(path, []byte("[]"), FilePermission); err != nil {
+		if err := os.WriteFile(path, []byte("[]"), 0666); err != nil {
 			fmt.Printf("[Persistence] Warning: Failed to create initial file: %v\n", err)
 		}
 	} else {
 		fmt.Printf("[Persistence] Using existing file at %s\n", path)
+		// Ensure file is writable
+		if err := os.Chmod(path, 0666); err != nil {
+			fmt.Printf("[Persistence] Warning: Failed to set file permissions: %v\n", err)
+		}
 	}
 
 	return &FileStore{path: path}
@@ -91,33 +95,50 @@ func (f *FileStore) Load(ctx context.Context) ([]BlockedIP, error) {
 	return ips, nil
 }
 
-func (f *FileStore) Save(ctx context.Context, ips []BlockedIP) error {
-	if ips == nil {
-		ips = make([]BlockedIP, 0)
+func (f *FileStore) Save(ctx context.Context, blocks []BlockedIP) error {
+	// Add panic recovery
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("[Persistence] Recovered from panic in Save: %v\n", r)
+		}
+	}()
+
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("context error before save: %w", err)
 	}
 
-	fmt.Printf("[Persistence] Save operation started with %d IPs\n", len(ips))
+	// Acquire write lock
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
-	// Ensure absolute path
+	fmt.Printf("[Persistence] Save operation started with %d IPs\n", len(blocks))
+
+	// Ensure blocks is not nil
+	if blocks == nil {
+		blocks = make([]BlockedIP, 0)
+	}
+
+	// Get absolute path
 	absPath, err := filepath.Abs(f.path)
 	if err != nil {
-		fmt.Printf("[Persistence] Error getting absolute path: %v\n", err)
+		fmt.Printf("[Persistence] Failed to get absolute path: %v\n", err)
 		return fmt.Errorf("failed to get absolute path: %w", err)
 	}
 
 	fmt.Printf("[Persistence] Attempting to save %d IPs to %s (absolute path: %s)\n",
-		len(ips), f.path, absPath)
+		len(blocks), f.path, absPath)
 
+	// Ensure directory exists
 	dir := filepath.Dir(absPath)
 	fmt.Printf("[Persistence] Directory to create/use: %s\n", dir)
-
-	// Verify file permissions before writing
-	if info, err := os.Stat(absPath); err == nil {
-		fmt.Printf("[Persistence] Existing file permissions: %v\n", info.Mode())
+	if err := os.MkdirAll(dir, DirectoryPermission); err != nil {
+		fmt.Printf("[Persistence] Failed to create directory: %v\n", err)
+		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	// Marshal with indentation for readability
-	data, err := json.MarshalIndent(ips, "", "  ")
+	data, err := json.MarshalIndent(blocks, "", "  ")
 	if err != nil {
 		fmt.Printf("[Persistence] Failed to marshal data: %v\n", err)
 		return fmt.Errorf("failed to marshal blocked IPs: %w", err)
@@ -125,27 +146,14 @@ func (f *FileStore) Save(ctx context.Context, ips []BlockedIP) error {
 
 	fmt.Printf("[Persistence] Successfully marshaled data: %s\n", string(data))
 
-	// Create a temporary file in the same directory
-	tmpFile := absPath + ".tmp"
-	if err := os.WriteFile(tmpFile, data, FilePermission); err != nil {
-		fmt.Printf("[Persistence] Failed to write temporary file %s: %v\n", tmpFile, err)
-		return fmt.Errorf("failed to write temporary file: %w", err)
+	// Try direct write with more permissive permissions
+	fmt.Printf("[Persistence] Writing directly to file: %s\n", absPath)
+	if err := os.WriteFile(absPath, data, 0666); err != nil {
+		fmt.Printf("[Persistence] Failed to write file: %v\n", err)
+		return fmt.Errorf("failed to write file: %w", err)
 	}
 
-	// Sync the temporary file to disk
-	if f, err := os.OpenFile(tmpFile, os.O_RDWR, FilePermission); err == nil {
-		f.Sync()
-		f.Close()
-	}
-
-	// Atomically rename temporary file to target file
-	if err := os.Rename(tmpFile, absPath); err != nil {
-		fmt.Printf("[Persistence] Failed to rename temporary file to %s: %v\n", absPath, err)
-		os.Remove(tmpFile) // Clean up temp file
-		return fmt.Errorf("failed to save blocked IPs file: %w", err)
-	}
-
-	fmt.Printf("[Persistence] Successfully saved %d blocked IPs to %s\n", len(ips), absPath)
+	fmt.Printf("[Persistence] Successfully saved %d blocked IPs to %s\n", len(blocks), absPath)
 	return nil
 }
 
@@ -192,24 +200,38 @@ func (f *FileStore) UpdateRuleID(ctx context.Context, ip string, ruleID string) 
 }
 
 func (f *FileStore) AddIP(ctx context.Context, block BlockedIP) error {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("context error before AddIP: %w", err)
+	}
+
+	// Acquire write lock for the entire operation
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
 	fmt.Printf("[Persistence] Adding IP %s to persistence (banned until: %s)\n",
 		block.IP, block.BanUntil.Format(time.RFC3339))
 
-	// Read existing blocks without holding the write lock
-	blocks, err := f.Load(ctx)
+	// Read existing blocks
+	data, err := os.ReadFile(f.path)
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Printf("[Persistence] Error loading existing blocks: %v\n", err)
 		return fmt.Errorf("failed to load blocks: %w", err)
+	}
+
+	var blocks []BlockedIP
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, &blocks); err != nil {
+			fmt.Printf("[Persistence] Error unmarshaling data: %v\n", err)
+			return fmt.Errorf("failed to parse blocked IPs file: %w", err)
+		}
 	}
 
 	if blocks == nil {
 		blocks = make([]BlockedIP, 0)
 	}
 
-	fmt.Printf("[Persistence] Current working directory: %s\n", getCurrentDirectory())
-	fmt.Printf("[Persistence] File store path: %s\n", f.path)
-	fmt.Printf("[Persistence] Directory permissions: %s\n", getDirectoryPermissions(filepath.Dir(f.path)))
-	fmt.Printf("[Persistence] Current blocks: %+v\n", blocks)
+	fmt.Printf("[Persistence] Current blocks: %d\n", len(blocks))
 
 	// Remove any existing block for this IP and add the new one
 	var newBlocks []BlockedIP
@@ -221,20 +243,25 @@ func (f *FileStore) AddIP(ctx context.Context, block BlockedIP) error {
 
 	// Add the new block
 	newBlocks = append(newBlocks, block)
-	fmt.Printf("[Persistence] Added new block for IP %s, total blocks: %d\n", block.IP, len(newBlocks))
-	fmt.Printf("[Persistence] Blocks to save: %+v\n", newBlocks)
 
-	// Now acquire the lock only for saving
-	f.mu.Lock()
-	defer f.mu.Unlock()
+	fmt.Printf("[Persistence] Saving %d blocks\n", len(newBlocks))
 
-	// Save the updated blocks
-	if err := f.Save(ctx, newBlocks); err != nil {
-		fmt.Printf("[Persistence] Failed to save blocks: %v\n", err)
-		return err
+	// Marshal with indentation for readability
+	data, err = json.MarshalIndent(newBlocks, "", "  ")
+	if err != nil {
+		fmt.Printf("[Persistence] Failed to marshal data: %v\n", err)
+		return fmt.Errorf("failed to marshal blocked IPs: %w", err)
 	}
 
-	fmt.Printf("[Persistence] Successfully saved block for IP %s\n", block.IP)
+	fmt.Printf("[Persistence] Writing data: %s\n", string(data))
+
+	// Write directly to file
+	if err := os.WriteFile(f.path, data, 0666); err != nil {
+		fmt.Printf("[Persistence] Failed to write file: %v\n", err)
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	fmt.Printf("[Persistence] Successfully saved %d blocks\n", len(newBlocks))
 	return nil
 }
 
