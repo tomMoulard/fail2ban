@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -159,12 +160,60 @@ func setupCloudflare(ctx context.Context, config *Config) (*cloudflare.Client, [
 	return cf, blocks, nil
 }
 
+// Add this function to validate the persistence path
+func validatePersistencePath(path string) error {
+	if path == "" {
+		return nil
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("invalid persistence path: %w", err)
+	}
+
+	// Check if directory exists or can be created
+	dir := filepath.Dir(absPath)
+	if err := os.MkdirAll(dir, persistence.DirectoryPermission); err != nil {
+		return fmt.Errorf("failed to create persistence directory: %w", err)
+	}
+
+	// Try to create a test file
+	testFile := filepath.Join(dir, ".test")
+	if err := os.WriteFile(testFile, []byte("test"), persistence.FilePermission); err != nil {
+		return fmt.Errorf("persistence directory is not writable: %w", err)
+	}
+	os.Remove(testFile)
+
+	return nil
+}
+
 // New creates a new fail2ban plugin instance.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	if !config.Rules.Enabled {
 		fmt.Println("Plugin: FailToBan is disabled")
-
 		return next, nil
+	}
+
+	fmt.Printf("[Fail2Ban] Persistence path configured as: %s\n", config.PersistencePath)
+
+	// Validate persistence path
+	if err := validatePersistencePath(config.PersistencePath); err != nil {
+		return nil, fmt.Errorf("persistence validation failed: %w", err)
+	}
+
+	// Configure persistence
+	var store persistence.Store
+	if config.PersistencePath != "" {
+		absPath, _ := filepath.Abs(config.PersistencePath) // Error already checked in validation
+		store = persistence.NewFileStore(absPath)
+		fmt.Printf("[Fail2Ban] Configured persistence at: %s\n", absPath)
+
+		// Verify store is working
+		if err := store.Save(ctx, []persistence.BlockedIP{}); err != nil {
+			fmt.Printf("[Fail2Ban] Warning: Initial persistence test failed: %v\n", err)
+		} else {
+			fmt.Printf("[Fail2Ban] Initial persistence test successful\n")
+		}
 	}
 
 	// Configure data package with IP header
@@ -184,16 +233,8 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		return nil, fmt.Errorf("failed to transform rules: %w", err)
 	}
 
-	store, persistedBlocks, err := setupPersistence(ctx, config.PersistencePath)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup persistence: %w", err)
-	}
-
 	var cf *cloudflare.Client
-
 	var cfBlocks []persistence.BlockedIP
-
 	var cfErr error
 
 	if config.Cloudflare.Enabled {
@@ -208,12 +249,18 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	f2b := fail2ban.New(ctx, transformedRules, cf, store)
 
-	// Load existing blocks from persistence
-	if persistedBlocks != nil {
-		fmt.Printf("Loaded %d blocked IPs from persistence", len(persistedBlocks))
+	// Load persisted blocks
+	if store != nil {
+		blocks, err := store.Load(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load persisted blocks: %w", err)
+		}
 
-		for _, block := range persistedBlocks {
-			f2b.RestoreBlock(ctx, block.IP, block.BannedAt, block.BanUntil, block.RuleID)
+		if len(blocks) > 0 {
+			fmt.Printf("[Fail2Ban] Loaded %d blocks from persistence\n", len(blocks))
+			for _, block := range blocks {
+				f2b.RestoreBlock(ctx, block.IP, block.BannedAt, block.BanUntil, block.RuleID)
+			}
 		}
 	}
 

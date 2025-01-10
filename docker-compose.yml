@@ -18,7 +18,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/plugins-local/src/github.com/tomMoulard/fail2ban/
-      - le-data:/data
+      - ./data:/data
+    user: 'root:root'
     tty: true
 
   whoami:
@@ -47,6 +48,3 @@ services:
       traefik.http.middlewares.fail2ban.plugin.fail2ban.cloudflare.apiToken: 'KTpsvWPFjAbB81jHDb26DGHutjw-INHl4TVh78EE'
       traefik.http.middlewares.fail2ban.plugin.fail2ban.cloudflare.zoneId: '79462d5d2be0c4d252c5f9f087e571e4'
       traefik.http.middlewares.fail2ban.plugin.fail2ban.persistencePath: '/data/blocked-ips.json'
-
-volumes:
-  le-data:

@@ -22,6 +22,8 @@ const (
 	CloudflareTimeout = 30 * time.Second
 	// PersistenceTimeout is the timeout for persistence operations.
 	PersistenceTimeout = 5 * time.Second
+	// PeriodicSaveInterval is how often we save the full block list
+	PeriodicSaveInterval = 5 * time.Minute
 )
 
 // Fail2Ban is a fail2ban implementation.
@@ -55,8 +57,14 @@ func New(ctx context.Context, rules rules.RulesTransformed, cf *cloudflare.Clien
 		f.cleanupBlockedIPs(cleanupCtx)
 	}()
 
-	// Then start the regular cleanup routine
+	// Start the regular cleanup routine
 	f.StartCleanup(ctx)
+
+	// Start periodic saving
+	f.startPeriodicSave(ctx)
+
+	// Start persistence verification
+	go f.verifyPersistence(ctx)
 
 	return f
 }
@@ -247,6 +255,7 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 		u.MuIP.Unlock()
 
 		go func() {
+			// Handle Cloudflare block
 			blockCtx, cancel := context.WithTimeout(context.Background(), CloudflareTimeout)
 			ruleID, err := u.handleCloudflareBlock(blockCtx, remoteIP)
 			cancel()
@@ -261,10 +270,33 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 					u.ruleIDs[remoteIP] = ruleID
 				}
 				u.MuIP.Unlock()
+			}
 
-				persistCtx, cancel := context.WithTimeout(context.Background(), PersistenceTimeout)
-				u.persistBlockedIP(persistCtx, remoteIP, viewed)
-				cancel()
+			// Always persist the block, even if Cloudflare fails
+			persistCtx, cancel := context.WithTimeout(context.Background(), PersistenceTimeout)
+			defer cancel()
+
+			fmt.Printf("[Fail2Ban] Store is nil: %v\n", u.store == nil)
+			if u.store != nil {
+				block := persistence.BlockedIP{
+					IP:       remoteIP,
+					BannedAt: viewed.Viewed,
+					BanUntil: viewed.Viewed.Add(u.rules.Bantime),
+					RuleID:   ruleID,
+				}
+
+				fmt.Printf("[Fail2Ban] Attempting to persist block for IP %s\n", remoteIP)
+				// Try to save directly first
+				blocks := []persistence.BlockedIP{block}
+				if err := u.store.Save(persistCtx, blocks); err != nil {
+					fmt.Printf("[Fail2Ban] Failed to save blocks directly: %v\n", err)
+					// Fallback to AddIP
+					if err := u.store.AddIP(persistCtx, block); err != nil {
+						fmt.Printf("[Fail2Ban] Failed to persist block for IP %s: %v\n", remoteIP, err)
+					}
+				} else {
+					fmt.Printf("[Fail2Ban] Successfully persisted block for IP %s\n", remoteIP)
+				}
 			}
 		}()
 
@@ -276,6 +308,49 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 	u.MuIP.Unlock()
 
 	return true
+}
+
+// Add this method to periodically verify persistence
+func (u *Fail2Ban) verifyPersistence(ctx context.Context) {
+	if u.store == nil {
+		return
+	}
+
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			blocks, err := u.store.Load(ctx)
+			if err != nil {
+				fmt.Printf("[Fail2Ban] Failed to load blocks during verification: %v\n", err)
+				continue
+			}
+			fmt.Printf("[Fail2Ban] Persistence verification: found %d blocks\n", len(blocks))
+
+			// Save current blocks to ensure file is writable
+			var currentBlocks []persistence.BlockedIP
+			u.MuIP.Lock()
+			for ip, viewed := range u.IPs {
+				if viewed.Denied {
+					currentBlocks = append(currentBlocks, persistence.BlockedIP{
+						IP:       ip,
+						BannedAt: viewed.Viewed,
+						BanUntil: viewed.Viewed.Add(u.rules.Bantime),
+						RuleID:   viewed.RuleID,
+					})
+				}
+			}
+			u.MuIP.Unlock()
+
+			if err := u.store.Save(ctx, currentBlocks); err != nil {
+				fmt.Printf("[Fail2Ban] Failed to save blocks during verification: %v\n", err)
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // RestoreBlock restores a previously blocked IP.
@@ -364,6 +439,7 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 
 	// First collect IPs to cleanup
 	var toCleanup []string
+	var persistenceUpdated bool
 
 	// Lock while reading and modifying memory
 	u.MuIP.Lock()
@@ -380,6 +456,7 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 
 			toCleanup = append(toCleanup, ip)
 			delete(u.IPs, ip) // Remove from memory immediately
+			persistenceUpdated = true
 		}
 	}
 	u.MuIP.Unlock()
@@ -389,6 +466,13 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 		cleanupCtx, cancel := context.WithTimeout(parentCtx, CloudflareTimeout)
 		u.removeExpiredBlock(cleanupCtx, ip)
 		cancel()
+	}
+
+	// If we removed any blocks, save the current state
+	if persistenceUpdated && u.store != nil {
+		if err := u.saveAllBlocks(parentCtx); err != nil {
+			fmt.Printf("[Fail2Ban] Failed to save updated blocks after cleanup: %v\n", err)
+		}
 	}
 }
 
@@ -432,4 +516,50 @@ func (u *Fail2Ban) cleanupPersistence(ctx context.Context, ip, ruleID string) {
 	if err := u.store.RemoveIP(ctx, ip); err != nil && !os.IsNotExist(err) {
 		fmt.Printf("Failed to remove IP %s from persistence: %v", ip, err)
 	}
+}
+
+func (u *Fail2Ban) startPeriodicSave(ctx context.Context) {
+	if u.store == nil {
+		return
+	}
+
+	go func() {
+		ticker := time.NewTicker(PeriodicSaveInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				if err := u.saveAllBlocks(ctx); err != nil {
+					fmt.Printf("[Fail2Ban] Periodic save failed: %v\n", err)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (u *Fail2Ban) saveAllBlocks(ctx context.Context) error {
+	if u.store == nil {
+		return nil
+	}
+
+	var blocks []persistence.BlockedIP
+
+	u.MuIP.Lock()
+	for ip, viewed := range u.IPs {
+		if viewed.Denied {
+			blocks = append(blocks, persistence.BlockedIP{
+				IP:       ip,
+				BannedAt: viewed.Viewed,
+				BanUntil: viewed.Viewed.Add(u.rules.Bantime),
+				RuleID:   viewed.RuleID,
+			})
+		}
+	}
+	u.MuIP.Unlock()
+
+	fmt.Printf("[Fail2Ban] Saving %d blocks to persistence\n", len(blocks))
+	return u.store.Save(ctx, blocks)
 }
