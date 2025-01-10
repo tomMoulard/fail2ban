@@ -4,7 +4,9 @@ package fail2ban
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -30,6 +32,8 @@ type Fail2Ban struct {
 
 	MuIP sync.Mutex
 	IPs  map[string]ipchecking.IPViewed
+	// Map to track Cloudflare rule IDs by IP
+	ruleIDs map[string]string
 }
 
 // New creates a new Fail2Ban.
@@ -37,10 +41,11 @@ func New(ctx context.Context, rules rules.RulesTransformed, cf *cloudflare.Clien
 	fmt.Printf("Plugin: FailToBan is up and running\n")
 
 	f := &Fail2Ban{
-		rules: rules,
-		cf:    cf,
-		store: store,
-		IPs:   make(map[string]ipchecking.IPViewed),
+		rules:   rules,
+		cf:      cf,
+		store:   store,
+		IPs:     make(map[string]ipchecking.IPViewed),
+		ruleIDs: make(map[string]string),
 	}
 
 	// Start cleanup immediately to handle any expired blocks
@@ -56,19 +61,65 @@ func New(ctx context.Context, rules rules.RulesTransformed, cf *cloudflare.Clien
 	return f
 }
 
+// normalizeIP converts an IP address string to its canonical form
+func normalizeIP(ip string) string {
+	// First remove any port number
+	ipStr := strings.Split(ip, ":")[0]
+
+	// Handle Cloudflare's IPv6 format with zeros
+	if strings.Contains(ipStr, "0000") {
+		ipStr = strings.ReplaceAll(ipStr, "0000", "0")
+	}
+
+	parsed := net.ParseIP(ipStr)
+	if parsed == nil {
+		return ip // Return original if parsing fails
+	}
+
+	// If it's an IPv6 address, return the normalized form
+	if v6 := parsed.To16(); v6 != nil && strings.Contains(ip, ":") {
+		// Convert to compressed format (::)
+		compressed := v6.String()
+
+		// If we're dealing with Cloudflare's format, maintain the full format
+		if strings.Contains(ip, "0000") {
+			// Convert back to full format with zeros
+			parts := strings.Split(compressed, ":")
+			var fullParts []string
+			for _, part := range parts {
+				if part == "" {
+					// Expand :: to appropriate number of zero groups
+					missing := 8 - (len(parts) - 1)
+					for i := 0; i < missing; i++ {
+						fullParts = append(fullParts, "0000")
+					}
+				} else {
+					// Pad each part to 4 digits
+					fullParts = append(fullParts, fmt.Sprintf("%04s", part))
+				}
+			}
+			return strings.Join(fullParts, ":")
+		}
+
+		return compressed
+	}
+
+	// For IPv4 or invalid addresses, return as-is
+	return ip
+}
+
 // ShouldAllow check if the request should be allowed.
 func (u *Fail2Ban) ShouldAllow(parentCtx context.Context, remoteIP string) bool {
-	// First check with a short lock
+	normalizedIP := normalizeIP(remoteIP)
 	u.MuIP.Lock()
-	ip, foundIP := u.IPs[remoteIP]
+	ip, foundIP := u.IPs[normalizedIP]
 	if !foundIP {
-		// New IP - add it and return quickly
-		u.IPs[remoteIP] = ipchecking.IPViewed{
+		u.IPs[normalizedIP] = ipchecking.IPViewed{
 			Viewed: utime.Now(),
 			Count:  1,
 		}
 		u.MuIP.Unlock()
-		fmt.Printf("welcome %q\n", remoteIP)
+		fmt.Printf("welcome %q\n", normalizedIP)
 		return true
 	}
 
@@ -83,34 +134,34 @@ func (u *Fail2Ban) ShouldAllow(parentCtx context.Context, remoteIP string) bool 
 				Denied: true,
 				RuleID: ip.RuleID,
 			}
-			u.IPs[remoteIP] = newIP
+			u.IPs[normalizedIP] = newIP
 			u.MuIP.Unlock()
 
 			fmt.Printf("%q is still banned since %q, %d request\n",
-				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
+				normalizedIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
 			return false
 		}
 
 		// Ban expired - clean up without holding the lock
-		delete(u.IPs, remoteIP)
+		delete(u.IPs, normalizedIP)
 		u.MuIP.Unlock()
 
 		go func() {
 			cleanupCtx, cancel := context.WithTimeout(parentCtx, CloudflareTimeout)
 			defer cancel()
-			u.removeExpiredBlock(cleanupCtx, remoteIP)
+			u.removeExpiredBlock(cleanupCtx, normalizedIP)
 		}()
 
 		// Reacquire lock to add new entry
 		u.MuIP.Lock()
-		u.IPs[remoteIP] = ipchecking.IPViewed{
+		u.IPs[normalizedIP] = ipchecking.IPViewed{
 			Viewed: utime.Now(),
 			Count:  1,
 			Denied: false,
 		}
 		u.MuIP.Unlock()
 
-		fmt.Println(remoteIP + " is no longer banned")
+		fmt.Println(normalizedIP + " is no longer banned")
 		return true
 	}
 
@@ -118,18 +169,18 @@ func (u *Fail2Ban) ShouldAllow(parentCtx context.Context, remoteIP string) bool 
 	if utime.Now().Before(ip.Viewed.Add(u.rules.Findtime)) {
 		// Release lock before potentially expensive operation
 		u.MuIP.Unlock()
-		return u.handleFindtimeExceeded(parentCtx, remoteIP, ip)
+		return u.handleFindtimeExceeded(parentCtx, normalizedIP, ip)
 	}
 
 	// Reset count for new findtime window
-	u.IPs[remoteIP] = ipchecking.IPViewed{
+	u.IPs[normalizedIP] = ipchecking.IPViewed{
 		Viewed: utime.Now(),
 		Count:  1,
 		Denied: false,
 	}
 	u.MuIP.Unlock()
 
-	fmt.Printf("welcome back %q\n", remoteIP)
+	fmt.Printf("welcome back %q\n", normalizedIP)
 	return true
 }
 
@@ -187,20 +238,15 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 		fmt.Printf("[Fail2Ban] IP %s exceeded retry limit, blocking...\n", remoteIP)
 
 		u.MuIP.Lock()
-		// Create the block record
 		viewed := ipchecking.IPViewed{
 			Viewed: ip.Viewed,
 			Count:  ip.Count + 1,
 			Denied: true,
 		}
-
-		// Store in memory
 		u.IPs[remoteIP] = viewed
 		u.MuIP.Unlock()
 
-		// Handle Cloudflare and persistence asynchronously
 		go func() {
-			// Handle Cloudflare
 			blockCtx, cancel := context.WithTimeout(context.Background(), CloudflareTimeout)
 			ruleID, err := u.handleCloudflareBlock(blockCtx, remoteIP)
 			cancel()
@@ -208,22 +254,19 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 			if err != nil {
 				fmt.Printf("[Fail2Ban] Error blocking IP in Cloudflare: %v\n", err)
 			} else {
-				// Update memory with the rule ID
 				u.MuIP.Lock()
 				if v, exists := u.IPs[remoteIP]; exists && v.Denied {
 					v.RuleID = ruleID
 					u.IPs[remoteIP] = v
+					u.ruleIDs[remoteIP] = ruleID
 				}
 				u.MuIP.Unlock()
 
-				// Handle persistence after Cloudflare success
 				persistCtx, cancel := context.WithTimeout(context.Background(), PersistenceTimeout)
 				u.persistBlockedIP(persistCtx, remoteIP, viewed)
 				cancel()
 			}
 		}()
-
-		fmt.Printf("%q is banned for %d>=%d request\n", remoteIP, ip.Count+1, u.rules.MaxRetry)
 
 		return false
 	}
@@ -279,6 +322,9 @@ func (u *Fail2Ban) RestoreBlock(ctx context.Context, ip string, bannedAt, banUnt
 		Count:  1,
 		Denied: true,
 		RuleID: ruleID,
+	}
+	if ruleID != "" {
+		u.ruleIDs[ip] = ruleID
 	}
 
 	fmt.Printf("Restored block for IP %s until %s\n", ip, banUntil)
@@ -354,15 +400,17 @@ func (u *Fail2Ban) cleanupExpiredBlock(ctx context.Context, ip string) {
 	cleanupCtx, cancel := context.WithTimeout(ctx, CloudflareTimeout)
 	defer cancel()
 
-	// Get the rule ID before removing from memory
-	var ruleID string
-	if viewed, ok := u.IPs[ip]; ok {
-		ruleID = viewed.RuleID
-	}
+	// Get the rule ID from our tracking map
+	u.MuIP.Lock()
+	ruleID := u.ruleIDs[ip]
+	delete(u.ruleIDs, ip)
+	u.MuIP.Unlock()
 
 	if u.cf != nil {
-		if err := u.cf.UnblockIP(cleanupCtx, ip); err != nil {
-			fmt.Printf("Failed to unblock IP %s from Cloudflare: %v", ip, err)
+		if ruleID != "" {
+			if err := u.cf.UnblockByRuleID(cleanupCtx, ruleID); err != nil {
+				fmt.Printf("Failed to unblock rule ID %s from Cloudflare: %v", ruleID, err)
+			}
 		}
 	}
 
