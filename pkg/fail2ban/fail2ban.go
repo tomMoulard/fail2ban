@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -48,6 +47,24 @@ func New(ctx context.Context, rules rules.RulesTransformed, cf *cloudflare.Clien
 		store:   store,
 		IPs:     make(map[string]ipchecking.IPViewed),
 		ruleIDs: make(map[string]string),
+	}
+
+	// Load persisted blocks first
+	if store != nil {
+		if blocks, err := store.Load(ctx); err != nil {
+			fmt.Printf("[Fail2Ban] Failed to load persisted blocks: %v\n", err)
+		} else {
+			fmt.Printf("[Fail2Ban] Loaded %d blocks from persistence\n", len(blocks))
+			for _, block := range blocks {
+				// Only restore if not expired
+				if time.Now().Before(block.BanUntil) {
+					f.RestoreBlock(ctx, block.IP, block.BannedAt, block.BanUntil, block.RuleID)
+				} else {
+					fmt.Printf("[Fail2Ban] Skipping expired block for IP %s (expired at %s)\n",
+						block.IP, block.BanUntil.Format(time.RFC3339))
+				}
+			}
+		}
 	}
 
 	// Start cleanup immediately to handle any expired blocks
@@ -157,7 +174,7 @@ func (u *Fail2Ban) ShouldAllow(parentCtx context.Context, remoteIP string) bool 
 		go func() {
 			cleanupCtx, cancel := context.WithTimeout(parentCtx, CloudflareTimeout)
 			defer cancel()
-			u.removeExpiredBlock(cleanupCtx, normalizedIP)
+			u.cleanupBlockedIPs(cleanupCtx)
 		}()
 
 		// Reacquire lock to add new entry
@@ -329,22 +346,30 @@ func (u *Fail2Ban) verifyPersistence(ctx context.Context) {
 			}
 			fmt.Printf("[Fail2Ban] Persistence verification: found %d blocks\n", len(blocks))
 
-			// Save current blocks to ensure file is writable
-			var currentBlocks []persistence.BlockedIP
+			// Filter out expired blocks from persistence
+			now := time.Now()
+			var validBlocks []persistence.BlockedIP
+			for _, block := range blocks {
+				if now.Before(block.BanUntil) {
+					validBlocks = append(validBlocks, block)
+				} else {
+					fmt.Printf("[Persistence] Removing expired block for IP %s (expired at %s)\n",
+						block.IP, block.BanUntil.Format(time.RFC3339))
+				}
+			}
+
+			// Get current blocks from memory
 			u.MuIP.Lock()
-			for ip, viewed := range u.IPs {
-				if viewed.Denied {
-					currentBlocks = append(currentBlocks, persistence.BlockedIP{
-						IP:       ip,
-						BannedAt: viewed.Viewed,
-						BanUntil: viewed.Viewed.Add(u.rules.Bantime),
-						RuleID:   viewed.RuleID,
-					})
+			// Only keep blocks that are still in memory and not expired
+			var finalBlocks []persistence.BlockedIP
+			for _, block := range validBlocks {
+				if viewed, exists := u.IPs[block.IP]; exists && viewed.Denied {
+					finalBlocks = append(finalBlocks, block)
 				}
 			}
 			u.MuIP.Unlock()
 
-			if err := u.store.Save(ctx, currentBlocks); err != nil {
+			if err := u.store.Save(ctx, finalBlocks); err != nil {
 				fmt.Printf("[Fail2Ban] Failed to save blocks during verification: %v\n", err)
 			}
 		case <-ctx.Done():
@@ -361,7 +386,6 @@ func (u *Fail2Ban) RestoreBlock(ctx context.Context, ip string, bannedAt, banUnt
 	// Skip if the ban end time is zero (invalid)
 	if banUntil.IsZero() {
 		fmt.Printf("[Fail2Ban] Skipping restore for IP %s - invalid ban end time\n", ip)
-
 		return
 	}
 
@@ -369,12 +393,26 @@ func (u *Fail2Ban) RestoreBlock(ctx context.Context, ip string, bannedAt, banUnt
 		fmt.Printf("[Fail2Ban] Not restoring expired block for IP %s (expired at %s)\n",
 			ip, banUntil.Format(time.RFC3339))
 
-		// Just remove from persistence and Cloudflare, but don't add to IPs map
+		// Clean up expired block
 		go func(ctx context.Context) {
 			cleanupCtx, cancel := context.WithTimeout(context.Background(), CloudflareTimeout)
 			defer cancel()
 
-			u.cleanupExpiredBlock(cleanupCtx, ip)
+			// Remove from Cloudflare if needed
+			if u.cf != nil && ruleID != "" {
+				if err := u.cf.UnblockByRuleID(cleanupCtx, ruleID); err != nil {
+					fmt.Printf("[Cloudflare] Failed to unblock rule ID %s: %v\n", ruleID, err)
+				} else {
+					fmt.Printf("[Cloudflare] Successfully unblocked IP %s (rule ID: %s)\n", ip, ruleID)
+				}
+			}
+
+			// Remove from persistence if needed
+			if u.store != nil {
+				if err := u.store.RemoveIP(cleanupCtx, ip); err != nil {
+					fmt.Printf("[Persistence] Failed to remove IP %s: %v\n", ip, err)
+				}
+			}
 		}(context.Background())
 
 		return
@@ -439,7 +477,6 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 
 	// First collect IPs to cleanup
 	var toCleanup []string
-	var persistenceUpdated bool
 
 	// Lock while reading and modifying memory
 	u.MuIP.Lock()
@@ -455,8 +492,6 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 				ip, viewed.Viewed.Format(time.RFC3339))
 
 			toCleanup = append(toCleanup, ip)
-			delete(u.IPs, ip) // Remove from memory immediately
-			persistenceUpdated = true
 		}
 	}
 	u.MuIP.Unlock()
@@ -464,57 +499,32 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 	// Then clean up Cloudflare and persistence without holding the lock
 	for _, ip := range toCleanup {
 		cleanupCtx, cancel := context.WithTimeout(parentCtx, CloudflareTimeout)
-		u.removeExpiredBlock(cleanupCtx, ip)
-		cancel()
-	}
-
-	// If we removed any blocks, save the current state
-	if persistenceUpdated && u.store != nil {
-		if err := u.saveAllBlocks(parentCtx); err != nil {
-			fmt.Printf("[Fail2Ban] Failed to save updated blocks after cleanup: %v\n", err)
-		}
-	}
-}
-
-func (u *Fail2Ban) removeExpiredBlock(ctx context.Context, ip string) {
-	u.cleanupExpiredBlock(ctx, ip)
-}
-
-func (u *Fail2Ban) cleanupExpiredBlock(ctx context.Context, ip string) {
-	cleanupCtx, cancel := context.WithTimeout(ctx, CloudflareTimeout)
-	defer cancel()
-
-	// Get the rule ID from our tracking map
-	u.MuIP.Lock()
-	ruleID := u.ruleIDs[ip]
-	delete(u.ruleIDs, ip)
-	u.MuIP.Unlock()
-
-	if u.cf != nil {
-		if ruleID != "" {
-			if err := u.cf.UnblockByRuleID(cleanupCtx, ruleID); err != nil {
-				fmt.Printf("Failed to unblock rule ID %s from Cloudflare: %v", ruleID, err)
+		// First remove from Cloudflare
+		if u.cf != nil {
+			ruleID := u.ruleIDs[ip]
+			if ruleID != "" {
+				if err := u.cf.UnblockByRuleID(cleanupCtx, ruleID); err != nil {
+					fmt.Printf("[Cloudflare] Failed to unblock rule ID %s: %v\n", ruleID, err)
+					cancel()
+					continue // Skip removing from persistence if Cloudflare fails
+				}
+				fmt.Printf("[Cloudflare] Successfully unblocked IP %s (rule ID: %s)\n", ip, ruleID)
 			}
 		}
-	}
 
-	if u.store != nil {
-		u.cleanupPersistence(cleanupCtx, ip, ruleID)
-	}
-}
+		// Then remove from memory
+		u.MuIP.Lock()
+		delete(u.IPs, ip)
+		delete(u.ruleIDs, ip)
+		u.MuIP.Unlock()
 
-func (u *Fail2Ban) cleanupPersistence(ctx context.Context, ip, ruleID string) {
-	if ruleID != "" {
-		if err := u.store.RemoveByRuleID(ctx, ruleID); err != nil && !os.IsNotExist(err) {
-			fmt.Printf("Failed to remove IP %s (rule ID: %s) from persistence: %v", ip, ruleID, err)
+		// Finally remove from persistence
+		if u.store != nil {
+			if err := u.store.RemoveIP(cleanupCtx, ip); err != nil {
+				fmt.Printf("[Persistence] Failed to remove IP %s: %v\n", ip, err)
+			}
 		}
-
-		return
-	}
-
-	// Fallback to removing by IP
-	if err := u.store.RemoveIP(ctx, ip); err != nil && !os.IsNotExist(err) {
-		fmt.Printf("Failed to remove IP %s from persistence: %v", ip, err)
+		cancel()
 	}
 }
 

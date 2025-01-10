@@ -207,13 +207,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		absPath, _ := filepath.Abs(config.PersistencePath) // Error already checked in validation
 		store = persistence.NewFileStore(absPath)
 		fmt.Printf("[Fail2Ban] Configured persistence at: %s\n", absPath)
-
-		// Verify store is working
-		if err := store.Save(ctx, []persistence.BlockedIP{}); err != nil {
-			fmt.Printf("[Fail2Ban] Warning: Initial persistence test failed: %v\n", err)
-		} else {
-			fmt.Printf("[Fail2Ban] Initial persistence test successful\n")
-		}
 	}
 
 	// Configure data package with IP header
@@ -248,21 +241,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	f2b := fail2ban.New(ctx, transformedRules, cf, store)
-
-	// Load persisted blocks
-	if store != nil {
-		blocks, err := store.Load(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load persisted blocks: %w", err)
-		}
-
-		if len(blocks) > 0 {
-			fmt.Printf("[Fail2Ban] Loaded %d blocks from persistence\n", len(blocks))
-			for _, block := range blocks {
-				f2b.RestoreBlock(ctx, block.IP, block.BannedAt, block.BanUntil, block.RuleID)
-			}
-		}
-	}
 
 	// Restore Cloudflare blocks
 	for _, block := range cfBlocks {

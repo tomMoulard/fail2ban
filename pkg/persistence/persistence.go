@@ -51,6 +51,8 @@ func NewFileStore(path string) *FileStore {
 		if err := os.WriteFile(path, []byte("[]"), FilePermission); err != nil {
 			fmt.Printf("[Persistence] Warning: Failed to create initial file: %v\n", err)
 		}
+	} else {
+		fmt.Printf("[Persistence] Using existing file at %s\n", path)
 	}
 
 	return &FileStore{path: path}
