@@ -309,8 +309,28 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 				}
 
 				fmt.Printf("[Fail2Ban] Attempting to persist block for IP %s\n", remoteIP)
-				if err := u.store.AddIP(persistCtx, block); err != nil {
-					fmt.Printf("[Fail2Ban] Failed to add block: %v\n", err)
+				// Load existing blocks
+				blocks, err := u.store.Load(persistCtx)
+				if err != nil {
+					fmt.Printf("[Fail2Ban] Failed to load blocks: %v\n", err)
+					return
+				}
+
+				// Filter out expired blocks and any existing block for this IP
+				now := time.Now()
+				var validBlocks []persistence.BlockedIP
+				for _, b := range blocks {
+					if now.Before(b.BanUntil) && b.IP != remoteIP {
+						validBlocks = append(validBlocks, b)
+					}
+				}
+
+				// Add the new block
+				validBlocks = append(validBlocks, block)
+
+				fmt.Printf("[Fail2Ban] Saving %d blocks (including new block)\n", len(validBlocks))
+				if err := u.store.Save(persistCtx, validBlocks); err != nil {
+					fmt.Printf("[Fail2Ban] Failed to save blocks: %v\n", err)
 				}
 			}
 		}()
@@ -494,6 +514,17 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 	}
 	u.MuIP.Unlock()
 
+	// Load current blocks from persistence
+	var currentBlocks []persistence.BlockedIP
+	if u.store != nil {
+		blocks, err := u.store.Load(parentCtx)
+		if err != nil {
+			fmt.Printf("[Fail2Ban] Failed to load blocks during cleanup: %v\n", err)
+		} else {
+			currentBlocks = blocks
+		}
+	}
+
 	// Then clean up Cloudflare and persistence without holding the lock
 	for _, ip := range toCleanup {
 		cleanupCtx, cancel := context.WithTimeout(parentCtx, CloudflareTimeout)
@@ -516,13 +547,30 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 		delete(u.ruleIDs, ip)
 		u.MuIP.Unlock()
 
-		// Finally remove from persistence
-		if u.store != nil {
-			if err := u.store.RemoveIP(cleanupCtx, ip); err != nil {
-				fmt.Printf("[Persistence] Failed to remove IP %s: %v\n", ip, err)
+		cancel()
+	}
+
+	// Update persistence with remaining blocks
+	if u.store != nil && len(currentBlocks) > 0 {
+		var validBlocks []persistence.BlockedIP
+		for _, block := range currentBlocks {
+			// Keep block if it's not in cleanup list and not expired
+			shouldKeep := true
+			for _, ip := range toCleanup {
+				if block.IP == ip {
+					shouldKeep = false
+					break
+				}
+			}
+			if shouldKeep && now.Before(block.BanUntil) {
+				validBlocks = append(validBlocks, block)
 			}
 		}
-		cancel()
+
+		fmt.Printf("[Fail2Ban] Updating persistence with %d remaining blocks\n", len(validBlocks))
+		if err := u.store.Save(parentCtx, validBlocks); err != nil {
+			fmt.Printf("[Fail2Ban] Failed to update persistence during cleanup: %v\n", err)
+		}
 	}
 }
 

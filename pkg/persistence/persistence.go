@@ -212,18 +212,52 @@ func (f *FileStore) AddIP(ctx context.Context, block BlockedIP) error {
 	fmt.Printf("[Persistence] Adding IP %s to persistence (banned until: %s)\n",
 		block.IP, block.BanUntil.Format(time.RFC3339))
 
+	// Ensure directory exists
+	dir := filepath.Dir(f.path)
+	if err := os.MkdirAll(dir, DirectoryPermission); err != nil {
+		fmt.Printf("[Persistence] Failed to create directory: %v\n", err)
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Check if file exists and is writable
+	if info, err := os.Stat(f.path); err != nil {
+		if os.IsNotExist(err) {
+			fmt.Printf("[Persistence] File does not exist, creating new file\n")
+			if err := os.WriteFile(f.path, []byte("[]"), 0666); err != nil {
+				fmt.Printf("[Persistence] Failed to create initial file: %v\n", err)
+				return fmt.Errorf("failed to create initial file: %w", err)
+			}
+		} else {
+			fmt.Printf("[Persistence] Error checking file: %v\n", err)
+			return fmt.Errorf("failed to check file: %w", err)
+		}
+	} else {
+		fmt.Printf("[Persistence] File exists with permissions: %v\n", info.Mode())
+		if info.Mode().Perm()&0200 == 0 {
+			fmt.Printf("[Persistence] File is not writable, attempting to fix permissions\n")
+			if err := os.Chmod(f.path, 0666); err != nil {
+				fmt.Printf("[Persistence] Failed to fix file permissions: %v\n", err)
+				return fmt.Errorf("failed to fix file permissions: %w", err)
+			}
+		}
+	}
+
 	// Read existing blocks
 	data, err := os.ReadFile(f.path)
-	if err != nil && !os.IsNotExist(err) {
+	fmt.Printf("[Persistence] Read %d bytes from file\n", len(data))
+	if err != nil {
 		fmt.Printf("[Persistence] Error loading existing blocks: %v\n", err)
 		return fmt.Errorf("failed to load blocks: %w", err)
 	}
 
 	var blocks []BlockedIP
 	if len(data) > 0 {
+		fmt.Printf("[Persistence] Attempting to unmarshal data: %s\n", string(data))
 		if err := json.Unmarshal(data, &blocks); err != nil {
 			fmt.Printf("[Persistence] Error unmarshaling data: %v\n", err)
-			return fmt.Errorf("failed to parse blocked IPs file: %w", err)
+			// If unmarshal fails, try to start fresh
+			fmt.Printf("[Persistence] Starting fresh with empty block list\n")
+			blocks = make([]BlockedIP, 0)
 		}
 	}
 
