@@ -58,81 +58,88 @@ func New(ctx context.Context, rules rules.RulesTransformed, cf *cloudflare.Clien
 
 // ShouldAllow check if the request should be allowed.
 func (u *Fail2Ban) ShouldAllow(parentCtx context.Context, remoteIP string) bool {
+	// First check with a short lock
 	u.MuIP.Lock()
-	defer u.MuIP.Unlock()
-
 	ip, foundIP := u.IPs[remoteIP]
-
-	// Fail2Ban
 	if !foundIP {
+		// New IP - add it and return quickly
 		u.IPs[remoteIP] = ipchecking.IPViewed{
 			Viewed: utime.Now(),
 			Count:  1,
 		}
-
+		u.MuIP.Unlock()
 		fmt.Printf("welcome %q\n", remoteIP)
-
 		return true
 	}
 
+	// Check if already denied
 	if ip.Denied {
-		if utime.Now().Before(ip.Viewed.Add(u.rules.Bantime)) {
-			u.IPs[remoteIP] = ipchecking.IPViewed{
+		denied := utime.Now().Before(ip.Viewed.Add(u.rules.Bantime))
+		if denied {
+			// Update count and return quickly
+			newIP := ipchecking.IPViewed{
 				Viewed: ip.Viewed,
 				Count:  ip.Count + 1,
 				Denied: true,
+				RuleID: ip.RuleID,
 			}
+			u.IPs[remoteIP] = newIP
+			u.MuIP.Unlock()
 
 			fmt.Printf("%q is still banned since %q, %d request\n",
 				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
-
 			return false
 		}
 
-		// Block has expired
+		// Ban expired - clean up without holding the lock
 		delete(u.IPs, remoteIP)
+		u.MuIP.Unlock()
 
-		// Clean up in background
 		go func() {
 			cleanupCtx, cancel := context.WithTimeout(parentCtx, CloudflareTimeout)
 			defer cancel()
-
 			u.removeExpiredBlock(cleanupCtx, remoteIP)
 		}()
 
-		// Allow the request and create new entry
+		// Reacquire lock to add new entry
+		u.MuIP.Lock()
 		u.IPs[remoteIP] = ipchecking.IPViewed{
 			Viewed: utime.Now(),
 			Count:  1,
 			Denied: false,
 		}
+		u.MuIP.Unlock()
 
 		fmt.Println(remoteIP + " is no longer banned")
-
 		return true
 	}
 
+	// Handle normal request counting
 	if utime.Now().Before(ip.Viewed.Add(u.rules.Findtime)) {
+		// Release lock before potentially expensive operation
+		u.MuIP.Unlock()
 		return u.handleFindtimeExceeded(parentCtx, remoteIP, ip)
 	}
 
+	// Reset count for new findtime window
 	u.IPs[remoteIP] = ipchecking.IPViewed{
 		Viewed: utime.Now(),
 		Count:  1,
 		Denied: false,
 	}
+	u.MuIP.Unlock()
 
 	fmt.Printf("welcome back %q\n", remoteIP)
-
 	return true
 }
 
 func (u *Fail2Ban) incrementIPCount(remoteIP string, ip ipchecking.IPViewed) {
-	u.IPs[remoteIP] = ipchecking.IPViewed{
+	newIP := ipchecking.IPViewed{
 		Viewed: ip.Viewed,
 		Count:  ip.Count + 1,
 		Denied: false,
 	}
+	u.IPs[remoteIP] = newIP
 
 	fmt.Printf("welcome back %q for the %d time\n", remoteIP, ip.Count+1)
 }
@@ -179,6 +186,7 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 	if ip.Count+1 >= u.rules.MaxRetry {
 		fmt.Printf("[Fail2Ban] IP %s exceeded retry limit, blocking...\n", remoteIP)
 
+		u.MuIP.Lock()
 		// Create the block record
 		viewed := ipchecking.IPViewed{
 			Viewed: ip.Viewed,
@@ -188,32 +196,31 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 
 		// Store in memory
 		u.IPs[remoteIP] = viewed
+		u.MuIP.Unlock()
 
 		// Handle Cloudflare and persistence asynchronously
 		go func() {
-			bgCtx := context.Background()
-			blockCtx, cancel := context.WithTimeout(bgCtx, CloudflareTimeout)
-			defer cancel()
-
+			// Handle Cloudflare
+			blockCtx, cancel := context.WithTimeout(context.Background(), CloudflareTimeout)
 			ruleID, err := u.handleCloudflareBlock(blockCtx, remoteIP)
+			cancel()
+
 			if err != nil {
 				fmt.Printf("[Fail2Ban] Error blocking IP in Cloudflare: %v\n", err)
+			} else {
+				// Update memory with the rule ID
+				u.MuIP.Lock()
+				if v, exists := u.IPs[remoteIP]; exists && v.Denied {
+					v.RuleID = ruleID
+					u.IPs[remoteIP] = v
+				}
+				u.MuIP.Unlock()
 
-				return
+				// Handle persistence after Cloudflare success
+				persistCtx, cancel := context.WithTimeout(context.Background(), PersistenceTimeout)
+				u.persistBlockedIP(persistCtx, remoteIP, viewed)
+				cancel()
 			}
-
-			// Create a new context for persistence
-			persistCtx, persistCancel := context.WithTimeout(bgCtx, PersistenceTimeout)
-			defer persistCancel()
-
-			// Update memory and persistence with the rule ID
-			u.MuIP.Lock()
-			if v, exists := u.IPs[remoteIP]; exists && v.Denied {
-				v.RuleID = ruleID
-				u.IPs[remoteIP] = v
-				u.persistBlockedIP(persistCtx, remoteIP, v)
-			}
-			u.MuIP.Unlock()
 		}()
 
 		fmt.Printf("%q is banned for %d>=%d request\n", remoteIP, ip.Count+1, u.rules.MaxRetry)
@@ -221,7 +228,9 @@ func (u *Fail2Ban) handleFindtimeExceeded(parentCtx context.Context, remoteIP st
 		return false
 	}
 
+	u.MuIP.Lock()
 	u.incrementIPCount(remoteIP, ip)
+	u.MuIP.Unlock()
 
 	return true
 }
@@ -243,12 +252,12 @@ func (u *Fail2Ban) RestoreBlock(ctx context.Context, ip string, bannedAt, banUnt
 			ip, banUntil.Format(time.RFC3339))
 
 		// Just remove from persistence and Cloudflare, but don't add to IPs map
-		go func() {
+		go func(ctx context.Context) {
 			cleanupCtx, cancel := context.WithTimeout(context.Background(), CloudflareTimeout)
 			defer cancel()
 
 			u.cleanupExpiredBlock(cleanupCtx, ip)
-		}()
+		}(context.Background())
 
 		return
 	}
@@ -331,12 +340,9 @@ func (u *Fail2Ban) cleanupBlockedIPs(parentCtx context.Context) {
 
 	// Then clean up Cloudflare and persistence without holding the lock
 	for _, ip := range toCleanup {
-		go func(ip string) {
-			cleanupCtx, cancel := context.WithTimeout(parentCtx, CloudflareTimeout)
-			defer cancel()
-
-			u.removeExpiredBlock(cleanupCtx, ip)
-		}(ip)
+		cleanupCtx, cancel := context.WithTimeout(parentCtx, CloudflareTimeout)
+		u.removeExpiredBlock(cleanupCtx, ip)
+		cancel()
 	}
 }
 
