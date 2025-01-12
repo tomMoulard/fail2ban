@@ -31,7 +31,6 @@ func (w *WebhookNotifier) Send(event Event) error {
 		return fmt.Errorf("failed to render webhook template: %w", err)
 	}
 
-	// Create request with headers
 	req, err := http.NewRequest(w.method, w.url, strings.NewReader(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create webhook request: %w", err)
@@ -39,7 +38,7 @@ func (w *WebhookNotifier) Send(event Event) error {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Fail2Ban-Notifier")
-	// Add headers
+
 	for k, v := range w.headers {
 		req.Header.Set(k, v)
 	}
