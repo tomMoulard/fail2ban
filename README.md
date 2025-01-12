@@ -226,6 +226,91 @@ A |--x--x--x---->            |------------->
 B          |--x---------->
 ```
 
+## Notifications
+
+The fail2ban middleware supports sending notifications through multiple channels when ban/unban events occur. The following notification channels are supported:
+
+- Telegram
+- Discord Webhooks  
+- Email (SMTP)
+- Custom Webhooks
+
+### Configuration
+
+Notifications can be configured in the middleware config:
+
+```yml
+testData:
+  notifications:
+    # List of event types to notify on (ban, unban)
+    allowedTypes: ["ban", "unban"]
+    
+    # Telegram configuration
+    telegram:
+      enabled: true
+      botToken: "your-bot-token" 
+      chatId: "your-chat-id"
+      templates:
+        ban: "🚫 IP Ban Alert\nIP: {{.IP}}\nReason: {{.Message}}"
+        unban: "✅ IP Unban Alert\nIP: {{.IP}}"
+
+    # Discord webhook configuration  
+    discord:
+      enabled: true
+      webhookUrl: "your-webhook-url"
+      username: "Fail2Ban Bot"
+      avatarUrl: "https://example.com/avatar.png"
+
+    # Email configuration
+    email:
+      enabled: true
+      server: "smtp.example.com:587"
+      username: "user@example.com" 
+      password: "password"
+      from: "from@example.com"
+      to: "to@example.com"
+
+    # Custom webhook configuration
+    webhook:
+      enabled: true
+      url: "https://example.com/webhook"
+      method: "POST"
+      headers:
+        Authorization: "Bearer token"
+```
+
+### Templates
+
+Each notification channel supports customizable message templates using Go template syntax. The following variables are available:
+
+- `{{.IP}}` - The IP address that triggered the event
+- `{{.Message}}` - Event message/reason
+- `{{.Timestamp}}` - Event timestamp
+- `{{.Duration}}` - Ban duration (only available for ban events)
+
+If no custom templates are provided, default templates will be used for each event type:
+
+```yml
+# Default Ban Template
+🚫 IP Ban Alert
+IP: {{.IP}}
+Reason: {{.Message}}
+Time: {{.Timestamp.Format "2006-01-02 15:04:05"}}
+Duration: {{.Duration}}
+
+# Default Unban Template
+✅ IP Unban Alert
+IP: {{.IP}}
+Reason: {{.Message}}
+Time: {{.Timestamp.Format "2006-01-02 15:04:05"}}
+
+# Default Notice Template
+ℹ️ Notice
+IP: {{.IP}}
+Message: {{.Message}}
+Time: {{.Timestamp.Format "2006-01-02 15:04:05"}}
+```
+
 ## How to dev
 
 ```bash
