@@ -133,6 +133,9 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 	}
 
 	notifSrvc := notifications.NewService(config.Notifications)
+	if notifSrvc != nil {
+		go notifSrvc.Run()
+	}
 
 	log.Println("Plugin: FailToBan is up and running")
 
