@@ -15,6 +15,7 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
 	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
+	"github.com/tomMoulard/fail2ban/pkg/notifications"
 	"github.com/tomMoulard/fail2ban/pkg/response/status"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
 	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
@@ -33,9 +34,10 @@ type List struct {
 
 // Config struct.
 type Config struct {
-	Denylist  List        `yaml:"denylist"`
-	Allowlist List        `yaml:"allowlist"`
-	Rules     rules.Rules `yaml:"port"`
+	Denylist      List                 `yaml:"denylist"`
+	Allowlist     List                 `yaml:"allowlist"`
+	Rules         rules.Rules          `yaml:"port"`
+	Notifications notifications.Config `yaml:"notifications"`
 
 	// deprecated
 	Blacklist List `yaml:"blacklist"`
@@ -136,9 +138,11 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
+	notifSrvc := notifications.NewService(config.Notifications)
+
 	log.Println("Plugin: FailToBan is up and running")
 
-	f2b := fail2ban.New(rules, allowNetIPs)
+	f2b := fail2ban.New(rules, allowNetIPs, notifSrvc)
 
 	c := chain.New(
 		next,
