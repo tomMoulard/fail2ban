@@ -36,15 +36,17 @@ func (s *Service) Notify(event Event) {
 }
 
 func NewService(cfg Config) *Service {
-	service := &Service{
-		notifiers: make([]notifier, 0),
-	}
 	allDisabled := !cfg.Telegram.Enabled && !cfg.Email.Enabled && !cfg.Webhook.Enabled && !cfg.Discord.Enabled
 
 	if len(cfg.Types) == 0 || allDisabled {
 		log.Printf("no notifiers enabled")
 
 		return nil
+	}
+
+	service := &Service{
+		notifiers:    make([]notifier, 0),
+		allowedTypes: cfg.Types,
 	}
 
 	const defaultHTTPTimeout = 10
@@ -71,8 +73,7 @@ func NewService(cfg Config) *Service {
 	}
 
 	if cfg.Discord.Enabled {
-		tmpl := NewTemplateHandler(cfg.Discord.Templates)
-		n := NewDiscordNotifier(cfg.Discord, tmpl, httpCli)
+		n := NewDiscordNotifier(cfg.Discord, httpCli)
 		service.addNotifier(n)
 	}
 

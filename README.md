@@ -235,6 +235,48 @@ The fail2ban middleware supports sending notifications through multiple channels
 - Email (SMTP)
 - Custom Webhooks
 
+### Channel-Specific Features
+
+#### Telegram
+- Supports HTML formatting
+- Full template customization
+- Supports all template variables
+
+#### Discord
+- Uses embedded message format
+- Customizable webhook username and avatar
+- Configurable title
+- Fields: IP Address, Ban Duration
+- Red color for ban events, green for unban events
+- Timestamp display
+
+#### Email
+- HTML email format
+- Customizable subject line
+- Supports all template variables
+- Maintains persistent SMTP connection
+- TLS support
+
+#### Custom Webhooks
+- Configurable HTTP method
+- Custom headers support
+- Full template customization
+- JSON payload format
+
+### Template Variables
+
+The following variables are available for template customization (except Discord):
+
+- `{{.IP}}` - The IP address that triggered the event
+- `{{.Message}}` - Event message/reason
+- `{{.Timestamp}}` - Event timestamp (format: "2006-01-02 15:04:05")
+- `{{.Duration}}` - Ban duration (only available for ban events)
+
+### Default Templates
+
+If no custom templates are provided, these defaults will be used:
+
+
 ### Configuration
 
 Notifications can be configured in the middleware config:
@@ -258,17 +300,22 @@ testData:
     discord:
       enabled: true
       webhookUrl: "your-webhook-url"
+      title: "🚫 IP Ban Details"
       username: "Fail2Ban Bot"
       avatarUrl: "https://example.com/avatar.png"
 
     # Email configuration
     email:
       enabled: true
-      server: "smtp.example.com:587"
+      server: "smtp.example.com"
+      port: 587
       username: "user@example.com" 
       password: "password"
       from: "from@example.com"
       to: "to@example.com"
+      templates:
+        ban: "{{.IP}} banned for {{.Duration}}"
+        unban: "{{.IP}} unbanned"
 
     # Custom webhook configuration
     webhook:
@@ -277,6 +324,9 @@ testData:
       method: "POST"
       headers:
         Authorization: "Bearer token"
+      templates:
+        ban: "IP {{.IP}} has been banned"
+        unban: "IP {{.IP}} has been unbanned"
 ```
 
 ### Templates

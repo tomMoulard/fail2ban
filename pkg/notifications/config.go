@@ -30,15 +30,16 @@ type EmailConfig struct {
 	Password  string         `yaml:"password"`
 	From      string         `yaml:"from"`
 	To        string         `yaml:"to"`
+	Subject   string         `yaml:"subject"`
 	Templates TemplateConfig `yaml:"templates"`
 }
 
 type DiscordConfig struct {
-	Enabled    bool           `yaml:"enabled"`
-	WebhookURL string         `yaml:"webhookUrl"`
-	Username   string         `yaml:"username"`
-	AvatarURL  string         `yaml:"avatarUrl"`
-	Templates  TemplateConfig `yaml:"templates"`
+	Enabled    bool   `yaml:"enabled"`
+	WebhookURL string `yaml:"webhookUrl"`
+	Username   string `yaml:"username"`
+	Title      string `yaml:"title"`
+	AvatarURL  string `yaml:"avatarUrl"`
 }
 
 type WebhookConfig struct {

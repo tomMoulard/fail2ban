@@ -77,6 +77,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		}
 
 		fmt.Println(remoteIP + " is no longer banned")
+		u.notify(notifications.UnbanEvent(remoteIP, fmt.Sprintf("%q is no longer banned", remoteIP)))
 
 		return true
 	}
@@ -101,9 +102,8 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 			Count:  ip.Count + 1,
 			Denied: false,
 		}
-		msg := fmt.Sprintf("welcome back %q for the %d time", remoteIP, ip.Count+1)
-		fmt.Printf("%s", msg)
-		u.notify(notifications.UnbanEvent(remoteIP, msg))
+
+		fmt.Printf("welcome back %q for the %d time", remoteIP, ip.Count+1)
 
 		return true
 	}
