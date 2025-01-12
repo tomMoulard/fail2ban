@@ -4,7 +4,6 @@ package notifications
 import (
 	"log"
 	"net/http"
-	"slices"
 	"time"
 )
 
@@ -22,12 +21,13 @@ func (s *Service) addNotifier(n notifier) {
 }
 
 func (s *Service) Notify(event Event) {
-	if !slices.Contains(s.allowedTypes, string(event.Type)) {
-		// event type not enabled
-		return
-	}
+	for _, allowedType := range s.allowedTypes {
+		if string(event.Type) == allowedType {
+			s.ch <- event
 
-	s.ch <- event
+			return
+		}
+	}
 }
 
 func (s *Service) Run() {
