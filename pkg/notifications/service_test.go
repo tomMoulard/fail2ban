@@ -16,6 +16,7 @@ func TestNewService(t *testing.T) {
 		cfg            Config
 		expectNil      bool
 		expectNotifier int
+		setupMock      func(*mockNotifier)
 	}{
 		{
 			name: "all disabled",
@@ -71,6 +72,33 @@ func TestNewService(t *testing.T) {
 				},
 			},
 			expectNotifier: 4,
+		},
+		{
+			name: "partial notifier failure",
+			cfg: Config{
+				Types:    []string{"ban"},
+				Telegram: TelegramConfig{Enabled: true},
+				Discord:  DiscordConfig{Enabled: true},
+			},
+			expectNotifier: 2,
+		},
+		{
+			name: "concurrent notifications",
+			cfg: Config{
+				Types:    []string{"ban", "unban"},
+				Telegram: TelegramConfig{Enabled: true},
+				Discord:  DiscordConfig{Enabled: true},
+				Email:    EmailConfig{Enabled: true},
+			},
+			expectNotifier: 3,
+		},
+		{
+			name: "invalid event type",
+			cfg: Config{
+				Types:    []string{"invalid"},
+				Telegram: TelegramConfig{Enabled: true},
+			},
+			expectNotifier: 1,
 		},
 	}
 

@@ -44,6 +44,14 @@ func TestDiscordNotifier(t *testing.T) {
 				WebhookURL: "invalid-url",
 			},
 		},
+		{
+			name:           "empty webhook URL",
+			serverResponse: http.StatusBadRequest,
+			expectError:    true,
+			config: DiscordConfig{
+				WebhookURL: "",
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -57,7 +65,7 @@ func TestDiscordNotifier(t *testing.T) {
 			defer server.Close()
 
 			test.config.WebhookURL = server.URL
-			n := NewDiscordNotifier(test.config, NewTemplateHandler(TemplateConfig{}), server.Client())
+			n := NewDiscordNotifier(test.config, server.Client())
 
 			err := n.Send(Event{
 				Type:      EventTypeBan,

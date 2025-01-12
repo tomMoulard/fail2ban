@@ -53,6 +53,44 @@ func TestTemplateHandler(t *testing.T) {
 			},
 			expectedError: true,
 		},
+		{
+			name: "empty event message",
+			event: Event{
+				Type:      EventTypeBan,
+				IP:        "192.0.2.1",
+				Message:   "",
+				Timestamp: time.Now(),
+			},
+			contains: "IP: 192.0.2.1",
+		},
+		{
+			name: "nil timestamp",
+			event: Event{
+				Type:    EventTypeBan,
+				IP:      "192.0.2.1",
+				Message: "test",
+			},
+			expectedError: false,
+		},
+		{
+			name: "template with complex formatting",
+			cfg: TemplateConfig{
+				Ban: "{{if .Message}}{{.Message}}{{else}}No message{{end}}",
+			},
+			event: Event{
+				Type:      EventTypeBan,
+				IP:        "192.0.2.1",
+				Timestamp: time.Now(),
+			},
+			contains: "No message",
+		},
+		{
+			name: "unknown event type",
+			event: Event{
+				Type: "unknown",
+			},
+			expectedError: true,
+		},
 	}
 
 	for _, test := range tests {

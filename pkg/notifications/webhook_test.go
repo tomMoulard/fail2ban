@@ -55,6 +55,25 @@ func TestWebhookNotifier(t *testing.T) {
 				Method: "INVALID",
 			},
 		},
+		{
+			name:           "timeout",
+			serverResponse: http.StatusGatewayTimeout,
+			expectError:    true,
+			config: WebhookConfig{
+				URL:     "https://webhook.test",
+				Method:  "POST",
+				Headers: map[string]string{"Timeout": "1"},
+			},
+		},
+		{
+			name:           "redirect",
+			serverResponse: http.StatusMovedPermanently,
+			expectError:    true,
+			config: WebhookConfig{
+				URL:    "https://webhook.test",
+				Method: "POST",
+			},
+		},
 	}
 
 	for _, test := range tests {
