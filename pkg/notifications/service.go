@@ -14,6 +14,7 @@ type notifier interface {
 type Service struct {
 	allowedTypes []string
 	notifiers    []notifier
+	ch           chan Event
 }
 
 func (s *Service) addNotifier(n notifier) {
@@ -26,13 +27,17 @@ func (s *Service) Notify(event Event) {
 		return
 	}
 
-	go func() {
+	s.ch <- event
+}
+
+func (s *Service) Run() {
+	for event := range s.ch {
 		for _, n := range s.notifiers {
 			if err := n.Send(event); err != nil {
 				log.Printf("failed to send notification: %v", err)
 			}
 		}
-	}()
+	}
 }
 
 func NewService(cfg Config) *Service {
@@ -43,10 +48,12 @@ func NewService(cfg Config) *Service {
 
 		return nil
 	}
-
+	// 1000 is large enough to handle typical traffic spikes but small enough to prevent unbounded memory growth
+	const channelSize = 1000
 	service := &Service{
 		notifiers:    make([]notifier, 0),
 		allowedTypes: cfg.Types,
+		ch:           make(chan Event, channelSize),
 	}
 
 	const defaultHTTPTimeout = 10

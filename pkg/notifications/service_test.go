@@ -158,10 +158,12 @@ func TestServiceNotify(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
+			done := make(chan struct{})
 			notified := false
 			n := &mockNotifier{
 				fn: func(event Event) error {
 					notified = true
+					done <- struct{}{}
 
 					return nil
 				},
@@ -170,10 +172,27 @@ func TestServiceNotify(t *testing.T) {
 			svc := &Service{
 				allowedTypes: test.allowedTypes,
 				notifiers:    []notifier{n},
+				ch:           make(chan Event, 1),
+			}
+			go svc.Run()
+			svc.Notify(test.event)
+
+			if test.shouldNotify {
+				// Only wait for notification if we expect one
+				select {
+				case <-done:
+				case <-time.After(time.Second):
+					t.Fatal("notification timed out")
+				}
+			} else {
+				// Give a small window for unexpected notifications
+				select {
+				case <-done:
+					t.Error("received unexpected notification")
+				case <-time.After(10 * time.Millisecond):
+				}
 			}
 
-			svc.Notify(test.event)
-			time.Sleep(100 * time.Millisecond) // Wait for goroutine
 			assert.Equal(t, test.shouldNotify, notified)
 		})
 	}
