@@ -14,12 +14,12 @@ import (
 
 // Fail2Ban is a fail2ban implementation.
 type Fail2Ban struct {
-	rules rules.RulesTransformed
-
-	MuIP      sync.Mutex
-	IPs       map[string]ipchecking.IPViewed
-	allowList ipchecking.NetIPs
+	rules     rules.RulesTransformed
 	notifSrv  *notifications.Service
+	allowList ipchecking.NetIPs
+
+	MuIP sync.Mutex
+	IPs  map[string]ipchecking.IPViewed
 }
 
 // New creates a new Fail2Ban.
@@ -170,12 +170,4 @@ func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
 	fmt.Printf("welcome back %q", remoteIP)
 
 	return true
-}
-
-func (u *Fail2Ban) notify(event notifications.Event) {
-	if u.notifSrv == nil {
-		return
-	}
-
-	u.notifSrv.Notify(event)
 }
