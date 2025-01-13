@@ -33,18 +33,28 @@ yaegi_test: vendor
 entr:
 	find | entr -r -s "docker compose up --remove-orphans"
 
+.PHONY: tidy
 tidy:
 	go mod tidy
 	cd tools && go mod tidy
 
+.PHONY: spell
 spell:
 	misspell -error -locale=US -w **.md
 
+.PHONY: inst
 inst:
 	cd tools && go install $(shell cd tools && go list -e -f '{{ join .Imports " " }}' -tags=tools)
 
+.PHONY: mod
+mod: ## go mod tidy
+	go mod tidy
+	cd tools && go mod tidy
+
+.PHONY: vulncheck
 vulncheck:
 	govulncheck ./...
 
+.PHONY: build
 build:
 	goreleaser build --clean --single-target --snapshot

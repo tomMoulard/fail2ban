@@ -1,6 +1,9 @@
-module github.com/tomMoulard/sendbird-go/build
+module github.com/tomMoulard/fail2ban/tools
 
-go 1.22.5
+go 1.23.0
+
+toolchain go1.23.4
+
 // FIXME: temporary fix for go.opentelemetry.io/otel/exporters/otlp/internal v0.20.1
 replace go.opentelemetry.io/otel/exporters/otlp/internal v0.20.1 => go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.43.0
 
