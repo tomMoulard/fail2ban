@@ -134,14 +134,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	f2b := fail2ban.New(rules)
 
-	c := chain.New(
-		next,
-		denyHandler,
-		allowHandler,
-		uDeny.New(rules.URLRegexpBan, f2b),
-		uAllow.New(rules.URLRegexpAllow),
-		f2bHandler.New(f2b),
-	)
+	var c chain.Chain
 
 	if rules.StatusCode != "" {
 		statusCodeHandler, err := status.New(next, rules.StatusCode, f2b)
@@ -149,7 +142,24 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 			return nil, fmt.Errorf("failed to create status handler: %w", err)
 		}
 
-		c.WithStatus(statusCodeHandler)
+		c = chain.New(
+			next,
+			denyHandler,
+			allowHandler,
+			uDeny.New(rules.URLRegexpBan, f2b),
+			uAllow.New(rules.URLRegexpAllow),
+			statusCodeHandler,
+			f2bHandler.New(f2b),
+		)
+	} else {
+		c = chain.New(
+			next,
+			denyHandler,
+			allowHandler,
+			uDeny.New(rules.URLRegexpBan, f2b),
+			uAllow.New(rules.URLRegexpAllow),
+			f2bHandler.New(f2b),
+		)
 	}
 
 	return c, nil
