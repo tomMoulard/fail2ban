@@ -7,8 +7,6 @@ linters:
     - err113 # deprecated
     - gochecknoglobals
     - gochecknoinits # useless
-    - gomnd # deprecated
-    - execinquery # deprecated
     - ireturn # Not relevant
     - nilnil # Not relevant
     - testpackage # Too strict
