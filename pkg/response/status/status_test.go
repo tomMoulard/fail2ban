@@ -120,7 +120,7 @@ func TestStatus(t *testing.T) {
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err = data.ServeHTTP(recorder, req)
+			req, err = data.ServeHTTP(recorder, req, "X-Forwarded-For")
 			require.NoError(t, err)
 
 			var b bytes.Buffer

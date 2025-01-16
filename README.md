@@ -103,6 +103,7 @@ testData:
     maxretry: 4
     enabled: true
     statuscode: "400,401,403-499"
+    sourceIpHeader: "CF-Connecting-IP"
 ```
 
 Where:
@@ -116,6 +117,16 @@ enable the plugin).
  - `urlregexp`: a regexp list to block / allow requests with regexps on the url
  - `statuscode`: a comma separated list of status code (or range of status
 codes) to consider as a failed request.
+ - `sourceIpHeader`: (optional) specifies which header to use for client IP identification.
+   Common values include:
+   - `X-Forwarded-For` - Standard proxy header
+   - `X-Real-IP` - Often used by Nginx
+   - `CF-Connecting-IP` - Cloudflare
+   - `True-Client-IP` - Akamai and Cloudflare
+   
+   When specified, the plugin will:
+   - Use the first valid IP from the specified header if present
+   - Fall back to the remote address if the header is missing or invalid
 
 #### URL Regexp
 Urlregexp are used to defined witch part of your website will be either

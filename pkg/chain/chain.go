@@ -30,16 +30,18 @@ type Chain interface {
 }
 
 type chain struct {
-	handlers []ChainHandler
-	final    http.Handler
-	status   *http.Handler
+	handlers       []ChainHandler
+	final          http.Handler
+	status         *http.Handler
+	sourceIPHeader string
 }
 
 // New creates a new chain.
-func New(final http.Handler, handlers ...ChainHandler) Chain {
+func New(final http.Handler, sourceIPHeader string, handlers ...ChainHandler) Chain {
 	return &chain{
-		handlers: handlers,
-		final:    final,
+		handlers:       handlers,
+		final:          final,
+		sourceIPHeader: sourceIPHeader,
 	}
 }
 
@@ -50,7 +52,7 @@ func (c *chain) WithStatus(status http.Handler) {
 
 // ServeHTTP chains the handlers together, and calls the final handler at the end.
 func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	r, err := data.ServeHTTP(w, r)
+	r, err := data.ServeHTTP(w, r, c.sourceIPHeader)
 	if err != nil {
 		log.Printf("data.ServeHTTP error: %v", err)
 

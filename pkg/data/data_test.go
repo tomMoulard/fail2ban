@@ -31,7 +31,7 @@ func TestData(t *testing.T) {
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err := ServeHTTP(recorder, req)
+			req, err := ServeHTTP(recorder, req, "X-Forwarded-For")
 			require.NoError(t, err)
 
 			got := GetData(req)
@@ -54,7 +54,7 @@ func TestGetData_InvalidData(t *testing.T) {
 				t.Helper()
 
 				req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-				req, err := ServeHTTP(nil, req)
+				req, err := ServeHTTP(nil, req, "X-Forwarded-For")
 				require.NoError(t, err)
 
 				return req

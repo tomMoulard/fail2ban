@@ -31,7 +31,7 @@ func Example() {
 	// return an error.
 	// Create a new chain with a final h.
 	h := &Handler{}
-	c := chain.New(&PongHandler{}, h)
+	c := chain.New(&PongHandler{}, "X-Forwarded-For", h)
 
 	// Create a new request.
 	req := httptest.NewRequest(http.MethodGet, "http://example.com", nil)

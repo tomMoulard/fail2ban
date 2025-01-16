@@ -136,6 +136,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	c := chain.New(
 		next,
+		rules.SourceIPHeader,
 		denyHandler,
 		allowHandler,
 		uDeny.New(rules.URLRegexpBan, f2b),
