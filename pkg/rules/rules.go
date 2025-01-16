@@ -16,12 +16,13 @@ type Urlregexp struct {
 
 // Rules struct fail2ban config.
 type Rules struct {
-	Bantime    string      `yaml:"bantime"`  // exprimate in a smart way: 3m
-	Enabled    bool        `yaml:"enabled"`  // enable or disable the jail
-	Findtime   string      `yaml:"findtime"` // exprimate in a smart way: 3m
-	Maxretry   int         `yaml:"maxretry"`
-	Urlregexps []Urlregexp `yaml:"urlregexps"`
-	StatusCode string      `yaml:"statuscode"`
+	Bantime        string      `yaml:"bantime"`  // exprimate in a smart way: 3m
+	Enabled        bool        `yaml:"enabled"`  // enable or disable the jail
+	Findtime       string      `yaml:"findtime"` // exprimate in a smart way: 3m
+	Maxretry       int         `yaml:"maxretry"`
+	Urlregexps     []Urlregexp `yaml:"urlregexps"`
+	StatusCode     string      `yaml:"statuscode"`
+	SourceIPHeader string      `json:"sourceIpHeader,omitempty" toml:"sourceIpHeader,omitempty,omitempty" yaml:"sourceIpHeader"`
 }
 
 // RulesTransformed transformed Rules struct.
@@ -33,6 +34,7 @@ type RulesTransformed struct {
 	MaxRetry       int
 	Enabled        bool
 	StatusCode     string
+	SourceIPHeader string
 }
 
 // TransformRule morph a Rules object into a RulesTransformed.
@@ -75,6 +77,7 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 		MaxRetry:       r.Maxretry,
 		Enabled:        r.Enabled,
 		StatusCode:     r.StatusCode,
+		SourceIPHeader: r.SourceIPHeader,
 	}
 
 	return rules, nil
