@@ -160,7 +160,7 @@ func setupCloudflare(ctx context.Context, config *Config) (*cloudflare.Client, [
 	return cf, blocks, nil
 }
 
-// Add this function to validate the persistence path
+// Add this function to validate the persistence path.
 func validatePersistencePath(path string) error {
 	if path == "" {
 		return nil
@@ -191,6 +191,7 @@ func validatePersistencePath(path string) error {
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	if !config.Rules.Enabled {
 		fmt.Println("Plugin: FailToBan is disabled")
+
 		return next, nil
 	}
 
@@ -203,6 +204,7 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 	// Configure persistence
 	var store persistence.Store
+
 	if config.PersistencePath != "" {
 		absPath, _ := filepath.Abs(config.PersistencePath) // Error already checked in validation
 		store = persistence.NewFileStore(absPath)
@@ -227,7 +229,9 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 	}
 
 	var cf *cloudflare.Client
+
 	var cfBlocks []persistence.BlockedIP
+
 	var cfErr error
 
 	if config.Cloudflare.Enabled {

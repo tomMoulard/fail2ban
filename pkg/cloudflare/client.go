@@ -434,14 +434,17 @@ func (c *Client) UnblockIP(ctx context.Context, ip string) error {
 			// Compare both IPs in their canonical form
 			ruleIP := net.ParseIP(rule.Configuration.Value)
 			targetIP := net.ParseIP(ip)
+
 			if ruleIP != nil && targetIP != nil && ruleIP.Equal(targetIP) {
 				ruleID = rule.ID
+
 				break
 			}
 		}
 
 		if ruleID == "" {
 			fmt.Printf("[Cloudflare] No rule found for IP %s", ip)
+
 			return nil
 		}
 	}
@@ -473,6 +476,7 @@ func (c *Client) UnblockIP(ctx context.Context, ip string) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+
 		return fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
 	}
 
@@ -648,6 +652,7 @@ func (c *Client) UnblockByRuleID(ctx context.Context, ruleID string) error {
 	}
 
 	endpoint := fmt.Sprintf("%s/zones/%s/firewall/rules/%s", c.baseURL, c.zoneID, ruleID)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, endpoint, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
