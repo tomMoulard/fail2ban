@@ -22,7 +22,7 @@ type Rules struct {
 	Maxretry       int         `yaml:"maxretry"`
 	Urlregexps     []Urlregexp `yaml:"urlregexps"`
 	StatusCode     string      `yaml:"statuscode"`
-	SourceIPHeader string      `json:"sourceIpHeader,omitempty" toml:"sourceIpHeader,omitempty,omitempty" yaml:"sourceIpHeader"`
+	SourceIPHeader string      `yaml:"sourceIpHeader"`
 }
 
 // RulesTransformed transformed Rules struct.
