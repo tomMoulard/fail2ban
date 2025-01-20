@@ -31,7 +31,7 @@ func GetRemoteIP(r *http.Request, sourceIPHeader string) (string, error) {
 				return ip, nil
 			}
 
-			return "", fmt.Errorf("invalid IP address in header %s: %s", sourceIPHeader, headerIP)
+			return "", fmt.Errorf("invalid IP address in header %q: %q", sourceIPHeader, headerIP)
 		}
 	}
 
