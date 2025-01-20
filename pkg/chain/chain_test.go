@@ -9,7 +9,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
 )
+
+var testHeaderName = "X-Forwarded-For"
+
+var testSourceCriterion = rules.SourceCriterion{
+	RequestHeaderName: &testHeaderName,
+}
 
 type mockHandler struct {
 	called         int
@@ -100,10 +107,10 @@ func TestChain(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			c := New(test.finalHandler, "X-Forwarded-For", test.handlers...)
+			c := New(test.finalHandler, testSourceCriterion, test.handlers...)
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err := data.ServeHTTP(recorder, req, "X-Forwarded-For")
+			req, err := data.ServeHTTP(recorder, req, testSourceCriterion)
 			require.NoError(t, err)
 
 			c.ServeHTTP(recorder, req)
@@ -142,7 +149,7 @@ func TestChainOrder(t *testing.T) {
 		expectedCalled: 1,
 	}
 
-	ch := New(final, "X-Forwarded-For", a, b, c)
+	ch := New(final, testSourceCriterion, a, b, c)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
@@ -176,7 +183,7 @@ func TestChainRequestContext(t *testing.T) {
 		expectedCalled: 1,
 	}
 
-	ch := New(final, "X-Forwarded-For", handler)
+	ch := New(final, testSourceCriterion, handler)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
@@ -192,7 +199,7 @@ func TestChainWithStatus(t *testing.T) {
 	final := &mockHandler{expectedCalled: 0}
 	status := &mockHandler{expectedCalled: 1}
 
-	ch := New(final, "X-Forwarded-For", handler)
+	ch := New(final, testSourceCriterion, handler)
 	ch.WithStatus(status)
 
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)

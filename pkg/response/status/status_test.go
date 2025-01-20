@@ -16,6 +16,12 @@ import (
 	utime "github.com/tomMoulard/fail2ban/pkg/utils/time"
 )
 
+var testHeaderName = "X-Forwarded-For"
+
+var testSourceCriterion = rules.SourceCriterion{
+	RequestHeaderName: &testHeaderName,
+}
+
 func TestStatus(t *testing.T) {
 	t.Parallel()
 
@@ -120,7 +126,7 @@ func TestStatus(t *testing.T) {
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err = data.ServeHTTP(recorder, req, "X-Forwarded-For")
+			req, err = data.ServeHTTP(recorder, req, testSourceCriterion)
 			require.NoError(t, err)
 
 			var b bytes.Buffer
