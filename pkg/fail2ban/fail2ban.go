@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
-	utime "github.com/tomMoulard/fail2ban/pkg/utils/time"
+	"github.com/jhalag/fail2ban/pkg/ipchecking"
+	"github.com/jhalag/fail2ban/pkg/rules"
+	utime "github.com/jhalag/fail2ban/pkg/utils/time"
 )
 
 // Fail2Ban is a fail2ban implementation.
@@ -27,7 +27,7 @@ func New(rules rules.RulesTransformed) *Fail2Ban {
 	}
 }
 
-// ShouldAllow check if the request should be allowed.
+// ShouldAllow check if the request should be allowed. Called when a request was DENIED - increments the denied counter.
 func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 	u.MuIP.Lock()
 	defer u.MuIP.Unlock()
@@ -71,6 +71,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		return true
 	}
 
+	//2025-02-19 JH: This is called regardless of if the call was denied upstream or not. It should only do it if that failed!
 	if utime.Now().Before(ip.Viewed.Add(u.rules.Findtime)) {
 		if ip.Count+1 >= u.rules.MaxRetry {
 			u.IPs[remoteIP] = ipchecking.IPViewed{
@@ -100,6 +101,55 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		Viewed: utime.Now(),
 		Count:  1,
 		Denied: false,
+	}
+
+	fmt.Printf("welcome back %q", remoteIP)
+
+	return true
+}
+
+// Non-incrementing check to see if an IP is already banned.
+func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
+	u.MuIP.Lock()
+	defer u.MuIP.Unlock()
+
+	ip, foundIP := u.IPs[remoteIP]
+
+	// Fail2Ban
+	if !foundIP {
+		u.IPs[remoteIP] = ipchecking.IPViewed{
+			Viewed: utime.Now(),
+			Count:  0,
+		}
+
+		fmt.Printf("welcome %q", remoteIP)
+
+		return true
+	}
+
+	if ip.Denied {
+		if utime.Now().Before(ip.Viewed.Add(u.rules.Bantime)) {
+			u.IPs[remoteIP] = ipchecking.IPViewed{
+				Viewed: utime.Now(), //refresh ban time
+				Count:  ip.Count + 1,
+				Denied: true,
+			}
+
+			fmt.Printf("%q is still banned since %q, %d request",
+				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
+
+			return false
+		}
+
+		u.IPs[remoteIP] = ipchecking.IPViewed{
+			Viewed: utime.Now(),
+			Count:  1,
+			Denied: false,
+		}
+
+		fmt.Println(remoteIP + " is no longer banned")
+
+		return true
 	}
 
 	fmt.Printf("welcome back %q", remoteIP)

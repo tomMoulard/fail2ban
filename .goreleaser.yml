@@ -13,7 +13,7 @@ release:
   github: {}
   prerelease: auto
   mode: append
-  footer: "**Full Changelog**: https://github.com/tomMoulard/fail2ban/compare/{{ .PreviousTag }}...{{ .Tag }}"
+  footer: "**Full Changelog**: https://github.com/jhalag/fail2ban/compare/{{ .PreviousTag }}...{{ .Tag }}"
 changelog:
   use: github
   sort: asc

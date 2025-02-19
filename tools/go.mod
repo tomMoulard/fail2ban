@@ -1,4 +1,4 @@
-module github.com/tomMoulard/fail2ban/tools
+module github.com/jhalag/fail2ban/tools
 
 go 1.23.0
 

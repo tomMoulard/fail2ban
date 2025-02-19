@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jhalag/fail2ban/pkg/data"
+	"github.com/jhalag/fail2ban/pkg/fail2ban"
+	"github.com/jhalag/fail2ban/pkg/ipchecking"
+	"github.com/jhalag/fail2ban/pkg/rules"
+	utime "github.com/jhalag/fail2ban/pkg/utils/time"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
-	utime "github.com/tomMoulard/fail2ban/pkg/utils/time"
 )
 
 func TestStatus(t *testing.T) {
