@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/jhalag/fail2ban/pkg/data"
 )
 
 // Status is a status that can be returned by a handler.

@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/jhalag/fail2ban/pkg/chain"
+	"github.com/jhalag/fail2ban/pkg/data"
+	"github.com/jhalag/fail2ban/pkg/ipchecking"
 )
 
 type allow struct {

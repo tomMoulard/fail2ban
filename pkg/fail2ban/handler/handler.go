@@ -5,9 +5,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
+	"github.com/jhalag/fail2ban/pkg/chain"
+	"github.com/jhalag/fail2ban/pkg/data"
+	"github.com/jhalag/fail2ban/pkg/fail2ban"
 )
 
 type handler struct {
@@ -26,7 +26,7 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.S
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	if !h.f2b.ShouldAllow(data.RemoteIP) {
+	if !h.f2b.IsNotBanned(data.RemoteIP) {
 		return &chain.Status{Return: true}, nil
 	}
 
