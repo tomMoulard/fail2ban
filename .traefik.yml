@@ -2,7 +2,7 @@ displayName: Fail2Ban
 type: middleware
 iconPath: .assets/f2b.png
 
-import: github.com/jhalag/fail2ban
+import: github.com/tomMoulard/fail2ban
 
 summary: 'Fail2ban for Traefik'
 

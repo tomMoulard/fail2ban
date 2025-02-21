@@ -9,15 +9,15 @@ import (
 	"os"
 	"strings"
 
-	"github.com/jhalag/fail2ban/pkg/chain"
-	"github.com/jhalag/fail2ban/pkg/fail2ban"
-	f2bHandler "github.com/jhalag/fail2ban/pkg/fail2ban/handler"
-	lAllow "github.com/jhalag/fail2ban/pkg/list/allow"
-	lDeny "github.com/jhalag/fail2ban/pkg/list/deny"
-	"github.com/jhalag/fail2ban/pkg/response/status"
-	"github.com/jhalag/fail2ban/pkg/rules"
-	uAllow "github.com/jhalag/fail2ban/pkg/url/allow"
-	uDeny "github.com/jhalag/fail2ban/pkg/url/deny"
+	"github.com/tomMoulard/fail2ban/pkg/chain"
+	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
+	f2bHandler "github.com/tomMoulard/fail2ban/pkg/fail2ban/handler"
+	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
+	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
+	"github.com/tomMoulard/fail2ban/pkg/response/status"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
+	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
+	uDeny "github.com/tomMoulard/fail2ban/pkg/url/deny"
 )
 
 func init() {
