@@ -4,9 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jhalag/fail2ban/pkg/ipchecking"
-	"github.com/jhalag/fail2ban/pkg/rules"
-	utime "github.com/jhalag/fail2ban/pkg/utils/time"
+	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
+	utime "github.com/tomMoulard/fail2ban/pkg/utils/time"
 	"github.com/stretchr/testify/assert"
 )
 

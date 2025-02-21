@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/jhalag/fail2ban/pkg/rules"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
 	"golang.org/x/net/websocket"
 )
 
@@ -327,7 +327,7 @@ func TestFail2Ban(t *testing.T) {
 	}
 }
 
-// https://github.com/jhalag/fail2ban/issues/67
+// https://github.com/tomMoulard/fail2ban/issues/67
 func TestDeadlockWebsocket(t *testing.T) {
 	t.Parallel()
 

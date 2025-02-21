@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/jhalag/fail2ban/pkg/chain"
-	"github.com/jhalag/fail2ban/pkg/data"
-	"github.com/jhalag/fail2ban/pkg/fail2ban"
-	"github.com/jhalag/fail2ban/pkg/ipchecking"
-	"github.com/jhalag/fail2ban/pkg/utils/time"
+	"github.com/tomMoulard/fail2ban/pkg/chain"
+	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
+	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/tomMoulard/fail2ban/pkg/utils/time"
 )
 
 type deny struct {
