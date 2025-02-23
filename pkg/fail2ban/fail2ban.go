@@ -71,7 +71,6 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		return true
 	}
 
-	//2025-02-19 JH: This is called regardless of if the call was denied upstream or not. It should only do it if that failed!
 	if utime.Now().Before(ip.Viewed.Add(u.rules.Findtime)) {
 		if ip.Count+1 >= u.rules.MaxRetry {
 			u.IPs[remoteIP] = ipchecking.IPViewed{

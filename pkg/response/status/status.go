@@ -46,7 +46,7 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("catcher: %+v", *catcher)
 
-	if !catcher.isFilteredCode() {
+	if !catcher.isFilteredCode() { //is this not a status code of concern? Return and do not increment fail counter.
 		w.WriteHeader(catcher.getCode())
 
 		return
