@@ -417,7 +417,7 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 					StatusCode: "404",
 				},
 			},
-			//multiple OKs in a row should not result in a ban
+			// multiple OKs in a row should not result in a ban
 			handlerStatus: []int{http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
 			expectStatus:  []int{http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
 		},
@@ -446,7 +446,7 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 					StatusCode: "404",
 				},
 			},
-			//the remaining OKs will not reach the client as it is banned
+			// the remaining OKs will not reach the client as it is banned
 			handlerStatus: []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusNotFound, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
 			expectStatus:  []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden},
 		},
@@ -454,12 +454,14 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				testno, err := strconv.Atoi(r.Header.Get("testno"))
+				testno, err := strconv.Atoi(r.Header.Get("Testno"))
 				if err != nil {
 					t.Fatalf("Error parsing header: %v", err)
 				}
+
 				w.WriteHeader(testno)
 			})
 
@@ -470,7 +472,8 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 
 			for i := range test.handlerStatus {
 				rw := httptest.NewRecorder()
-				req.Header.Set("testno", fmt.Sprintf("%d", test.handlerStatus[i])) // pass the expected value to the mock handler (fail2ban response code may differ)
+
+				req.Header.Set("Testno", strconv.Itoa(test.handlerStatus[i])) // pass the expected value to the mock handler (fail2ban response code may differ)
 				handler.ServeHTTP(rw, req)
 
 				if rw.Code != test.expectStatus[i] {
