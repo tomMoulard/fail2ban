@@ -128,16 +128,16 @@ func TestStatus(t *testing.T) {
 			d.ServeHTTP(recorder, req)
 			t.Logf("recorder: %+v", recorder)
 
-			//workaround for time.Now() not matching between expected and actual
+			// workaround for time.Now() not matching between expected and actual
 			for k, v := range test.expectedIPViewed {
-				//equal size maps
+				// equal size maps
 				assert.Equal(t, len(test.expectedIPViewed), len(f2b.IPs))
 
-				//expected key exists
+				// expected key exists
 				_, ok := f2b.IPs[k]
 				assert.True(t, ok)
 
-				//copy timestamp, as it will not match otherwise. Then compare
+				// copy timestamp, as it will not match otherwise. Then compare
 				v.Viewed = f2b.IPs[k].Viewed
 				assert.Equal(t, v, f2b.IPs[k])
 			}

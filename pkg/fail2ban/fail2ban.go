@@ -107,7 +107,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 	return true
 }
 
-// Non-incrementing check to see if an IP is already banned.
+// IsNotBanned Non-incrementing check to see if an IP is already banned.
 func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
 	u.MuIP.Lock()
 	defer u.MuIP.Unlock()
@@ -129,7 +129,7 @@ func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
 	if ip.Denied {
 		if utime.Now().Before(ip.Viewed.Add(u.rules.Bantime)) {
 			u.IPs[remoteIP] = ipchecking.IPViewed{
-				Viewed: utime.Now(), //refresh ban time
+				Viewed: utime.Now(), // refresh ban time
 				Count:  ip.Count + 1,
 				Denied: true,
 			}
