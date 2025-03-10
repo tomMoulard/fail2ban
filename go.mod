@@ -1,10 +1,11 @@
 module github.com/tomMoulard/fail2ban
 
 go 1.22.2
+toolchain go1.23.7
 
 require (
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/net v0.34.0
+	golang.org/x/net v0.37.0
 )
 
 require (
