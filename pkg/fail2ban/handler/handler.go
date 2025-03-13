@@ -26,7 +26,7 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.S
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	if !h.f2b.ShouldAllow(data.RemoteIP) {
+	if !h.f2b.IsNotBanned(data.RemoteIP) {
 		return &chain.Status{Return: true}, nil
 	}
 
