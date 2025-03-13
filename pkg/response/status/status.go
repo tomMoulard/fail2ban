@@ -3,6 +3,7 @@ package status
 
 import (
 	"fmt"
+	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"net/http"
 	"strings"
 
@@ -29,14 +30,14 @@ func New(next http.Handler, statusCode string, f2b *fail2ban.Fail2Ban) (*status,
 	}, nil
 }
 
-func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status, error) {
 	fmt.Printf("status handler")
 
 	data := data.GetData(r)
 	if data == nil {
 		fmt.Print("data is nil")
 
-		return
+		return nil, nil
 	}
 
 	fmt.Printf("data: %+v", data)
@@ -49,21 +50,18 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !catcher.isFilteredCode() {
 		w.WriteHeader(catcher.getCode())
 
-		return
+		return nil, nil
 	}
 
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
 		fmt.Printf("IP %s is banned", data.RemoteIP)
-		w.WriteHeader(http.StatusForbidden)
 
-		return
+		return &chain.Status{Return: true}, nil
 	}
 
 	fmt.Printf("IP %s is allowed", data.RemoteIP)
 	w.WriteHeader(catcher.getCode())
 
-	if _, err := w.Write(catcher.bytes); err != nil {
-		fmt.Printf("failed to write to response: %v", err)
-	}
+	return &chain.Status{Break: true}, nil
 }

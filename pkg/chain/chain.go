@@ -80,11 +80,5 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if c.status != nil {
-		(*c.status).ServeHTTP(w, r)
-
-		return
-	}
-
 	c.final.ServeHTTP(w, r)
 }
