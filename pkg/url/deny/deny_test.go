@@ -49,7 +49,7 @@ func TestDeny(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			f2b := fail2ban.New(rules.RulesTransformed{})
+			f2b := fail2ban.New(rules.RulesTransformed{}, nil)
 			d := New(test.regs, f2b)
 
 			recorder := &httptest.ResponseRecorder{}
