@@ -4,12 +4,12 @@
 all: spell lint build test
 
 .PHONY: ci
-ci: inst tidy all vulncheck
+ci: tidy all vulncheck
 
 .PHONY: lint
 lint:
-	goreleaser check
-	golangci-lint run
+	go tool goreleaser check
+	go tool golangci-lint run
 
 .PHONY: test
 TEST_ARGS ?= -v -cover -race -tags DEBUG,TEST
@@ -26,7 +26,7 @@ clean:
 .PHONY: yaegi_test
 YAEGI_TEST_ARGS ?= -v
 yaegi_test: vendor
-	yaegi test ${YAEGI_TEST_ARGS} .
+	go tool yaegi test ${YAEGI_TEST_ARGS} .
 
 .PHONY: entr
 # https://github.com/eradman/entr
@@ -36,25 +36,19 @@ entr:
 .PHONY: tidy
 tidy:
 	go mod tidy
-	cd tools && go mod tidy
 
 .PHONY: spell
 spell:
-	misspell -error -locale=US -w **.md
-
-.PHONY: inst
-inst:
-	cd tools && go install $(shell cd tools && go list -e -f '{{ join .Imports " " }}' -tags=tools)
+	go tool misspell -error -locale=US -w **.md
 
 .PHONY: mod
 mod: ## go mod tidy
 	go mod tidy
-	cd tools && go mod tidy
 
 .PHONY: vulncheck
 vulncheck:
-	govulncheck ./...
+	go tool govulncheck ./...
 
 .PHONY: build
 build:
-	goreleaser build --clean --single-target --snapshot
+	go tool goreleaser build --clean --single-target --snapshot
