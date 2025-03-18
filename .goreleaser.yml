@@ -3,12 +3,10 @@ version: 2
 before:
   hooks:
     - go mod download
+
 builds:
   - skip: true
-archives:
-  - format_overrides:
-      - goos: windows
-        format: zip
+
 release:
   github: {}
   prerelease: auto

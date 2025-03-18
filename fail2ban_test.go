@@ -1,7 +1,6 @@
 package fail2ban
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -299,7 +298,7 @@ func TestFail2Ban(t *testing.T) {
 				nextCount.Add(1)
 			})
 
-			handler, err := New(context.Background(), next, test.cfg, "fail2ban_test")
+			handler, err := New(t.Context(), next, test.cfg, "fail2ban_test")
 			if err != nil {
 				if test.newError != (err != nil) {
 					t.Errorf("newError: wanted '%t' got '%t'", test.newError, err != nil)
@@ -347,7 +346,7 @@ func TestDeadlockWebsocket(t *testing.T) {
 	cfg := CreateConfig()
 	cfg.Rules.Maxretry = 20
 
-	handler, err := New(context.Background(), next, cfg, "fail2ban_test")
+	handler, err := New(t.Context(), next, cfg, "fail2ban_test")
 	if err != nil {
 		t.Fatal(err)
 	}
