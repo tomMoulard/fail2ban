@@ -458,9 +458,7 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				testno, err := strconv.Atoi(r.Header.Get("Testno"))
-				if err != nil {
-					t.Fatalf("Error parsing header: %v", err)
-				}
+				require.NoError(t, err)
 
 				w.WriteHeader(testno)
 			})
@@ -476,9 +474,7 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 				req.Header.Set("Testno", strconv.Itoa(test.handlerStatus[i])) // pass the expected value to the mock handler (fail2ban response code may differ)
 				handler.ServeHTTP(rw, req)
 
-				if rw.Code != test.expectStatus[i] {
-					t.Fatalf("request [%d] code: got %d, expected %d", i, rw.Code, test.expectStatus[i])
-				}
+				assert.Equal(t, test.expectStatus[i], rw.Code, "request [%d] code", i)
 			}
 		})
 	}

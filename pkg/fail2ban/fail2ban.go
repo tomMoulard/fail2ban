@@ -27,7 +27,8 @@ func New(rules rules.RulesTransformed) *Fail2Ban {
 	}
 }
 
-// ShouldAllow check if the request should be allowed. Called when a request was DENIED - increments the denied counter.
+// ShouldAllow check if the request should be allowed.
+// Called when a request was DENIED - increments the denied counter.
 func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 	u.MuIP.Lock()
 	defer u.MuIP.Unlock()
