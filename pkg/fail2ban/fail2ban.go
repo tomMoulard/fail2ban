@@ -7,23 +7,25 @@ import (
 	"time"
 
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/tomMoulard/fail2ban/pkg/notifications"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
 	utime "github.com/tomMoulard/fail2ban/pkg/utils/time"
 )
 
 // Fail2Ban is a fail2ban implementation.
 type Fail2Ban struct {
-	rules rules.RulesTransformed
-
-	MuIP sync.Mutex
-	IPs  map[string]ipchecking.IPViewed
+	rules    rules.RulesTransformed
+	notifSrv *notifications.Service
+	MuIP     sync.Mutex
+	IPs      map[string]ipchecking.IPViewed
 }
 
 // New creates a new Fail2Ban.
-func New(rules rules.RulesTransformed) *Fail2Ban {
+func New(rules rules.RulesTransformed, notifSrv *notifications.Service) *Fail2Ban {
 	return &Fail2Ban{
-		rules: rules,
-		IPs:   make(map[string]ipchecking.IPViewed),
+		rules:    rules,
+		notifSrv: notifSrv,
+		IPs:      make(map[string]ipchecking.IPViewed),
 	}
 }
 
@@ -67,6 +69,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		}
 
 		fmt.Println(remoteIP + " is no longer banned")
+		u.notify(notifications.UnbanEvent(remoteIP, fmt.Sprintf("%q is no longer banned", remoteIP)))
 
 		return true
 	}
@@ -78,9 +81,10 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 				Count:  ip.Count + 1,
 				Denied: true,
 			}
-
-			fmt.Printf("%q is banned for %d>=%d request",
+			msg := fmt.Sprintf("%q is banned for %d>=%d request",
 				remoteIP, ip.Count+1, u.rules.MaxRetry)
+			fmt.Printf("%s", msg)
+			u.notify(notifications.BanEvent(remoteIP, msg, u.rules.Bantime))
 
 			return false
 		}
@@ -105,4 +109,12 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 	fmt.Printf("welcome back %q", remoteIP)
 
 	return true
+}
+
+func (u *Fail2Ban) notify(event notifications.Event) {
+	if u.notifSrv == nil {
+		return
+	}
+
+	u.notifSrv.Notify(event)
 }

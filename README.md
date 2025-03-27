@@ -226,6 +226,141 @@ A |--x--x--x---->            |------------->
 B          |--x---------->
 ```
 
+## Notifications
+
+The fail2ban middleware supports sending notifications through multiple channels when ban/unban events occur. The following notification channels are supported:
+
+- Telegram
+- Discord Webhooks  
+- Email (SMTP)
+- Custom Webhooks
+
+### Channel-Specific Features
+
+#### Telegram
+- Supports HTML formatting
+- Full template customization
+- Supports all template variables
+
+#### Discord
+- Uses embedded message format
+- Customizable webhook username and avatar
+- Configurable title
+- Fields: IP Address, Ban Duration
+- Red color for ban events, green for unban events
+- Timestamp display
+
+#### Email
+- HTML email format
+- Customizable subject line
+- Supports all template variables
+- Maintains persistent SMTP connection
+- TLS support
+
+#### Custom Webhooks
+- Configurable HTTP method
+- Custom headers support
+- Full template customization
+- JSON payload format
+
+### Template Variables
+
+The following variables are available for template customization (except Discord):
+
+- `{{.IP}}` - The IP address that triggered the event
+- `{{.Message}}` - Event message/reason
+- `{{.Timestamp}}` - Event timestamp (format: "2006-01-02 15:04:05")
+- `{{.Duration}}` - Ban duration (only available for ban events)
+
+### Default Templates
+
+If no custom templates are provided, these defaults will be used:
+
+
+### Configuration
+
+Notifications can be configured in the middleware config:
+
+```yml
+testData:
+  notifications:
+    # List of event types to notify on (ban, unban)
+    allowedTypes: ["ban", "unban"]
+    
+    # Telegram configuration
+    telegram:
+      enabled: true
+      botToken: "your-bot-token" 
+      chatId: "your-chat-id"
+      templates:
+        ban: "🚫 IP Ban Alert\nIP: {{.IP}}\nReason: {{.Message}}"
+        unban: "✅ IP Unban Alert\nIP: {{.IP}}"
+
+    # Discord webhook configuration  
+    discord:
+      enabled: true
+      webhookUrl: "your-webhook-url"
+      title: "🚫 IP Ban Details"
+      username: "Fail2Ban Bot"
+      avatarUrl: "https://example.com/avatar.png"
+
+    # Email configuration
+    email:
+      enabled: true
+      server: "smtp.example.com"
+      port: 587
+      username: "user@example.com" 
+      password: "password"
+      from: "from@example.com"
+      to: "to@example.com"
+      templates:
+        ban: "{{.IP}} banned for {{.Duration}}"
+        unban: "{{.IP}} unbanned"
+
+    # Custom webhook configuration
+    webhook:
+      enabled: true
+      url: "https://example.com/webhook"
+      method: "POST"
+      headers:
+        Authorization: "Bearer token"
+      templates:
+        ban: "IP {{.IP}} has been banned"
+        unban: "IP {{.IP}} has been unbanned"
+```
+
+### Templates
+
+Each notification channel supports customizable message templates using Go template syntax. The following variables are available:
+
+- `{{.IP}}` - The IP address that triggered the event
+- `{{.Message}}` - Event message/reason
+- `{{.Timestamp}}` - Event timestamp
+- `{{.Duration}}` - Ban duration (only available for ban events)
+
+If no custom templates are provided, default templates will be used for each event type:
+
+```yml
+# Default Ban Template
+🚫 IP Ban Alert
+IP: {{.IP}}
+Reason: {{.Message}}
+Time: {{.Timestamp.Format "2006-01-02 15:04:05"}}
+Duration: {{.Duration}}
+
+# Default Unban Template
+✅ IP Unban Alert
+IP: {{.IP}}
+Reason: {{.Message}}
+Time: {{.Timestamp.Format "2006-01-02 15:04:05"}}
+
+# Default Notice Template
+ℹ️ Notice
+IP: {{.IP}}
+Message: {{.Message}}
+Time: {{.Timestamp.Format "2006-01-02 15:04:05"}}
+```
+
 ## How to dev
 
 ```bash

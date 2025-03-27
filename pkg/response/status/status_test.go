@@ -113,7 +113,7 @@ func TestStatus(t *testing.T) {
 				MaxRetry: 1,
 				Findtime: 300 * time.Second,
 				Bantime:  300 * time.Second,
-			})
+			}, nil)
 			f2b.IPs = test.ips
 			d, err := New(next, test.codeRanges, f2b)
 			require.NoError(t, err)
