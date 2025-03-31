@@ -132,10 +132,7 @@ func TestStatus(t *testing.T) {
 
 			// workaround for time.Now() not matching between expected and actual
 			for k, v := range test.expectedIPViewed {
-
-				// expected key exists
-				_, ok := f2b.IPs[k]
-				assert.True(t, ok)
+				assert.Contains(t, f2b.IPs, k)
 
 				// copy timestamp, as it will not match otherwise. Then compare
 				v.Viewed = f2b.IPs[k].Viewed

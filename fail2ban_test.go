@@ -1,7 +1,6 @@
 package fail2ban
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
 	"golang.org/x/net/websocket"
 )
@@ -461,12 +459,12 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				testno, err := strconv.Atoi(r.Header.Get("Testno"))
-				require.NoError(t, err)
+				assert.NoError(t, err)
 
 				w.WriteHeader(testno)
 			})
 
-			handler, _ := New(context.Background(), next, test.cfg, "fail2ban_test")
+			handler, _ := New(t.Context(), next, test.cfg, "fail2ban_test")
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.RemoteAddr = remoteAddr + ":1234"

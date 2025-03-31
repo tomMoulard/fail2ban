@@ -12,7 +12,7 @@ lint:
 	go tool golangci-lint run
 
 .PHONY: test
-TEST_ARGS ?= -v -cover -race -tags DEBUG,TEST
+TEST_ARGS ?= -cover -race -tags DEBUG,TEST
 test:
 	go test ${TEST_ARGS} ./...
 
