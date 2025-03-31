@@ -28,6 +28,7 @@ func New(rules rules.RulesTransformed) *Fail2Ban {
 }
 
 // ShouldAllow check if the request should be allowed.
+// Called when a request was DENIED - increments the denied counter.
 func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 	u.MuIP.Lock()
 	defer u.MuIP.Unlock()
@@ -100,6 +101,55 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		Viewed: utime.Now(),
 		Count:  1,
 		Denied: false,
+	}
+
+	fmt.Printf("welcome back %q", remoteIP)
+
+	return true
+}
+
+// IsNotBanned Non-incrementing check to see if an IP is already banned.
+func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
+	u.MuIP.Lock()
+	defer u.MuIP.Unlock()
+
+	ip, foundIP := u.IPs[remoteIP]
+
+	// Fail2Ban
+	if !foundIP {
+		u.IPs[remoteIP] = ipchecking.IPViewed{
+			Viewed: utime.Now(),
+			Count:  0,
+		}
+
+		fmt.Printf("welcome %q", remoteIP)
+
+		return true
+	}
+
+	if ip.Denied {
+		if utime.Now().Before(ip.Viewed.Add(u.rules.Bantime)) {
+			u.IPs[remoteIP] = ipchecking.IPViewed{
+				Viewed: utime.Now(), // refresh ban time
+				Count:  ip.Count + 1,
+				Denied: true,
+			}
+
+			fmt.Printf("%q is still banned since %q, %d request",
+				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
+
+			return false
+		}
+
+		u.IPs[remoteIP] = ipchecking.IPViewed{
+			Viewed: utime.Now(),
+			Count:  1,
+			Denied: false,
+		}
+
+		fmt.Println(remoteIP + " is no longer banned")
+
+		return true
 	}
 
 	fmt.Printf("welcome back %q", remoteIP)

@@ -6,10 +6,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
 	"golang.org/x/net/websocket"
 )
@@ -392,5 +394,89 @@ func TestDeadlockWebsocket(t *testing.T) {
 
 	if concurentWSCount.Load() != 10 {
 		t.Errorf("wanted %d got %d", 10, concurentWSCount.Load())
+	}
+}
+
+func TestFail2Ban_SuccessiveRequests(t *testing.T) {
+	t.Parallel()
+
+	remoteAddr := "10.0.0.0"
+	tests := []struct {
+		name          string
+		cfg           *Config
+		handlerStatus []int // HTTP code the internal HTTP handler should return
+		expectStatus  []int // HTTP code the downstream client should request after passing through fail2ban
+	}{
+		{
+			name: "rule enabled, 200 code does not increment count or ban",
+			cfg: &Config{
+				Rules: rules.Rules{
+					Enabled:    true,
+					Bantime:    "300s",
+					Findtime:   "300s",
+					Maxretry:   3,
+					StatusCode: "404",
+				},
+			},
+			// multiple OKs in a row should not result in a ban
+			handlerStatus: []int{http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
+			expectStatus:  []int{http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
+		},
+		{
+			name: "rule enabled, single 404 does not ban",
+			cfg: &Config{
+				Rules: rules.Rules{
+					Enabled:    true,
+					Bantime:    "300s",
+					Findtime:   "300s",
+					Maxretry:   3,
+					StatusCode: "404",
+				},
+			},
+			handlerStatus: []int{http.StatusNotFound, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
+			expectStatus:  []int{http.StatusNotFound, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
+		},
+		{
+			name: "rule enabled, multiple 404 causes ban",
+			cfg: &Config{
+				Rules: rules.Rules{
+					Enabled:    true,
+					Bantime:    "300s",
+					Findtime:   "300s",
+					Maxretry:   3,
+					StatusCode: "404",
+				},
+			},
+			// the remaining OKs will not reach the client as it is banned
+			handlerStatus: []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusNotFound, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
+			expectStatus:  []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				testno, err := strconv.Atoi(r.Header.Get("Testno"))
+				assert.NoError(t, err)
+
+				w.WriteHeader(testno)
+			})
+
+			handler, _ := New(t.Context(), next, test.cfg, "fail2ban_test")
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = remoteAddr + ":1234"
+
+			for i := range test.handlerStatus {
+				rw := httptest.NewRecorder()
+
+				req.Header.Set("Testno", strconv.Itoa(test.handlerStatus[i])) // pass the expected value to the mock handler (fail2ban response code may differ)
+				handler.ServeHTTP(rw, req)
+
+				assert.Equal(t, test.expectStatus[i], rw.Code, "request [%d] code", i)
+			}
+		})
 	}
 }

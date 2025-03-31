@@ -60,7 +60,16 @@ func TestDeny(t *testing.T) {
 			got, err := d.ServeHTTP(recorder, req)
 			require.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, got)
-			assert.Equal(t, test.expectedIPViewed, f2b.IPs)
+			require.Equal(t, len(test.expectedIPViewed), len(f2b.IPs))
+
+			// workaround for time.Now() not matching between expected and actual
+			for k, v := range test.expectedIPViewed {
+				assert.Contains(t, f2b.IPs, k)
+
+				// copy timestamp, as it will not match otherwise. Then compare
+				v.Viewed = f2b.IPs[k].Viewed
+				assert.Equal(t, v, f2b.IPs[k])
+			}
 		})
 	}
 }
