@@ -1,6 +1,7 @@
 package fail2ban
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
