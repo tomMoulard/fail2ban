@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:latest
+    image: traefik:v3.3
     command:
       - --api.insecure=true
       - --providers.docker
@@ -18,7 +18,7 @@ services:
     tty: true
 
   whoami:
-    image: traefik/whoami
+    image: traefik/whoami # https://github.com/traefik/whoami
     command: >-
       -name whoami -verbose true
     labels:
