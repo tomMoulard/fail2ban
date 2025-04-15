@@ -103,6 +103,10 @@ testData:
     maxretry: 4
     enabled: true
     statuscode: "400,401,403-499"
+    sourceCriterion:
+      requestHeaderName: "CF-Connecting-IP"
+      ipStrategy:
+        depth: 1
 ```
 
 Where:
@@ -116,6 +120,38 @@ enable the plugin).
  - `urlregexp`: a regexp list to block / allow requests with regexps on the url
  - `statuscode`: a comma separated list of status code (or range of status
 codes) to consider as a failed request.
+ - `sourceCriterion`: (optional) configures how to determine the client IP:
+   - `requestHeaderName`: specifies which header to use for client IP identification
+   - `ipStrategy`: configures how to extract the IP from the header:
+     - `depth`: (optional) which IP to pick from right when header contains multiple IPs
+
+   Common header values include:
+   - `X-Forwarded-For` - Standard proxy header
+   - `X-Real-IP` - Often used by Nginx
+   - `CF-Connecting-IP` - Cloudflare
+   - `True-Client-IP` - Akamai and Cloudflare
+   
+   When no sourceCriterion is specified or when the specified header is missing/invalid,
+   the plugin falls back to using the remote address.
+
+   Examples:
+   ```yaml
+   # Use first IP from X-Forwarded-For
+   sourceCriterion:
+     requestHeaderName: "X-Forwarded-For"
+
+   # Use last IP from X-Forwarded-For
+   sourceCriterion:
+     requestHeaderName: "X-Forwarded-For" 
+     ipStrategy:
+       depth: 1
+
+   # Use second to last IP from X-Forwarded-For
+   sourceCriterion:
+     requestHeaderName: "X-Forwarded-For"
+     ipStrategy:
+       depth: 2
+   ```
 
 #### URL Regexp
 Urlregexp are used to defined witch part of your website will be either
