@@ -26,7 +26,7 @@ clean:
 .PHONY: yaegi_test
 YAEGI_TEST_ARGS ?= -v
 yaegi_test: vendor
-	go tool yaegi test ${YAEGI_TEST_ARGS} .
+	go run github.com/traefik/yaegi/cmd/yaegi@v0.16.1 test ${YAEGI_TEST_ARGS} .
 
 .PHONY: entr
 # https://github.com/eradman/entr
