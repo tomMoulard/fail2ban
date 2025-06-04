@@ -11,7 +11,6 @@ tool (
 	github.com/golangci/golangci-lint/cmd/golangci-lint
 	github.com/golangci/misspell/cmd/misspell
 	github.com/goreleaser/goreleaser/v2
-	github.com/traefik/yaegi/cmd/yaegi
 	golang.org/x/vuln/cmd/govulncheck
 )
 
@@ -412,7 +411,6 @@ require (
 	github.com/tomarrell/wrapcheck/v2 v2.10.0 // indirect
 	github.com/tommy-muehle/go-mnd/v2 v2.5.1 // indirect
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
-	github.com/traefik/yaegi v0.16.1 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/ultraware/funlen v0.2.0 // indirect
 	github.com/ultraware/whitespace v0.2.0 // indirect
