@@ -55,9 +55,12 @@ func makeTmplOrDefault(tp EventType, tmpl string) *template.Template {
 
 	t, err := template.New(string(tp)).Parse(tmpl)
 	if err != nil {
-		log.Printf("failed to parse %s template: %v", tp, err)
-
-		return nil
+		log.Printf("failed to parse %s template: %v, falling back to default template", tp, err)
+		t, err = template.New(string(tp)).Parse(defaultTemplatesMapping[tp])
+		if err != nil {
+			log.Printf("failed to parse default template for %s: %v", tp, err)
+			return nil
+		}
 	}
 
 	return t
