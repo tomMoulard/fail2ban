@@ -50,7 +50,7 @@ func (w *WebhookNotifier) Send(event Event) error {
 
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode/100 != 2 {
 		return fmt.Errorf("webhook request failed with status: %d", resp.StatusCode)
 	}
 
