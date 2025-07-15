@@ -34,7 +34,8 @@ type List struct {
 type Config struct {
 	Denylist  List        `yaml:"denylist"`
 	Allowlist List        `yaml:"allowlist"`
-	Rules     rules.Rules `yaml:"port"`
+	// Rules for Fail2Ban behaviour.
+	Rules     rules.Rules `yaml:"rules"`
 
 	// deprecated
 	Blacklist List `yaml:"blacklist"`
@@ -63,13 +64,25 @@ func ImportIP(list List) ([]string, error) {
 			return nil, fmt.Errorf("error when getting file content: %w", err)
 		}
 
-		rlist = append(rlist, strings.Split(string(content), "\n")...)
-		if len(rlist) > 1 {
-			rlist = rlist[:len(rlist)-1]
+		// Split the file content by new lines and ignore blank lines (handles
+		// both the presence and absence of a trailing newline gracefully).
+		for _, line := range strings.Split(string(content), "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" {
+				rlist = append(rlist, line)
+			}
 		}
 	}
 
-	rlist = append(rlist, list.IP...)
+	// Append IPs coming from the inline configuration and ignore empty
+	// entries so that a trailing comma in YAML does not produce an empty
+	// string.
+	for _, ip := range list.IP {
+		ip = strings.TrimSpace(ip)
+		if ip != "" {
+			rlist = append(rlist, ip)
+		}
+	}
 
 	return rlist, nil
 }

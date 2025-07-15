@@ -18,18 +18,23 @@ func NewHTTPCodeRanges(strBlocks []string) (HTTPCodeRanges, error) {
 	blocks := make(HTTPCodeRanges, 0, len(strBlocks))
 
 	for _, block := range strBlocks {
+		block = strings.TrimSpace(block)
+		if block == "" {
+			continue // skip empty fragments that may appear due to trailing commas
+		}
+
 		codes := strings.Split(block, "-")
 		// if only a single HTTP code was configured, assume the best and create the correct configuration on the user's behalf
 		if len(codes) == 1 {
 			codes = append(codes, codes[0])
 		}
 
-		lowCode, err := strconv.Atoi(codes[0])
+		lowCode, err := strconv.Atoi(strings.TrimSpace(codes[0]))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse HTTP code: %w", err)
 		}
 
-		highCode, err := strconv.Atoi(codes[1])
+		highCode, err := strconv.Atoi(strings.TrimSpace(codes[1]))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse HTTP code: %w", err)
 		}
