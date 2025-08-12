@@ -215,6 +215,7 @@ func TestHeaderCopying(t *testing.T) {
 				for k, v := range test.respHeaders {
 					w.Header().Set(k, v)
 				}
+
 				w.WriteHeader(test.respStatusCode)
 				_, _ = w.Write([]byte("test body"))
 			})
