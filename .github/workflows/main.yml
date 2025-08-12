@@ -12,7 +12,7 @@ jobs:
 
     steps:
       # https://github.com/marketplace/actions/checkout
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # https://github.com/marketplace/actions/setup-go-environment
       - uses: actions/setup-go@v5
