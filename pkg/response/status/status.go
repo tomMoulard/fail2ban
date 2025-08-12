@@ -47,6 +47,10 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Printf("catcher: %+v", *catcher)
 
 	if !catcher.isFilteredCode() { // if this is not a status code of concern: Return and do not increment fail counter.
+		// Copy headers from backend response
+		for k, v := range catcher.Header() {
+			w.Header()[k] = v
+		}
 		w.WriteHeader(catcher.getCode())
 
 		return
@@ -61,6 +65,9 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("IP %s is allowed", data.RemoteIP)
+	for k, v := range catcher.Header() {
+		w.Header()[k] = v
+	}
 	w.WriteHeader(catcher.getCode())
 
 	if _, err := w.Write(catcher.bytes); err != nil {
