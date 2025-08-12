@@ -46,15 +46,15 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("catcher: %+v", *catcher)
 
-	if !catcher.isFilteredCode() { // if this is not a status code of concern: Return and do not increment fail counter.
-		for k, v := range catcher.Header() {
-			w.Header()[k] = v
-		}
+    if !catcher.isFilteredCode() { // if this is not a status code of concern: Return and do not increment fail counter.
+        for k, vv := range catcher.Header() {
+            w.Header().Set(k, strings.Join(vv, ", "))
+        }
 
-		w.WriteHeader(catcher.getCode())
+        w.WriteHeader(catcher.getCode())
 
-		return
-	}
+        return
+    }
 
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
@@ -66,9 +66,9 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("IP %s is allowed", data.RemoteIP)
 
-	for k, v := range catcher.Header() {
-		w.Header()[k] = v
-	}
+    for k, vv := range catcher.Header() {
+        w.Header().Set(k, strings.Join(vv, ", "))
+    }
 
 	w.WriteHeader(catcher.getCode())
 
