@@ -120,6 +120,9 @@ func TestFail2Ban(t *testing.T) {
 	t.Parallel()
 
 	remoteAddr := "10.0.0.0"
+	testHeaderName := "X-Forwarded-For"
+	testDepth := 1
+
 	tests := []struct {
 		name         string
 		url          string
@@ -134,6 +137,12 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Findtime: "300s",
 					Maxretry: 20,
+					SourceCriterion: rules.SourceCriterion{
+						RequestHeaderName: &testHeaderName,
+						IPStrategy: &rules.IPStrategy{
+							Depth: &testDepth,
+						},
+					},
 				},
 			},
 			newError:     true,
@@ -146,6 +155,9 @@ func TestFail2Ban(t *testing.T) {
 					Enabled:  true,
 					Bantime:  "300s",
 					Maxretry: 20,
+					SourceCriterion: rules.SourceCriterion{
+						RequestHeaderName: &testHeaderName,
+					},
 				},
 			},
 			newError:     true,
@@ -159,6 +171,12 @@ func TestFail2Ban(t *testing.T) {
 					Bantime:  "300s",
 					Findtime: "300s",
 					Maxretry: 20,
+					SourceCriterion: rules.SourceCriterion{
+						RequestHeaderName: &testHeaderName,
+						IPStrategy: &rules.IPStrategy{
+							Depth: &testDepth,
+						},
+					},
 				},
 			},
 			newError:     false,
