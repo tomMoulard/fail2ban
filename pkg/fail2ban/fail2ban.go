@@ -32,7 +32,7 @@ func New(rules rules.RulesTransformed, allowList ipchecking.NetIPs) *Fail2Ban {
 // ShouldAllow check if the request should be allowed.
 // Called when a request was DENIED - increments the denied counter.
 func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
-	if u.allowList.Contains(remoteIP) {
+	if u.allowList != nil && u.allowList.Contains(remoteIP) {
 		return true
 	}
 
@@ -116,7 +116,7 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 
 // IsNotBanned Non-incrementing check to see if an IP is already banned.
 func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
-	if u.allowList.Contains(remoteIP) {
+	if u.allowList != nil && u.allowList.Contains(remoteIP) {
 		return true
 	}
 
