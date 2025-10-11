@@ -113,7 +113,7 @@ func TestStatus(t *testing.T) {
 				MaxRetry: 1,
 				Findtime: 300 * time.Second,
 				Bantime:  300 * time.Second,
-			})
+			}, nil)
 			f2b.IPs = test.ips
 			d, err := New(next, test.codeRanges, f2b)
 			require.NoError(t, err)
@@ -230,7 +230,7 @@ func TestHeaderCopying(t *testing.T) {
 			rulesTransformed, err := rules.TransformRule(rulesObj)
 			require.NoError(t, err)
 
-			f2b := fail2ban.New(rulesTransformed)
+			f2b := fail2ban.New(rulesTransformed, nil)
 			// Set IP viewed state
 			for ip, viewed := range test.ips {
 				f2b.IPs[ip] = viewed
