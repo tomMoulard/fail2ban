@@ -342,7 +342,7 @@ func TestAllowlistCIDRDoesNotBan(t *testing.T) {
 	}
 
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusBadRequest)
 	})
 
 	handler, err := New(t.Context(), next, cfg, "fail2ban_test")
@@ -354,14 +354,14 @@ func TestAllowlistCIDRDoesNotBan(t *testing.T) {
 	for i := range 3 {
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, req)
-		assert.Equal(t, http.StatusOK, recorder.Code, "request %d should pass through", i+1)
+		assert.Equal(t, http.StatusBadRequest, recorder.Code, "request %d should pass through", i+1)
 	}
 
 	finalRecorder := httptest.NewRecorder()
 	handler.ServeHTTP(finalRecorder, req)
 
 	assert.NotEqual(t, http.StatusForbidden, finalRecorder.Code, "allowlisted CIDR IP must not be banned")
-	assert.Equal(t, http.StatusOK, finalRecorder.Code, "allowlisted CIDR IP should receive backend status")
+	assert.Equal(t, http.StatusBadRequest, finalRecorder.Code, "allowlisted CIDR IP should receive backend status")
 }
 
 // https://github.com/tomMoulard/fail2ban/issues/67
@@ -414,14 +414,10 @@ func TestDeadlockWebsocket(t *testing.T) {
 		_, err = conns[i].Read(p)
 		require.NoError(t, err)
 
-		if msg != string(p) {
-			t.Errorf("wanted %q got %q", msg, string(p))
-		}
+		assert.Equal(t, msg, string(p))
 	}
 
-	if concurentWSCount.Load() != 10 {
-		t.Errorf("wanted %d got %d", 10, concurentWSCount.Load())
-	}
+	assert.Equal(t, 10, int(concurentWSCount.Load()))
 }
 
 func TestFail2Ban_SuccessiveRequests(t *testing.T) {
