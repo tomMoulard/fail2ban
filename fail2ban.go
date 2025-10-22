@@ -12,6 +12,7 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
 	f2bHandler "github.com/tomMoulard/fail2ban/pkg/fail2ban/handler"
+	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
 	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
 	"github.com/tomMoulard/fail2ban/pkg/response/status"
@@ -99,6 +100,11 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		allowIPs = append(allowIPs, whiteips...)
 	}
 
+	allowNetIPs, err := ipchecking.ParseNetIPs(allowIPs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse allowlist IPs: %w", err)
+	}
+
 	allowHandler, err := lAllow.New(allowIPs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
@@ -132,7 +138,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	log.Println("Plugin: FailToBan is up and running")
 
-	f2b := fail2ban.New(rules)
+	f2b := fail2ban.New(rules, allowNetIPs)
 
 	c := chain.New(
 		next,

@@ -15,21 +15,27 @@ import (
 type Fail2Ban struct {
 	rules rules.RulesTransformed
 
-	MuIP sync.Mutex
-	IPs  map[string]ipchecking.IPViewed
+	MuIP      sync.Mutex
+	IPs       map[string]ipchecking.IPViewed
+	allowList ipchecking.NetIPs
 }
 
 // New creates a new Fail2Ban.
-func New(rules rules.RulesTransformed) *Fail2Ban {
+func New(rules rules.RulesTransformed, allowList ipchecking.NetIPs) *Fail2Ban {
 	return &Fail2Ban{
-		rules: rules,
-		IPs:   make(map[string]ipchecking.IPViewed),
+		rules:     rules,
+		IPs:       make(map[string]ipchecking.IPViewed),
+		allowList: allowList,
 	}
 }
 
 // ShouldAllow check if the request should be allowed.
 // Called when a request was DENIED - increments the denied counter.
 func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
+	if u.allowList != nil && u.allowList.Contains(remoteIP) {
+		return true
+	}
+
 	u.MuIP.Lock()
 	defer u.MuIP.Unlock()
 
@@ -110,6 +116,10 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 
 // IsNotBanned Non-incrementing check to see if an IP is already banned.
 func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
+	if u.allowList != nil && u.allowList.Contains(remoteIP) {
+		return true
+	}
+
 	u.MuIP.Lock()
 	defer u.MuIP.Unlock()
 

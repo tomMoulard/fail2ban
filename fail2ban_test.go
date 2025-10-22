@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
 	"golang.org/x/net/websocket"
 )
@@ -320,13 +321,47 @@ func TestFail2Ban(t *testing.T) {
 			for range 10 {
 				rw := httptest.NewRecorder()
 				handler.ServeHTTP(rw, req)
-
-				if rw.Code != test.expectStatus {
-					t.Fatalf("code: got %d, expected %d", rw.Code, test.expectStatus)
-				}
+				assert.Equal(t, test.expectStatus, rw.Code)
 			}
 		})
 	}
+}
+
+func TestAllowlistCIDRDoesNotBan(t *testing.T) {
+	t.Parallel()
+
+	const remoteIP = "192.168.10.50"
+
+	cfg := CreateConfig()
+	cfg.Rules.Bantime = "3h"
+	cfg.Rules.Findtime = "30m"
+	cfg.Rules.Maxretry = 4
+	cfg.Rules.StatusCode = "400-499"
+	cfg.Allowlist = List{
+		IP: []string{"192.168.0.0/16"},
+	}
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	})
+
+	handler, err := New(t.Context(), next, cfg, "fail2ban_test")
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.RemoteAddr = remoteIP + ":1234"
+
+	for i := range 3 {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, req)
+		assert.Equal(t, http.StatusBadRequest, recorder.Code, "request %d should pass through", i+1)
+	}
+
+	finalRecorder := httptest.NewRecorder()
+	handler.ServeHTTP(finalRecorder, req)
+
+	assert.NotEqual(t, http.StatusForbidden, finalRecorder.Code, "allowlisted CIDR IP must not be banned")
+	assert.Equal(t, http.StatusBadRequest, finalRecorder.Code, "allowlisted CIDR IP should receive backend status")
 }
 
 // https://github.com/tomMoulard/fail2ban/issues/67
@@ -349,9 +384,7 @@ func TestDeadlockWebsocket(t *testing.T) {
 	cfg.Rules.Maxretry = 20
 
 	handler, err := New(t.Context(), next, cfg, "fail2ban_test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	s := httptest.NewServer(handler)
 	defer s.Close()
@@ -361,9 +394,7 @@ func TestDeadlockWebsocket(t *testing.T) {
 
 	for i := range 10 {
 		ws, err := websocket.Dial(wsURL, "", "http://localhost")
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		defer func() { _ = ws.Close() }()
 
@@ -376,25 +407,17 @@ func TestDeadlockWebsocket(t *testing.T) {
 		msg := fmt.Sprintf("hello %d", i)
 
 		n, err := conns[i].Write([]byte(msg))
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		p := make([]byte, n)
 
 		_, err = conns[i].Read(p)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
-		if msg != string(p) {
-			t.Errorf("wanted %q got %q", msg, string(p))
-		}
+		assert.Equal(t, msg, string(p))
 	}
 
-	if concurentWSCount.Load() != 10 {
-		t.Errorf("wanted %d got %d", 10, concurentWSCount.Load())
-	}
+	assert.Equal(t, 10, int(concurentWSCount.Load()))
 }
 
 func TestFail2Ban_SuccessiveRequests(t *testing.T) {
