@@ -48,7 +48,7 @@ func TestStatus(t *testing.T) {
 					Denied: true,
 				},
 			},
-			expectedStatus: http.StatusForbidden,
+			expectedStatus: http.StatusTooManyRequests,
 		},
 		{
 			name:           "is being denied",
@@ -68,7 +68,7 @@ func TestStatus(t *testing.T) {
 					Denied: true,
 				},
 			},
-			expectedStatus: http.StatusForbidden,
+			expectedStatus: http.StatusTooManyRequests,
 		},
 		{
 			name:           "not denied in limits",
