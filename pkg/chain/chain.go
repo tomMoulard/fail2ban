@@ -70,7 +70,7 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if s.Return {
-			w.WriteHeader(http.StatusForbidden)
+			w.WriteHeader(http.StatusTooManyRequests)
 
 			return
 		}
