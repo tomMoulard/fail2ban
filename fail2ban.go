@@ -47,9 +47,10 @@ type Config struct {
 func CreateConfig() *Config {
 	return &Config{
 		Rules: rules.Rules{
-			Bantime:  "300s",
-			Findtime: "120s",
-			Enabled:  true,
+			Bantime:         "300s",
+			Findtime:        "120s",
+			Enabled:         true,
+			SourceCriterion: rules.SourceCriterion{}, // Empty SourceCriterion for default behavior
 		},
 	}
 }
@@ -142,6 +143,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	c := chain.New(
 		next,
+		rules.SourceCriterion,
 		denyHandler,
 		allowHandler,
 		uDeny.New(rules.URLRegexpBan, f2b),
