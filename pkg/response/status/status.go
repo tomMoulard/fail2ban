@@ -59,7 +59,7 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
 		fmt.Printf("IP %s is banned", data.RemoteIP)
-		w.WriteHeader(http.StatusForbidden)
+		w.WriteHeader(http.StatusTooManyRequests)
 
 		return
 	}

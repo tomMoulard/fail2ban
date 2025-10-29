@@ -255,7 +255,7 @@ func TestFail2Ban(t *testing.T) {
 				},
 			},
 			newError:     false,
-			expectStatus: http.StatusForbidden,
+			expectStatus: http.StatusTooManyRequests,
 		},
 		{
 			name: "allowlist",
@@ -287,7 +287,7 @@ func TestFail2Ban(t *testing.T) {
 				},
 			},
 			newError:     false,
-			expectStatus: http.StatusForbidden,
+			expectStatus: http.StatusTooManyRequests,
 		},
 	}
 
@@ -360,7 +360,7 @@ func TestAllowlistCIDRDoesNotBan(t *testing.T) {
 	finalRecorder := httptest.NewRecorder()
 	handler.ServeHTTP(finalRecorder, req)
 
-	assert.NotEqual(t, http.StatusForbidden, finalRecorder.Code, "allowlisted CIDR IP must not be banned")
+	assert.NotEqual(t, http.StatusTooManyRequests, finalRecorder.Code, "allowlisted CIDR IP must not be banned")
 	assert.Equal(t, http.StatusBadRequest, finalRecorder.Code, "allowlisted CIDR IP should receive backend status")
 }
 
@@ -472,7 +472,7 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 			},
 			// the remaining OKs will not reach the client as it is banned
 			handlerStatus: []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusNotFound, http.StatusOK, http.StatusOK, http.StatusOK, http.StatusOK},
-			expectStatus:  []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden, http.StatusForbidden},
+			expectStatus:  []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusTooManyRequests, http.StatusTooManyRequests},
 		},
 	}
 
