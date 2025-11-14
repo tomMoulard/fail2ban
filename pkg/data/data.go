@@ -18,9 +18,18 @@ type Data struct {
 
 // ServeHTTP sets data in the request context, to be extracted with GetData.
 func ServeHTTP(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to split remote address %q: %w", r.RemoteAddr, err)
+	var remoteIP string
+
+	// Try to get IP from X-Real-Ip header first (Traefik middleware)
+	if xRealIP := r.Header.Get("X-Real-Ip"); xRealIP != "" {
+		remoteIP = xRealIP
+	} else {
+		// Fallback to RemoteAddr
+		var err error
+		remoteIP, _, err = net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to split remote address %q: %w", r.RemoteAddr, err)
+		}
 	}
 
 	data := &Data{
