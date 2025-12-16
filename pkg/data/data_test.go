@@ -8,7 +8,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
 )
+
+var testHeaderName = "X-Forwarded-For"
+
+var testSourceCriterion = rules.SourceCriterion{
+	RequestHeaderName: &testHeaderName,
+}
 
 func TestData(t *testing.T) {
 	t.Parallel()
@@ -31,7 +38,7 @@ func TestData(t *testing.T) {
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err := ServeHTTP(recorder, req)
+			req, err := ServeHTTP(recorder, req, testSourceCriterion)
 			require.NoError(t, err)
 
 			got := GetData(req)
@@ -54,7 +61,7 @@ func TestGetData_InvalidData(t *testing.T) {
 				t.Helper()
 
 				req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-				req, err := ServeHTTP(nil, req)
+				req, err := ServeHTTP(nil, req, testSourceCriterion)
 				require.NoError(t, err)
 
 				return req

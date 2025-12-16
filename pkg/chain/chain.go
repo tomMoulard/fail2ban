@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/tomMoulard/fail2ban/pkg/rules"
 )
 
 // Status is a status that can be returned by a handler.
@@ -30,16 +31,18 @@ type Chain interface {
 }
 
 type chain struct {
-	handlers []ChainHandler
-	final    http.Handler
-	status   *http.Handler
+	handlers        []ChainHandler
+	final           http.Handler
+	status          *http.Handler
+	sourceCriterion rules.SourceCriterion
 }
 
 // New creates a new chain.
-func New(final http.Handler, handlers ...ChainHandler) Chain {
+func New(final http.Handler, sourceCriterion rules.SourceCriterion, handlers ...ChainHandler) Chain {
 	return &chain{
-		handlers: handlers,
-		final:    final,
+		handlers:        handlers,
+		final:           final,
+		sourceCriterion: sourceCriterion,
 	}
 }
 
@@ -50,7 +53,7 @@ func (c *chain) WithStatus(status http.Handler) {
 
 // ServeHTTP chains the handlers together, and calls the final handler at the end.
 func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	r, err := data.ServeHTTP(w, r)
+	req, err := data.ServeHTTP(w, r, c.sourceCriterion)
 	if err != nil {
 		log.Printf("data.ServeHTTP error: %v", err)
 
@@ -58,7 +61,7 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, handler := range c.handlers {
-		s, err := handler.ServeHTTP(w, r)
+		s, err := handler.ServeHTTP(w, req)
 		if err != nil {
 			log.Printf("handler.ServeHTTP error: %v", err)
 
@@ -81,10 +84,10 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if c.status != nil {
-		(*c.status).ServeHTTP(w, r)
+		(*c.status).ServeHTTP(w, req)
 
 		return
 	}
 
-	c.final.ServeHTTP(w, r)
+	c.final.ServeHTTP(w, req)
 }
