@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,8 +32,7 @@ func NewTelegramNotifier(cfg TelegramConfig, templates *TemplateHandler, httpCli
 	return &tn
 }
 
-//nolint:noctx
-func (t *TelegramNotifier) Send(event Event) error {
+func (t *TelegramNotifier) Send(ctx context.Context, event Event) error {
 	msg, err := t.templates.RenderTemplate(event)
 	if err != nil {
 		return fmt.Errorf("failed to render telegram template: %w", err)
@@ -50,7 +50,7 @@ func (t *TelegramNotifier) Send(event Event) error {
 		return fmt.Errorf("failed to marshal telegram payload: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create telegram request: %w", err)
 	}

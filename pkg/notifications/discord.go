@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -47,8 +48,7 @@ func NewDiscordNotifier(cfg DiscordConfig, httpCli *http.Client) *DiscordNotifie
 	}
 }
 
-//nolint:noctx
-func (d *DiscordNotifier) Send(event Event) error {
+func (d *DiscordNotifier) Send(ctx context.Context, event Event) error {
 	var color int
 
 	switch event.Type {
@@ -90,7 +90,7 @@ func (d *DiscordNotifier) Send(event Event) error {
 		return fmt.Errorf("failed to marshal discord payload: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, d.webhookURL, bytes.NewReader(jsonPayload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, d.webhookURL, bytes.NewReader(jsonPayload))
 	if err != nil {
 		return fmt.Errorf("failed to create discord request: %w", err)
 	}

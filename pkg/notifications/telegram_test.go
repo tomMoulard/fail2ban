@@ -43,7 +43,8 @@ func TestTelegramNotifier(t *testing.T) {
 				BaseURL:  server.URL,
 			}, NewTemplateHandler(TemplateConfig{}), server.Client())
 
-			err := n.Send(Event{
+			ctx := t.Context()
+			err := n.Send(ctx, Event{
 				Type:      EventTypeBan,
 				IP:        "192.0.2.1",
 				Message:   "test",

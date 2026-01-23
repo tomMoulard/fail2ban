@@ -67,7 +67,9 @@ func TestDiscordNotifier(t *testing.T) {
 			test.config.WebhookURL = server.URL
 			n := NewDiscordNotifier(test.config, server.Client())
 
-			err := n.Send(Event{
+			ctx := t.Context()
+
+			err := n.Send(ctx, Event{
 				Type:      EventTypeBan,
 				IP:        "192.0.2.1",
 				Message:   "test",

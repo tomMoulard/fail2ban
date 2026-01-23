@@ -79,7 +79,7 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP
 // request.
-func New(_ context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
+func New(ctx context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
 	if !config.Rules.Enabled {
 		log.Println("Plugin: FailToBan is disabled")
 
@@ -140,7 +140,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	notifSrvc := notifications.NewService(config.Notifications)
 	if notifSrvc != nil {
-		go notifSrvc.Run()
+		go notifSrvc.Run(context.WithoutCancel(ctx))
 	}
 
 	log.Println("Plugin: FailToBan is up and running")

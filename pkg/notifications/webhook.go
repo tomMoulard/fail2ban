@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,14 +25,13 @@ func NewWebhookNotifier(cfg WebhookConfig, templates *TemplateHandler, httpCli *
 	}
 }
 
-//nolint:noctx
-func (w *WebhookNotifier) Send(event Event) error {
+func (w *WebhookNotifier) Send(ctx context.Context, event Event) error {
 	payload, err := w.templates.RenderTemplate(event)
 	if err != nil {
 		return fmt.Errorf("failed to render webhook template: %w", err)
 	}
 
-	req, err := http.NewRequest(w.method, w.url, strings.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, w.method, w.url, strings.NewReader(payload))
 	if err != nil {
 		return fmt.Errorf("failed to create webhook request: %w", err)
 	}

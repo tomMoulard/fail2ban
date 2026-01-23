@@ -94,7 +94,7 @@ func TestWebhookNotifier(t *testing.T) {
 			test.config.URL = server.URL
 			notifier := NewWebhookNotifier(test.config, NewTemplateHandler(TemplateConfig{}), server.Client())
 
-			err := notifier.Send(Event{
+			err := notifier.Send(t.Context(), Event{
 				Type:      EventTypeBan,
 				IP:        "192.0.2.1",
 				Message:   "test",

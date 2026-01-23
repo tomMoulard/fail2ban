@@ -2,13 +2,14 @@
 package notifications
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"time"
 )
 
 type notifier interface {
-	Send(event Event) error
+	Send(ctx context.Context, event Event) error
 }
 type Service struct {
 	allowedTypes []string
@@ -30,10 +31,10 @@ func (s *Service) Notify(event Event) {
 	}
 }
 
-func (s *Service) Run() {
+func (s *Service) Run(ctx context.Context) {
 	for event := range s.ch {
 		for _, n := range s.notifiers {
-			if err := n.Send(event); err != nil {
+			if err := n.Send(ctx, event); err != nil {
 				log.Printf("failed to send notification: %v", err)
 			}
 		}

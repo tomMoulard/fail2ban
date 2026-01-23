@@ -1,11 +1,20 @@
 package notifications
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
+	"net"
 	"net/smtp"
+	"strconv"
 	"sync"
+	"time"
+)
+
+const (
+	// dialerTimeout defines the timeout for establishing SMTP connections.
+	dialerTimeout = 5 * time.Second
 )
 
 type mailer interface {
@@ -45,7 +54,7 @@ func NewEmailNotifier(cfg EmailConfig, templates *TemplateHandler) *EmailNotifie
 	return n
 }
 
-func (e *EmailNotifier) ensureConnected() error {
+func (e *EmailNotifier) ensureConnected(ctx context.Context) error {
 	e.clientMux.Lock()
 	defer e.clientMux.Unlock()
 
@@ -58,7 +67,7 @@ func (e *EmailNotifier) ensureConnected() error {
 		_ = e.client.Close()
 	}
 
-	client, err := createSMTPClient(e.server, e.port, e.username, e.password)
+	client, err := createSMTPClient(ctx, e.server, e.port, e.username, e.password)
 	if err != nil {
 		return fmt.Errorf("failed to reconnect SMTP client: %w", err)
 	}
@@ -68,9 +77,9 @@ func (e *EmailNotifier) ensureConnected() error {
 	return nil
 }
 
-func (e *EmailNotifier) Send(event Event) error {
+func (e *EmailNotifier) Send(ctx context.Context, event Event) error {
 	// Ensure we have a valid connection
-	if err := e.ensureConnected(); err != nil {
+	if err := e.ensureConnected(ctx); err != nil {
 		return fmt.Errorf("failed to ensure SMTP connection: %w", err)
 	}
 
@@ -114,12 +123,21 @@ func (e *EmailNotifier) Send(event Event) error {
 	return nil
 }
 
-func createSMTPClient(host string, port int, username, password string) (*smtp.Client, error) {
-	addr := fmt.Sprintf("%s:%d", host, port)
+func createSMTPClient(ctx context.Context, host string, port int, username, password string) (*smtp.Client, error) {
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
 
-	client, err := smtp.Dial(addr)
+	dialer := &net.Dialer{
+		Timeout: dialerTimeout,
+	}
+
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to dial SMTP server: %w", err)
+		return nil, fmt.Errorf("dial SMTP server: %w", err)
+	}
+
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return nil, fmt.Errorf("create SMTP client: %w", err)
 	}
 
 	tlsConfig := &tls.Config{

@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -174,7 +175,7 @@ func TestServiceNotify(t *testing.T) {
 				notifiers:    []notifier{n},
 				ch:           make(chan Event, 1),
 			}
-			go svc.Run()
+			go svc.Run(t.Context())
 			svc.Notify(test.event)
 
 			if test.shouldNotify {
@@ -202,6 +203,6 @@ type mockNotifier struct {
 	fn func(event Event) error
 }
 
-func (m *mockNotifier) Send(event Event) error {
+func (m *mockNotifier) Send(_ context.Context, event Event) error {
 	return m.fn(event)
 }

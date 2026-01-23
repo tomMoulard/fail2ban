@@ -98,11 +98,14 @@ func TestEmailNotifier(t *testing.T) {
 			},
 			validate: func(t *testing.T, n *EmailNotifier) {
 				t.Helper()
+
+				ctx := t.Context()
+
 				// Send multiple emails concurrently
 				errCh := make(chan error, 3)
 				for range 3 {
 					go func() {
-						errCh <- n.Send(Event{
+						errCh <- n.Send(ctx, Event{
 							Type:      EventTypeBan,
 							IP:        "192.0.2.1",
 							Message:   "test ban",
@@ -157,7 +160,8 @@ func TestEmailNotifier(t *testing.T) {
 			}
 
 			// Send notification
-			err := n.Send(test.event)
+			ctx := t.Context()
+			err := n.Send(ctx, test.event)
 
 			// Validate results
 			if test.expectError {
