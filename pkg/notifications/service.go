@@ -32,10 +32,19 @@ func (s *Service) Notify(event Event) {
 }
 
 func (s *Service) Run(ctx context.Context) {
-	for event := range s.ch {
-		for _, n := range s.notifiers {
-			if err := n.Send(ctx, event); err != nil {
-				log.Printf("failed to send notification: %v", err)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case event, ok := <-s.ch:
+			if !ok {
+				return
+			}
+
+			for _, n := range s.notifiers {
+				if err := n.Send(ctx, event); err != nil {
+					log.Printf("failed to send notification: %v", err)
+				}
 			}
 		}
 	}
