@@ -88,6 +88,10 @@ issues:
     - text: 'use of `fmt.Println` forbidden' # FIXME: add revert this change ASAP
       linters:
         - forbidigo
+    - text: 'Magic number: 2, in <condition> detected'
+      file: 'pkg/notifications/webhook.go'
+      linters:
+        - mnd
 
 output:
   show-stats: true
