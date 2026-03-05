@@ -3,11 +3,13 @@ package fail2ban
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
@@ -25,6 +27,11 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+var (
+	globalJails = make(map[string]*fail2ban.Fail2Ban)
+	globalMu    sync.Mutex
+)
+
 // List struct.
 type List struct {
 	IP    []string
@@ -33,9 +40,10 @@ type List struct {
 
 // Config struct.
 type Config struct {
-	Denylist  List        `yaml:"denylist"`
-	Allowlist List        `yaml:"allowlist"`
-	Rules     rules.Rules `yaml:"port"`
+	Denylist   List        `yaml:"denylist"`
+	Allowlist  List        `yaml:"allowlist"`
+	Rules      rules.Rules `yaml:"port"`
+	SharedJail bool        `yaml:"sharedJail"`
 
 	// deprecated
 	Blacklist List `yaml:"blacklist"`
@@ -77,7 +85,7 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP
 // request.
-func New(_ context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
+func New(_ context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	if !config.Rules.Enabled {
 		log.Println("Plugin: FailToBan is disabled")
 
@@ -136,9 +144,31 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
-	log.Println("Plugin: FailToBan is up and running")
+	// Get or create jail
+	var f2b *fail2ban.Fail2Ban
 
-	f2b := fail2ban.New(rules, allowNetIPs)
+	if config.SharedJail {
+		// Use middleware name and config hash as key for shared jail
+		jailKey := fmt.Sprintf("%s-%x", name, sha256.Sum256([]byte(fmt.Sprintf("%v", config))))
+		// Use shared jail based on middleware name
+		globalMu.Lock()
+		if f2bTemp, exists := globalJails[jailKey]; exists {
+			f2b = f2bTemp
+
+			log.Printf("Plugin: FailToBan using existing shared jail for middleware %s", jailKey)
+		} else {
+			f2b = fail2ban.New(rules, allowNetIPs)
+			globalJails[jailKey] = f2b
+
+			log.Printf("Plugin: FailToBan created new shared jail for middleware %s", jailKey)
+		}
+		globalMu.Unlock()
+	} else {
+		// Create individual jail
+		f2b = fail2ban.New(rules, allowNetIPs)
+
+		log.Printf("Plugin: FailToBan created individual jail for middleware %s", name)
+	}
 
 	c := chain.New(
 		next,

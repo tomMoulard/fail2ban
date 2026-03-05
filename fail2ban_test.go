@@ -17,6 +17,8 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+const testRemoteAddr = "10.0.0.0"
+
 func TestDummy(t *testing.T) {
 	t.Parallel()
 
@@ -120,7 +122,7 @@ func TestImportIP(t *testing.T) {
 func TestFail2Ban(t *testing.T) {
 	t.Parallel()
 
-	remoteAddr := "10.0.0.0"
+	remoteAddr := testRemoteAddr
 	tests := []struct {
 		name         string
 		url          string
@@ -423,7 +425,7 @@ func TestDeadlockWebsocket(t *testing.T) {
 func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 	t.Parallel()
 
-	remoteAddr := "10.0.0.0"
+	remoteAddr := testRemoteAddr
 	tests := []struct {
 		name          string
 		cfg           *Config
@@ -500,6 +502,94 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 
 				assert.Equal(t, test.expectStatus[i], rw.Code, "request [%d] code", i)
 			}
+		})
+	}
+}
+
+func TestFail2Ban_SuccessiveRequests_SharedJail(t *testing.T) {
+	t.Parallel()
+
+	remoteAddr := testRemoteAddr
+	tests := []struct {
+		name               string
+		cfg                *Config
+		handlerStatus      []int // HTTP code the internal HTTP handler should return
+		expectStatus       []int // HTTP code the downstream client should request after passing through fail2ban
+		expectStatusSecond int
+	}{
+		{
+			name: "shared jail enabled propagates ban",
+			cfg: &Config{
+				Rules: rules.Rules{
+					Enabled:    true,
+					Bantime:    "300s",
+					Findtime:   "300s",
+					Maxretry:   3,
+					StatusCode: "404",
+				},
+				SharedJail: true,
+			},
+			// the remaining OKs will not reach the client as it is banned
+			handlerStatus:      []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusNotFound, http.StatusOK},
+			expectStatus:       []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusTooManyRequests, http.StatusTooManyRequests},
+			expectStatusSecond: http.StatusTooManyRequests,
+		},
+		{
+			name: "shared jail disabled does not propagate ban",
+			cfg: &Config{
+				Rules: rules.Rules{
+					Enabled:    true,
+					Bantime:    "300s",
+					Findtime:   "300s",
+					Maxretry:   3,
+					StatusCode: "404",
+				},
+				SharedJail: false,
+			},
+			handlerStatus:      []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusNotFound, http.StatusOK},
+			expectStatus:       []int{http.StatusNotFound, http.StatusOK, http.StatusNotFound, http.StatusTooManyRequests, http.StatusTooManyRequests},
+			expectStatusSecond: http.StatusOK,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			jailKey := t.Name()
+
+			globalMu.Lock()
+			delete(globalJails, jailKey)
+			globalMu.Unlock()
+
+			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				testno, err := strconv.Atoi(r.Header.Get("Testno"))
+				assert.NoError(t, err)
+
+				w.WriteHeader(testno)
+			})
+
+			handler, err := New(t.Context(), next, test.cfg, jailKey)
+			require.NoError(t, err)
+			handler2, err := New(t.Context(), next, test.cfg, jailKey)
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = remoteAddr + ":1234"
+
+			for i := range test.handlerStatus {
+				rw := httptest.NewRecorder()
+
+				req.Header.Set("Testno", strconv.Itoa(test.handlerStatus[i])) // pass the expected value to the mock handler (fail2ban response code may differ)
+				handler.ServeHTTP(rw, req)
+
+				assert.Equal(t, test.expectStatus[i], rw.Code, "request [%d] code", i)
+			}
+
+			rw := httptest.NewRecorder()
+
+			req.Header.Set("Testno", strconv.Itoa(http.StatusOK))
+			handler2.ServeHTTP(rw, req)
+			assert.Equal(t, test.expectStatusSecond, rw.Code, "request to handler2 code")
 		})
 	}
 }
