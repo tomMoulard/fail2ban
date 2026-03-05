@@ -52,6 +52,16 @@ _only_ be used _concurrently_ with Fail2ban functionality (if you are looking
 for a way to allowlist or denylist IPs without using any of the Fail2ban
 logic, you might want to use a different plugin.)
 
+### Shared Jail
+By default, each middleware instance has its own jail. To share a jail across multiple routers using the same middleware name, set `sharedJail` to `true`:
+
+```yml
+testData:
+  sharedJail: true
+```
+
+When enabled, all routers using the same named middleware will share the same jail, allowing bans to propagate across subdomains.
+
 ### Allowlist
 You can allowlist some IP using this:
 ```yml
