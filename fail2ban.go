@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
@@ -25,6 +26,11 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+var (
+	globalJails = make(map[string]*fail2ban.Fail2Ban)
+	globalMu    sync.Mutex
+)
+
 // List struct.
 type List struct {
 	IP    []string
@@ -36,6 +42,7 @@ type Config struct {
 	Denylist  List        `yaml:"denylist"`
 	Allowlist List        `yaml:"allowlist"`
 	Rules     rules.Rules `yaml:"port"`
+	SharedJail bool       `yaml:"sharedJail"`
 
 	// deprecated
 	Blacklist List `yaml:"blacklist"`
@@ -77,7 +84,7 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP
 // request.
-func New(_ context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
+func New(_ context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	if !config.Rules.Enabled {
 		log.Println("Plugin: FailToBan is disabled")
 
@@ -136,9 +143,28 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
-	log.Println("Plugin: FailToBan is up and running")
-
-	f2b := fail2ban.New(rules, allowNetIPs)
+	// Get or create jail
+	var f2b *fail2ban.Fail2Ban
+	if config.SharedJail {
+		// Use middleware name as key for shared jail
+		jailKey := name
+		// Use shared jail based on middleware name
+		globalMu.Lock()
+		var exists bool
+		f2b, exists = globalJails[jailKey]
+		if !exists {
+			f2b = fail2ban.New(rules, allowNetIPs)
+			globalJails[jailKey] = f2b
+			log.Printf("Plugin: FailToBan created new shared jail for middleware %s", jailKey)
+		} else {
+			log.Printf("Plugin: FailToBan using existing shared jail for middleware %s", jailKey)
+		}
+		globalMu.Unlock()
+	} else {
+		// Create individual jail
+		f2b = fail2ban.New(rules, allowNetIPs)
+		log.Printf("Plugin: FailToBan created individual jail for middleware %s", name)
+	}
 
 	c := chain.New(
 		next,
