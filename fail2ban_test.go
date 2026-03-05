@@ -516,7 +516,7 @@ func TestFail2Ban_SuccessiveRequests_SharedJail(t *testing.T) {
 		expectStatusSecond  int
 	}{
 		{
-			name: "rule enabled, multiple 404 causes ban",
+			name: "shared jail enabled propagates ban",
 			cfg: &Config{
 				Rules: rules.Rules{
 					Enabled:    true,
@@ -533,7 +533,7 @@ func TestFail2Ban_SuccessiveRequests_SharedJail(t *testing.T) {
 			expectStatusSecond: http.StatusTooManyRequests,
 		},
 		{
-			name: "rule enabled, multiple 404 causes ban",
+			name: "shared jail disabled does not propagate ban",
 			cfg: &Config{
 				Rules: rules.Rules{
 					Enabled:    true,
@@ -553,6 +553,10 @@ func TestFail2Ban_SuccessiveRequests_SharedJail(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
+			jailKey := t.Name()
+			globalMu.Lock()
+			delete(globalJails, jailKey)
+			globalMu.Unlock()
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				testno, err := strconv.Atoi(r.Header.Get("Testno"))
@@ -561,8 +565,10 @@ func TestFail2Ban_SuccessiveRequests_SharedJail(t *testing.T) {
 				w.WriteHeader(testno)
 			})
 
-			handler, _ := New(t.Context(), next, test.cfg, "fail2ban_test")
-			handler2, _ := New(t.Context(), next, test.cfg, "fail2ban_test")
+			handler, err := New(t.Context(), next, test.cfg, jailKey)
+			require.NoError(t, err)
+			handler2, err := New(t.Context(), next, test.cfg, jailKey)
+			require.NoError(t, err)
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.RemoteAddr = remoteAddr + ":1234"
