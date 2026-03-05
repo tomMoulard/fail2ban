@@ -3,6 +3,8 @@ package fail2ban
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -146,8 +148,9 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 	// Get or create jail
 	var f2b *fail2ban.Fail2Ban
 	if config.SharedJail {
-		// Use middleware name as key for shared jail
-		jailKey := name
+		// Use middleware name and config hash as key for shared jail
+		keyBytes, _ := json.Marshal(config)
+		jailKey := fmt.Sprintf("%s-%x", name, md5.Sum(keyBytes))
 		// Use shared jail based on middleware name
 		globalMu.Lock()
 		var exists bool
