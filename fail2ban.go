@@ -32,6 +32,34 @@ var (
 	globalMu    sync.Mutex
 )
 
+func getOrCreateSharedJail(name string, config *Config, rules rules.RulesTransformed, allowNetIPs ipchecking.NetIPs) *fail2ban.Fail2Ban {
+	jailKey := fmt.Sprintf("%s-%x", name, sha256.Sum256([]byte(fmt.Sprintf("%v", config))))
+
+	globalMu.Lock()
+	defer globalMu.Unlock()
+
+	if f2b, exists := globalJails[jailKey]; exists {
+		log.Printf("Plugin: FailToBan using existing shared jail for middleware %s", jailKey)
+
+		return f2b
+	}
+	// Keep at most one shared jail per middleware name.
+	// Old handlers keep their pointer; this only bounds registry growth.
+	prefix := name + "-"
+	for key := range globalJails {
+		if strings.HasPrefix(key, prefix) && key != jailKey {
+			delete(globalJails, key)
+		}
+	}
+
+	f2b := fail2ban.New(rules, allowNetIPs)
+	globalJails[jailKey] = f2b
+
+	log.Printf("Plugin: FailToBan created new shared jail for middleware %s", jailKey)
+
+	return f2b
+}
+
 // List struct.
 type List struct {
 	IP    []string
@@ -148,21 +176,7 @@ func New(_ context.Context, next http.Handler, config *Config, name string) (htt
 	var f2b *fail2ban.Fail2Ban
 
 	if config.SharedJail {
-		// Use middleware name and config hash as key for shared jail
-		jailKey := fmt.Sprintf("%s-%x", name, sha256.Sum256([]byte(fmt.Sprintf("%v", config))))
-		// Use shared jail based on middleware name
-		globalMu.Lock()
-		if f2bTemp, exists := globalJails[jailKey]; exists {
-			f2b = f2bTemp
-
-			log.Printf("Plugin: FailToBan using existing shared jail for middleware %s", jailKey)
-		} else {
-			f2b = fail2ban.New(rules, allowNetIPs)
-			globalJails[jailKey] = f2b
-
-			log.Printf("Plugin: FailToBan created new shared jail for middleware %s", jailKey)
-		}
-		globalMu.Unlock()
+		f2b = getOrCreateSharedJail(name, config, rules, allowNetIPs)
 	} else {
 		// Create individual jail
 		f2b = fail2ban.New(rules, allowNetIPs)

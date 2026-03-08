@@ -1,6 +1,7 @@
 package fail2ban
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -555,7 +556,7 @@ func TestFail2Ban_SuccessiveRequests_SharedJail(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			jailKey := t.Name()
+			jailKey := fmt.Sprintf("%s-%x", t.Name(), sha256.Sum256([]byte(fmt.Sprintf("%v", test.cfg))))
 
 			globalMu.Lock()
 			delete(globalJails, jailKey)
