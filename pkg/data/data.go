@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 )
 
 type key string
@@ -17,19 +18,32 @@ type Data struct {
 }
 
 // ServeHTTP sets data in the request context, to be extracted with GetData.
-func ServeHTTP(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to split remote address %q: %w", r.RemoteAddr, err)
+// If requestHeaderName is non-empty, the IP is read from that request header
+// (e.g. "Cf-Connecting-Ip") instead of r.RemoteAddr.
+func ServeHTTP(w http.ResponseWriter, r *http.Request, requestHeaderName string) (*http.Request, error) {
+	var remoteIP string
+
+	if requestHeaderName != "" {
+		headerValue := r.Header.Get(requestHeaderName)
+		if headerValue == "" {
+			return nil, fmt.Errorf("header %q is missing from request", requestHeaderName)
+		}
+
+		remoteIP = strings.TrimSpace(strings.SplitN(headerValue, ",", 2)[0])
+	} else {
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to split remote address %q: %w", r.RemoteAddr, err)
+		}
+
+		remoteIP = ip
 	}
 
-	data := &Data{
+	d := &Data{
 		RemoteIP: remoteIP,
 	}
 
-	fmt.Printf("data: %+v", data)
-
-	return r.WithContext(context.WithValue(r.Context(), contextDataKey, data)), nil
+	return r.WithContext(context.WithValue(r.Context(), contextDataKey, d)), nil
 }
 
 // GetData returns the data stored in the request context.

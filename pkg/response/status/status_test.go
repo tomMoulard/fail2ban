@@ -9,11 +9,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
-	utime "github.com/tomMoulard/fail2ban/pkg/utils/time"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/rules"
+	utime "github.com/Workiz/traefik-plugin-fail2ban/pkg/utils/time"
 )
 
 func TestStatus(t *testing.T) {
@@ -120,7 +120,7 @@ func TestStatus(t *testing.T) {
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err = data.ServeHTTP(recorder, req)
+			req, err = data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 
 			var b bytes.Buffer
@@ -240,7 +240,7 @@ func TestHeaderCopying(t *testing.T) {
 			require.NoError(t, err)
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			req, err = data.ServeHTTP(httptest.NewRecorder(), req)
+			req, err = data.ServeHTTP(httptest.NewRecorder(), req, "")
 			require.NoError(t, err)
 
 			d := data.GetData(req)

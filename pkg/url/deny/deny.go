@@ -3,15 +3,15 @@ package deny
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"net/http"
 	"regexp"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	"github.com/tomMoulard/fail2ban/pkg/utils/time"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/utils/time"
 )
 
 type deny struct {
@@ -33,8 +33,6 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	fmt.Printf("data: %+v", data)
-
 	d.f2b.MuIP.Lock()
 	defer d.f2b.MuIP.Unlock()
 
@@ -48,7 +46,7 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 				Denied: true,
 			}
 
-			fmt.Printf("Url (%q) was matched by regexpBan: %q", r.URL.String(), reg.String())
+			log.Printf("Plugin: FailToBan: IP %s blocked (URL rule %q matched %q)", data.RemoteIP, reg.String(), r.URL.String())
 
 			return &chain.Status{Return: true}, nil
 		}

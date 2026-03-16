@@ -14,14 +14,32 @@ func TestData(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name         string
-		expectedData *Data
+		name              string
+		requestHeaderName string
+		headerValue       string
+		expectedData      *Data
+		expectError       bool
 	}{
 		{
-			name: "allowed",
-			expectedData: &Data{
-				RemoteIP: "192.0.2.1",
-			},
+			name:         "remote addr used when no header name configured",
+			expectedData: &Data{RemoteIP: "192.0.2.1"},
+		},
+		{
+			name:              "ip read from custom header",
+			requestHeaderName: "Cf-Connecting-Ip",
+			headerValue:       "1.2.3.4",
+			expectedData:      &Data{RemoteIP: "1.2.3.4"},
+		},
+		{
+			name:              "first ip taken from comma-separated header value",
+			requestHeaderName: "X-Forwarded-For",
+			headerValue:       "1.2.3.4, 5.6.7.8, 9.10.11.12",
+			expectedData:      &Data{RemoteIP: "1.2.3.4"},
+		},
+		{
+			name:              "error when configured header is missing from request",
+			requestHeaderName: "Cf-Connecting-Ip",
+			expectError:       true,
 		},
 	}
 
@@ -31,7 +49,18 @@ func TestData(t *testing.T) {
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err := ServeHTTP(recorder, req)
+
+			if test.headerValue != "" {
+				req.Header.Set(test.requestHeaderName, test.headerValue)
+			}
+
+			req, err := ServeHTTP(recorder, req, test.requestHeaderName)
+			if test.expectError {
+				require.Error(t, err)
+
+				return
+			}
+
 			require.NoError(t, err)
 
 			got := GetData(req)
@@ -54,7 +83,7 @@ func TestGetData_InvalidData(t *testing.T) {
 				t.Helper()
 
 				req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-				req, err := ServeHTTP(nil, req)
+				req, err := ServeHTTP(nil, req, "")
 				require.NoError(t, err)
 
 				return req

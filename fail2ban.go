@@ -9,16 +9,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
-	f2bHandler "github.com/tomMoulard/fail2ban/pkg/fail2ban/handler"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
-	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
-	"github.com/tomMoulard/fail2ban/pkg/response/status"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
-	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
-	uDeny "github.com/tomMoulard/fail2ban/pkg/url/deny"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
+	f2bHandler "github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban/handler"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/ipchecking"
+	lAllow "github.com/Workiz/traefik-plugin-fail2ban/pkg/list/allow"
+	lDeny "github.com/Workiz/traefik-plugin-fail2ban/pkg/list/deny"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/response/status"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/rules"
+	uAllow "github.com/Workiz/traefik-plugin-fail2ban/pkg/url/allow"
+	uDeny "github.com/Workiz/traefik-plugin-fail2ban/pkg/url/deny"
 )
 
 func init() {
@@ -31,11 +31,20 @@ type List struct {
 	Files []string
 }
 
+// SourceCriterion defines how to determine the client IP for fail2ban evaluation.
+type SourceCriterion struct {
+	// RequestHeaderName is the HTTP header from which to read the client IP.
+	// Useful when running behind a proxy/CDN (e.g. "Cf-Connecting-Ip" for Cloudflare).
+	// When empty, r.RemoteAddr is used.
+	RequestHeaderName string `yaml:"requestHeaderName"`
+}
+
 // Config struct.
 type Config struct {
-	Denylist  List        `yaml:"denylist"`
-	Allowlist List        `yaml:"allowlist"`
-	Rules     rules.Rules `yaml:"port"`
+	Denylist        List            `yaml:"denylist"`
+	Allowlist       List            `yaml:"allowlist"`
+	Rules           rules.Rules     `yaml:"port"`
+	SourceCriterion SourceCriterion `yaml:"sourceCriterion"`
 
 	// deprecated
 	Blacklist List `yaml:"blacklist"`
@@ -142,6 +151,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	c := chain.New(
 		next,
+		config.SourceCriterion.RequestHeaderName,
 		denyHandler,
 		allowHandler,
 		uDeny.New(rules.URLRegexpBan, f2b),

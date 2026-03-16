@@ -3,11 +3,12 @@ package status
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
 )
 
 type status struct {
@@ -30,23 +31,15 @@ func New(next http.Handler, statusCode string, f2b *fail2ban.Fail2Ban) (*status,
 }
 
 func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("status handler")
-
 	data := data.GetData(r)
 	if data == nil {
-		fmt.Print("data is nil")
-
 		return
 	}
-
-	fmt.Printf("data: %+v", data)
 
 	catcher := newCodeCatcher(w, s.codeRanges)
 	s.next.ServeHTTP(catcher, r)
 
-	fmt.Printf("catcher: %+v", *catcher)
-
-	if !catcher.isFilteredCode() { // if this is not a status code of concern: Return and do not increment fail counter.
+	if !catcher.isFilteredCode() {
 		for k, vv := range catcher.Header() {
 			w.Header().Set(k, strings.Join(vv, ", "))
 		}
@@ -58,13 +51,11 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
-		fmt.Printf("IP %s is banned", data.RemoteIP)
+		log.Printf("Plugin: FailToBan: IP %s blocked (status code ban)", data.RemoteIP)
 		w.WriteHeader(http.StatusTooManyRequests)
 
 		return
 	}
-
-	fmt.Printf("IP %s is allowed", data.RemoteIP)
 
 	for k, vv := range catcher.Header() {
 		w.Header().Set(k, strings.Join(vv, ", "))
@@ -73,6 +64,6 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(catcher.getCode())
 
 	if _, err := w.Write(catcher.bytes); err != nil {
-		fmt.Printf("failed to write to response: %v", err)
+		log.Printf("Plugin: FailToBan: failed to write response: %v", err)
 	}
 }

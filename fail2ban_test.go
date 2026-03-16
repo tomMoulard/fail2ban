@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/rules"
 	"golang.org/x/net/websocket"
 )
 
@@ -364,7 +364,7 @@ func TestAllowlistCIDRDoesNotBan(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, finalRecorder.Code, "allowlisted CIDR IP should receive backend status")
 }
 
-// https://github.com/tomMoulard/fail2ban/issues/67
+// https://github.com/Workiz/traefik-plugin-fail2ban/issues/67
 func TestDeadlockWebsocket(t *testing.T) {
 	t.Parallel()
 
@@ -418,6 +418,91 @@ func TestDeadlockWebsocket(t *testing.T) {
 	}
 
 	assert.Equal(t, 10, int(concurentWSCount.Load()))
+}
+
+func TestSourceCriterion(t *testing.T) {
+	t.Parallel()
+
+	const headerName = "Cf-Connecting-Ip"
+	const trustedProxyAddr = "10.0.0.1"
+	const realClientIP = "203.0.113.5"
+	const deniedClientIP = "203.0.113.99"
+
+	baseConfig := func() *Config {
+		cfg := CreateConfig()
+		cfg.Rules.Bantime = "300s"
+		cfg.Rules.Findtime = "300s"
+		cfg.Rules.Maxretry = 20
+		cfg.SourceCriterion = SourceCriterion{RequestHeaderName: headerName}
+		return cfg
+	}
+
+	t.Run("ip from header is used instead of remote addr", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := baseConfig()
+		cfg.Denylist = List{IP: []string{deniedClientIP}}
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+
+		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = trustedProxyAddr + ":1234"
+		req.Header.Set(headerName, deniedClientIP)
+
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, req)
+
+		assert.Equal(t, http.StatusTooManyRequests, rw.Code)
+	})
+
+	t.Run("allowlisted ip via header is not blocked", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := baseConfig()
+		cfg.Allowlist = List{IP: []string{realClientIP}}
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+
+		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = trustedProxyAddr + ":1234"
+		req.Header.Set(headerName, realClientIP)
+
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, req)
+
+		assert.Equal(t, http.StatusOK, rw.Code)
+	})
+
+	t.Run("missing configured header returns no response", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := baseConfig()
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+
+		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = trustedProxyAddr + ":1234"
+
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, req)
+
+		assert.Equal(t, http.StatusOK, rw.Code)
+	})
 }
 
 func TestFail2Ban_SuccessiveRequests(t *testing.T) {

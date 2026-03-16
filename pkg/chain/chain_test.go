@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
 )
 
 type mockHandler struct {
@@ -100,11 +100,11 @@ func TestChain(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			c := New(test.finalHandler, test.handlers...)
-			recorder := &httptest.ResponseRecorder{}
-			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err := data.ServeHTTP(recorder, req)
-			require.NoError(t, err)
+		c := New(test.finalHandler, "", test.handlers...)
+		recorder := &httptest.ResponseRecorder{}
+		req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+		req, err := data.ServeHTTP(recorder, req, "")
+		require.NoError(t, err)
 
 			c.ServeHTTP(recorder, req)
 
@@ -142,7 +142,7 @@ func TestChainOrder(t *testing.T) {
 		expectedCalled: 1,
 	}
 
-	ch := New(final, a, b, c)
+	ch := New(final, "", a, b, c)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
@@ -176,7 +176,45 @@ func TestChainRequestContext(t *testing.T) {
 		expectedCalled: 1,
 	}
 
-	ch := New(final, handler)
+	ch := New(final, "", handler)
+	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+	ch.ServeHTTP(nil, r)
+
+	final.assert(t)
+}
+
+func TestChainRequestContextWithSourceCriterionHeader(t *testing.T) {
+	t.Parallel()
+
+	const headerName = "Cf-Connecting-Ip"
+	const clientIP = "1.2.3.4"
+
+	handler := &mockDataHandler{
+		t:          t,
+		ExpectData: &data.Data{RemoteIP: clientIP},
+	}
+
+	final := &mockHandler{expectedCalled: 1}
+
+	ch := New(final, headerName, handler)
+	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+	r.Header.Set(headerName, clientIP)
+	ch.ServeHTTP(nil, r)
+
+	final.assert(t)
+}
+
+func TestChainMissingSourceCriterionHeader(t *testing.T) {
+	t.Parallel()
+
+	handler := &mockDataHandler{
+		t:          t,
+		ExpectData: nil,
+	}
+
+	final := &mockHandler{expectedCalled: 0}
+
+	ch := New(final, "Cf-Connecting-Ip", handler)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
@@ -192,7 +230,7 @@ func TestChainWithStatus(t *testing.T) {
 	final := &mockHandler{expectedCalled: 0}
 	status := &mockHandler{expectedCalled: 1}
 
-	ch := New(final, handler)
+	ch := New(final, "", handler)
 	ch.WithStatus(status)
 
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)

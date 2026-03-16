@@ -3,11 +3,12 @@ package handler
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
 )
 
 type handler struct {
@@ -27,6 +28,8 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.S
 	}
 
 	if !h.f2b.IsNotBanned(data.RemoteIP) {
+		log.Printf("Plugin: FailToBan: IP %s blocked (banned)", data.RemoteIP)
+
 		return &chain.Status{Return: true}, nil
 	}
 

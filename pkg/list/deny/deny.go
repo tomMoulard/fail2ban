@@ -4,11 +4,12 @@ package deny
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/ipchecking"
 )
 
 type deny struct {
@@ -30,15 +31,11 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	fmt.Printf("data: %+v", data)
-
 	if d.list.Contains(data.RemoteIP) {
-		fmt.Printf("IP %s is denied", data.RemoteIP)
+		log.Printf("Plugin: FailToBan: IP %s blocked (static denylist)", data.RemoteIP)
 
 		return &chain.Status{Return: true}, nil
 	}
-
-	fmt.Printf("IP %s not is denied", data.RemoteIP)
 
 	return nil, nil
 }

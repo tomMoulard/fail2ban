@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
 )
 
 func TestAllow(t *testing.T) {
@@ -40,7 +40,7 @@ func TestAllow(t *testing.T) {
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err = data.ServeHTTP(recorder, req)
+			req, err = data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 
 			got, err := a.ServeHTTP(recorder, req)

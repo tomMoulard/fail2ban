@@ -8,12 +8,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
-	"github.com/tomMoulard/fail2ban/pkg/utils/time"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/rules"
+	"github.com/Workiz/traefik-plugin-fail2ban/pkg/utils/time"
 )
 
 func TestDeny(t *testing.T) {
@@ -54,7 +54,7 @@ func TestDeny(t *testing.T) {
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err := data.ServeHTTP(recorder, req)
+			req, err := data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 
 			got, err := d.ServeHTTP(recorder, req)

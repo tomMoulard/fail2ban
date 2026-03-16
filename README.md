@@ -52,6 +52,31 @@ _only_ be used _concurrently_ with Fail2ban functionality (if you are looking
 for a way to allowlist or denylist IPs without using any of the Fail2ban
 logic, you might want to use a different plugin.)
 
+### Source Criterion
+
+By default, the plugin uses the connection's remote IP address (`r.RemoteAddr`)
+to identify clients. When running behind a proxy or CDN (e.g. Cloudflare), the
+real client IP is forwarded in a request header. Use `sourceCriterion` to
+tell the plugin which header to read instead:
+
+```yml
+testData:
+  sourceCriterion:
+    requestHeaderName: "Cf-Connecting-Ip"
+  rules:
+    bantime: "3h"
+    findtime: "10m"
+    maxretry: 4
+    enabled: true
+```
+
+| Field | Description |
+|---|---|
+| `requestHeaderName` | HTTP header containing the real client IP. When empty (default) `r.RemoteAddr` is used. |
+
+> **Note:** If the configured header is missing from an incoming request the
+> plugin returns an error and the request is not forwarded.
+
 ### Allowlist
 You can allowlist some IP using this:
 ```yml
