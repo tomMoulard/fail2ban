@@ -9,11 +9,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/ipchecking"
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/rules"
-	utime "github.com/Workiz/traefik-plugin-fail2ban/pkg/utils/time"
+	"github.com/Workiz/traefik-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-fail2ban/pkg/rules"
+	utime "github.com/Workiz/traefik-fail2ban/pkg/utils/time"
 )
 
 func TestStatus(t *testing.T) {

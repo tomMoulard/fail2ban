@@ -4,7 +4,7 @@ pilot:
 experimental:
   devPlugin:
     goPath:
-    moduleName: github.com/Workiz/traefik-plugin-fail2ban
+    moduleName: github.com/Workiz/traefik-fail2ban
 
 entryPoints:
   http:

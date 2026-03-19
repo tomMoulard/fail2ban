@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-fail2ban/pkg/fail2ban"
 )
 
 type status struct {

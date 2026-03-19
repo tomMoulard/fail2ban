@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/chain"
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/data"
-	"github.com/Workiz/traefik-plugin-fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-fail2ban/pkg/fail2ban"
 )
 
 type handler struct {
