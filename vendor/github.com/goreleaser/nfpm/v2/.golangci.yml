@@ -1,0 +1,56 @@
+version: "2"
+run:
+  go: "1.24"
+linters:
+  enable:
+    - depguard
+    - forbidigo
+    - misspell
+    - revive
+    - tagliatelle
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - usetesting
+    - unparam
+    - wastedassign
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/pkg/errors
+              desc: use stdlib instead
+    forbidigo:
+      forbid:
+        - pattern: ioutil\.*
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+        use-field-name: false
+    testifylint:
+      disable:
+        - encoded-compare
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

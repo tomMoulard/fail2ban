@@ -1,0 +1,61 @@
+version: "2"
+run:
+  go: "1.22"
+linters:
+  enable:
+    - depguard
+    - forbidigo
+    - gocritic
+    - misspell
+    - revive
+    - tagliatelle
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - wastedassign
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/pkg/errors
+              desc: use stdlib instead
+    forbidigo:
+      forbid:
+        - pattern: ioutil\.*
+    staticcheck:
+      checks:
+        - all
+        - -SA1019
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+        use-field-name: false
+    testifylint:
+      enable-all: true
+      disable:
+        - error-is-as
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
