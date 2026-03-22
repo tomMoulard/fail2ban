@@ -76,8 +76,6 @@ func (cc *codeCatcher) Write(buf []byte) (int, error) {
 		return len(buf), nil
 	}
 
-	fmt.Printf("Write: buf: %q, code: %d", buf, cc.code)
-
 	i, err := cc.responseWriter.Write(buf)
 	if err != nil {
 		return i, fmt.Errorf("failed to write to response: %w", err)
@@ -93,8 +91,6 @@ func (cc *codeCatcher) WriteHeader(code int) {
 	if cc.headersSent || cc.caughtFilteredCode {
 		return
 	}
-
-	fmt.Printf("Write header: code: %d", code)
 
 	// Handling informational headers.
 	if code >= 100 && code <= 199 {
@@ -148,8 +144,6 @@ func (cc *codeCatcher) Flush() {
 	// If WriteHeader was already called from the caller, this is a NOOP.
 	// Otherwise, cc.code is actually a 200 here.
 	cc.WriteHeader(cc.code)
-
-	fmt.Printf("Flush: code: %d, caughtFilteredCode: %t", cc.code, cc.caughtFilteredCode)
 
 	// We don't care about the contents of the response,
 	// since we want to serve the forbidden page,
