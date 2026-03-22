@@ -145,8 +145,6 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
-	log.Println("Plugin: FailToBan is up and running")
-
 	f2b := fail2ban.New(rules, allowNetIPs)
 
 	c := chain.New(
