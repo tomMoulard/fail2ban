@@ -46,7 +46,8 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 				Denied: true,
 			}
 
-			log.Printf("Plugin: FailToBan: IP %s blocked (URL rule %q matched %q)", data.RemoteIP, reg.String(), r.URL.String())
+			log.Printf("Plugin: FailToBan: IP %s blocked (URL rule %q matched %q) method=%s ua=%q",
+				data.RemoteIP, reg.String(), r.URL.String(), r.Method, r.UserAgent())
 
 			return &chain.Status{Return: true}, nil
 		}

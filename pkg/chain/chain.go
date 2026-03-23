@@ -54,7 +54,8 @@ func (c *chain) WithStatus(status http.Handler) {
 func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r, err := data.ServeHTTP(w, r, c.requestHeaderName)
 	if err != nil {
-		log.Printf("data.ServeHTTP error: %v", err)
+		log.Printf("Plugin: FailToBan: failed to extract IP, passing through: %v", err)
+		c.final.ServeHTTP(w, r)
 
 		return
 	}

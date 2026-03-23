@@ -32,7 +32,8 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 	}
 
 	if d.list.Contains(data.RemoteIP) {
-		log.Printf("Plugin: FailToBan: IP %s blocked (static denylist)", data.RemoteIP)
+		log.Printf("Plugin: FailToBan: IP %s blocked (static denylist) method=%s path=%s ua=%q",
+			data.RemoteIP, r.Method, r.URL.Path, r.UserAgent())
 
 		return &chain.Status{Return: true}, nil
 	}

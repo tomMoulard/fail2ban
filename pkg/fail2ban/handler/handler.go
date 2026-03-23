@@ -28,7 +28,8 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.S
 	}
 
 	if !h.f2b.IsNotBanned(data.RemoteIP) {
-		log.Printf("Plugin: FailToBan: IP %s blocked (banned)", data.RemoteIP)
+		log.Printf("Plugin: FailToBan: IP %s blocked (banned) method=%s path=%s ua=%q",
+			data.RemoteIP, req.Method, req.URL.Path, req.UserAgent())
 
 		return &chain.Status{Return: true}, nil
 	}

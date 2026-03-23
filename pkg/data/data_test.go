@@ -37,9 +37,9 @@ func TestData(t *testing.T) {
 			expectedData:      &Data{RemoteIP: "1.2.3.4"},
 		},
 		{
-			name:              "error when configured header is missing from request",
+			name:              "falls back to RemoteAddr when configured header is missing",
 			requestHeaderName: "Cf-Connecting-Ip",
-			expectError:       true,
+			expectedData:      &Data{RemoteIP: "192.0.2.1"},
 		},
 	}
 

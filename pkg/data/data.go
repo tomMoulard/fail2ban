@@ -4,6 +4,7 @@ package data
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -20,16 +21,24 @@ type Data struct {
 // ServeHTTP sets data in the request context, to be extracted with GetData.
 // If requestHeaderName is non-empty, the IP is read from that request header
 // (e.g. "Cf-Connecting-Ip") instead of r.RemoteAddr.
+// If the header is configured but missing, it falls back to r.RemoteAddr with a warning.
 func ServeHTTP(w http.ResponseWriter, r *http.Request, requestHeaderName string) (*http.Request, error) {
 	var remoteIP string
 
 	if requestHeaderName != "" {
 		headerValue := r.Header.Get(requestHeaderName)
-		if headerValue == "" {
-			return nil, fmt.Errorf("header %q is missing from request", requestHeaderName)
-		}
+		if headerValue != "" {
+			remoteIP = strings.TrimSpace(strings.SplitN(headerValue, ",", 2)[0])
+		} else {
+			ip, _, err := net.SplitHostPort(r.RemoteAddr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to split remote address %q: %w", r.RemoteAddr, err)
+			}
 
-		remoteIP = strings.TrimSpace(strings.SplitN(headerValue, ",", 2)[0])
+			log.Printf("Plugin: FailToBan: header %q missing, falling back to RemoteAddr %s", requestHeaderName, ip)
+
+			remoteIP = ip
+		}
 	} else {
 		ip, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {

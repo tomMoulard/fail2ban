@@ -51,7 +51,8 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
-		log.Printf("Plugin: FailToBan: IP %s blocked (status code ban)", data.RemoteIP)
+		log.Printf("Plugin: FailToBan: IP %s blocked (status code ban: %d) method=%s path=%s ua=%q",
+			data.RemoteIP, catcher.getCode(), r.Method, r.URL.Path, r.UserAgent())
 		w.WriteHeader(http.StatusTooManyRequests)
 
 		return
