@@ -2,10 +2,10 @@
 package chain
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/Workiz/traefik-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-fail2ban/pkg/logger"
 )
 
 // Status is a status that can be returned by a handler.
@@ -54,7 +54,9 @@ func (c *chain) WithStatus(status http.Handler) {
 func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r, err := data.ServeHTTP(w, r, c.requestHeaderName)
 	if err != nil {
-		log.Printf("Plugin: FailToBan: failed to extract IP, passing through: %v", err)
+		logger.Error("Plugin: FailToBan: failed to extract IP, passing through",
+			logger.WithErr(err.Error()),
+		)
 		c.final.ServeHTTP(w, r)
 
 		return
@@ -63,7 +65,9 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, handler := range c.handlers {
 		s, err := handler.ServeHTTP(w, r)
 		if err != nil {
-			log.Printf("handler.ServeHTTP error: %v", err)
+			logger.Error("Plugin: FailToBan: handler error",
+				logger.WithErr(err.Error()),
+			)
 
 			break
 		}

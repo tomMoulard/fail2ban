@@ -3,12 +3,12 @@ package status
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/Workiz/traefik-fail2ban/pkg/data"
 	"github.com/Workiz/traefik-fail2ban/pkg/fail2ban"
+	"github.com/Workiz/traefik-fail2ban/pkg/logger"
 )
 
 type status struct {
@@ -51,8 +51,14 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
-		log.Printf("Plugin: FailToBan: IP %s blocked (status code ban: %d) method=%s path=%s ua=%q",
-			data.RemoteIP, catcher.getCode(), r.Method, r.URL.Path, r.UserAgent())
+		logger.Info("Plugin: FailToBan: IP blocked",
+			logger.WithIP(data.RemoteIP),
+			logger.WithReason("status code ban"),
+			logger.WithStatusCode(catcher.getCode()),
+			logger.WithMethod(r.Method),
+			logger.WithPath(r.URL.Path),
+			logger.WithUA(r.UserAgent()),
+		)
 		w.WriteHeader(http.StatusTooManyRequests)
 
 		return
@@ -65,6 +71,8 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(catcher.getCode())
 
 	if _, err := w.Write(catcher.bytes); err != nil {
-		log.Printf("Plugin: FailToBan: failed to write response: %v", err)
+		logger.Error("Plugin: FailToBan: failed to write response",
+			logger.WithErr(err.Error()),
+		)
 	}
 }

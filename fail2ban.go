@@ -4,9 +4,7 @@ package traefik_fail2ban
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/Workiz/traefik-fail2ban/pkg/chain"
@@ -15,15 +13,13 @@ import (
 	"github.com/Workiz/traefik-fail2ban/pkg/ipchecking"
 	lAllow "github.com/Workiz/traefik-fail2ban/pkg/list/allow"
 	lDeny "github.com/Workiz/traefik-fail2ban/pkg/list/deny"
+	"github.com/Workiz/traefik-fail2ban/pkg/logger"
 	"github.com/Workiz/traefik-fail2ban/pkg/response/status"
 	"github.com/Workiz/traefik-fail2ban/pkg/rules"
 	uAllow "github.com/Workiz/traefik-fail2ban/pkg/url/allow"
 	uDeny "github.com/Workiz/traefik-fail2ban/pkg/url/deny"
 )
 
-func init() {
-	log.SetOutput(os.Stdout)
-}
 
 // List struct.
 type List struct {
@@ -88,7 +84,7 @@ func ImportIP(list List) ([]string, error) {
 // request.
 func New(_ context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
 	if !config.Rules.Enabled {
-		log.Println("Plugin: FailToBan is disabled")
+		logger.Info("Plugin: FailToBan is disabled")
 
 		return next, nil
 	}
@@ -99,7 +95,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 	}
 
 	if len(config.Whitelist.IP) > 0 || len(config.Whitelist.Files) > 0 {
-		log.Println("Plugin: FailToBan: 'whitelist' is deprecated, please use 'denylist' instead")
+		logger.Warn("Plugin: FailToBan: 'whitelist' is deprecated, please use 'allowlist' instead")
 
 		whiteips, err := ImportIP(config.Whitelist)
 		if err != nil {
@@ -125,7 +121,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 	}
 
 	if len(config.Blacklist.IP) > 0 || len(config.Blacklist.Files) > 0 {
-		log.Println("Plugin: FailToBan: 'blacklist' is deprecated, please use 'denylist' instead")
+		logger.Warn("Plugin: FailToBan: 'blacklist' is deprecated, please use 'denylist' instead")
 
 		blackips, err := ImportIP(config.Blacklist)
 		if err != nil {

@@ -4,10 +4,11 @@ package data
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strings"
+
+	"github.com/Workiz/traefik-fail2ban/pkg/logger"
 )
 
 type key string
@@ -35,7 +36,10 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request, requestHeaderName string)
 				return nil, fmt.Errorf("failed to split remote address %q: %w", r.RemoteAddr, err)
 			}
 
-			log.Printf("Plugin: FailToBan: header %q missing, falling back to RemoteAddr %s", requestHeaderName, ip)
+			logger.Warn("Plugin: FailToBan: header missing, falling back to RemoteAddr",
+				logger.WithHeader(requestHeaderName),
+				logger.WithFallbackIP(ip),
+			)
 
 			remoteIP = ip
 		}

@@ -3,7 +3,6 @@ package deny
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"regexp"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/Workiz/traefik-fail2ban/pkg/data"
 	"github.com/Workiz/traefik-fail2ban/pkg/fail2ban"
 	"github.com/Workiz/traefik-fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-fail2ban/pkg/logger"
 	"github.com/Workiz/traefik-fail2ban/pkg/utils/time"
 )
 
@@ -46,8 +46,13 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 				Denied: true,
 			}
 
-			log.Printf("Plugin: FailToBan: IP %s blocked (URL rule %q matched %q) method=%s ua=%q",
-				data.RemoteIP, reg.String(), r.URL.String(), r.Method, r.UserAgent())
+			logger.Info("Plugin: FailToBan: IP blocked",
+				logger.WithIP(data.RemoteIP),
+				logger.WithReason("url rule: "+reg.String()),
+				logger.WithMethod(r.Method),
+				logger.WithPath(r.URL.String()),
+				logger.WithUA(r.UserAgent()),
+			)
 
 			return &chain.Status{Return: true}, nil
 		}
