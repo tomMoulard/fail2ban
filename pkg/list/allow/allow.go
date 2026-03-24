@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-fail2ban/pkg/ipchecking"
 )
 
 type allow struct {

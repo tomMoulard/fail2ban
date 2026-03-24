@@ -1,4 +1,4 @@
-package fail2ban
+package traefik_fail2ban
 
 import (
 	"errors"
@@ -13,7 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
+	"github.com/Workiz/traefik-fail2ban/pkg/rules"
 	"golang.org/x/net/websocket"
 )
 
@@ -364,7 +364,7 @@ func TestAllowlistCIDRDoesNotBan(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, finalRecorder.Code, "allowlisted CIDR IP should receive backend status")
 }
 
-// https://github.com/tomMoulard/fail2ban/issues/67
+// https://github.com/Workiz/traefik-fail2ban/issues/67
 func TestDeadlockWebsocket(t *testing.T) {
 	t.Parallel()
 

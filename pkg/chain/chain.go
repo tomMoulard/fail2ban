@@ -4,8 +4,8 @@ package chain
 import (
 	"net/http"
 
-	"github.com/tomMoulard/fail2ban/pkg/data"
-	"github.com/tomMoulard/fail2ban/pkg/logger"
+	"github.com/Workiz/traefik-fail2ban/pkg/data"
+	"github.com/Workiz/traefik-fail2ban/pkg/logger"
 )
 
 // Status is a status that can be returned by a handler.

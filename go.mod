@@ -1,4 +1,4 @@
-module github.com/tomMoulard/fail2ban
+module github.com/Workiz/traefik-fail2ban
 
 go 1.25.5
 

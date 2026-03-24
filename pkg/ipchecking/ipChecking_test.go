@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-fail2ban/pkg/ipchecking"
 )
 
 func Example() {

@@ -4,9 +4,9 @@ package fail2ban
 import (
 	"sync"
 
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
-	utime "github.com/tomMoulard/fail2ban/pkg/utils/time"
+	"github.com/Workiz/traefik-fail2ban/pkg/ipchecking"
+	"github.com/Workiz/traefik-fail2ban/pkg/rules"
+	utime "github.com/Workiz/traefik-fail2ban/pkg/utils/time"
 )
 
 // Fail2Ban is a fail2ban implementation.

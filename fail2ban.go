@@ -1,5 +1,5 @@
 // Package fail2ban contains the Fail2ban mechanism for the plugin.
-package fail2ban
+package traefik_fail2ban
 
 import (
 	"context"
@@ -8,17 +8,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tomMoulard/fail2ban/pkg/chain"
-	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
-	f2bHandler "github.com/tomMoulard/fail2ban/pkg/fail2ban/handler"
-	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
-	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
-	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
-	"github.com/tomMoulard/fail2ban/pkg/logger"
-	"github.com/tomMoulard/fail2ban/pkg/response/status"
-	"github.com/tomMoulard/fail2ban/pkg/rules"
-	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
-	uDeny "github.com/tomMoulard/fail2ban/pkg/url/deny"
+	"github.com/Workiz/traefik-fail2ban/pkg/chain"
+	"github.com/Workiz/traefik-fail2ban/pkg/fail2ban"
+	f2bHandler "github.com/Workiz/traefik-fail2ban/pkg/fail2ban/handler"
+	"github.com/Workiz/traefik-fail2ban/pkg/ipchecking"
+	lAllow "github.com/Workiz/traefik-fail2ban/pkg/list/allow"
+	lDeny "github.com/Workiz/traefik-fail2ban/pkg/list/deny"
+	"github.com/Workiz/traefik-fail2ban/pkg/logger"
+	"github.com/Workiz/traefik-fail2ban/pkg/response/status"
+	"github.com/Workiz/traefik-fail2ban/pkg/rules"
+	uAllow "github.com/Workiz/traefik-fail2ban/pkg/url/allow"
+	uDeny "github.com/Workiz/traefik-fail2ban/pkg/url/deny"
 )
 
 
