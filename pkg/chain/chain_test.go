@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/Workiz/traefik-fail2ban/pkg/data"
+	"github.com/tomMoulard/fail2ban/pkg/data"
 )
 
 type mockHandler struct {
@@ -209,10 +209,10 @@ func TestChainMissingSourceCriterionHeader(t *testing.T) {
 
 	handler := &mockDataHandler{
 		t:          t,
-		ExpectData: nil,
+		ExpectData: &data.Data{RemoteIP: "192.0.2.1"},
 	}
 
-	final := &mockHandler{expectedCalled: 0}
+	final := &mockHandler{expectedCalled: 1}
 
 	ch := New(final, "Cf-Connecting-Ip", handler)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)

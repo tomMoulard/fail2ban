@@ -5,10 +5,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/Workiz/traefik-fail2ban/pkg/chain"
-	"github.com/Workiz/traefik-fail2ban/pkg/data"
-	"github.com/Workiz/traefik-fail2ban/pkg/fail2ban"
-	"github.com/Workiz/traefik-fail2ban/pkg/logger"
+	"github.com/tomMoulard/fail2ban/pkg/chain"
+	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
+	"github.com/tomMoulard/fail2ban/pkg/logger"
 )
 
 type handler struct {

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Workiz/traefik-fail2ban/pkg/logger"
+	"github.com/tomMoulard/fail2ban/pkg/logger"
 )
 
 type key string
