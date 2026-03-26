@@ -115,7 +115,7 @@ func TestStatus(t *testing.T) {
 				Bantime:  300 * time.Second,
 			}, nil)
 			f2b.IPs = test.ips
-			d, err := New(next, test.codeRanges, f2b)
+			d, err := New(next, test.codeRanges, f2b, true)
 			require.NoError(t, err)
 
 			recorder := &httptest.ResponseRecorder{}
@@ -236,7 +236,7 @@ func TestHeaderCopying(t *testing.T) {
 				f2b.IPs[ip] = viewed
 			}
 
-			statusHandler, err := New(next, test.codeRanges, f2b)
+			statusHandler, err := New(next, test.codeRanges, f2b, true)
 			require.NoError(t, err)
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)

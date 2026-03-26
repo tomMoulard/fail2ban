@@ -55,6 +55,7 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r, err := data.ServeHTTP(w, r, c.requestHeaderName)
 	if err != nil {
 		logger.Error("Plugin: FailToBan: failed to extract IP, passing through",
+			logger.WithHeader(c.requestHeaderName),
 			logger.WithErr(err.Error()),
 		)
 		c.final.ServeHTTP(w, r)

@@ -12,11 +12,12 @@ import (
 )
 
 type handler struct {
-	f2b *fail2ban.Fail2Ban
+	f2b             *fail2ban.Fail2Ban
+	enableBlockLogs bool
 }
 
-func New(f2b *fail2ban.Fail2Ban) *handler {
-	return &handler{f2b: f2b}
+func New(f2b *fail2ban.Fail2Ban, enableBlockLogs bool) *handler {
+	return &handler{f2b: f2b, enableBlockLogs: enableBlockLogs}
 }
 
 // ServeHTTP iterates over every headers to match the ones specified in the
@@ -28,13 +29,15 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.S
 	}
 
 	if !h.f2b.IsNotBanned(data.RemoteIP) {
-		logger.Info("Plugin: FailToBan: IP blocked",
-			logger.WithIP(data.RemoteIP),
-			logger.WithReason("banned"),
-			logger.WithMethod(req.Method),
-			logger.WithPath(req.URL.Path),
-			logger.WithUA(req.UserAgent()),
-		)
+		if h.enableBlockLogs {
+			logger.Info("Plugin: FailToBan: IP blocked",
+				logger.WithIP(data.RemoteIP),
+				logger.WithReason("banned"),
+				logger.WithMethod(req.Method),
+				logger.WithPath(req.URL.Path),
+				logger.WithUA(req.UserAgent()),
+			)
+		}
 
 		return &chain.Status{Return: true}, nil
 	}

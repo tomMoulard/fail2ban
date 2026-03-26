@@ -42,6 +42,7 @@ type Config struct {
 	Allowlist       List            `yaml:"allowlist"`
 	Rules           rules.Rules     `yaml:"port"`
 	SourceCriterion SourceCriterion `yaml:"sourceCriterion"`
+	EnableBlockLogs bool            `yaml:"enableBlockLogs"`
 
 	// deprecated
 	Blacklist List `yaml:"blacklist"`
@@ -57,6 +58,7 @@ func CreateConfig() *Config {
 			Findtime: "120s",
 			Enabled:  true,
 		},
+		EnableBlockLogs: true,
 	}
 }
 
@@ -132,7 +134,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		denyIPs = append(denyIPs, blackips...)
 	}
 
-	denyHandler, err := lDeny.New(denyIPs)
+	denyHandler, err := lDeny.New(denyIPs, config.EnableBlockLogs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
 	}
@@ -151,11 +153,11 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		allowHandler,
 		uDeny.New(rules.URLRegexpBan, f2b),
 		uAllow.New(rules.URLRegexpAllow),
-		f2bHandler.New(f2b),
+		f2bHandler.New(f2b, config.EnableBlockLogs),
 	)
 
 	if rules.StatusCode != "" {
-		statusCodeHandler, err := status.New(next, rules.StatusCode, f2b)
+		statusCodeHandler, err := status.New(next, rules.StatusCode, f2b, config.EnableBlockLogs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create status handler: %w", err)
 		}

@@ -13,16 +13,17 @@ import (
 )
 
 type deny struct {
-	list ipchecking.NetIPs
+	list            ipchecking.NetIPs
+	enableBlockLogs bool
 }
 
-func New(ipList []string) (*deny, error) {
+func New(ipList []string, enableBlockLogs bool) (*deny, error) {
 	list, err := ipchecking.ParseNetIPs(ipList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new net ips: %w", err)
 	}
 
-	return &deny{list: list}, nil
+	return &deny{list: list, enableBlockLogs: enableBlockLogs}, nil
 }
 
 func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status, error) {
@@ -32,13 +33,15 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 	}
 
 	if d.list.Contains(data.RemoteIP) {
-		logger.Info("Plugin: FailToBan: IP blocked",
-			logger.WithIP(data.RemoteIP),
-			logger.WithReason("static denylist"),
-			logger.WithMethod(r.Method),
-			logger.WithPath(r.URL.Path),
-			logger.WithUA(r.UserAgent()),
-		)
+		if d.enableBlockLogs {
+			logger.Info("Plugin: FailToBan: IP blocked",
+				logger.WithIP(data.RemoteIP),
+				logger.WithReason("static denylist"),
+				logger.WithMethod(r.Method),
+				logger.WithPath(r.URL.Path),
+				logger.WithUA(r.UserAgent()),
+			)
+		}
 
 		return &chain.Status{Return: true}, nil
 	}

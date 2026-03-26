@@ -12,21 +12,23 @@ import (
 )
 
 type status struct {
-	next       http.Handler
-	codeRanges HTTPCodeRanges
-	f2b        *fail2ban.Fail2Ban
+	next            http.Handler
+	codeRanges      HTTPCodeRanges
+	f2b             *fail2ban.Fail2Ban
+	enableBlockLogs bool
 }
 
-func New(next http.Handler, statusCode string, f2b *fail2ban.Fail2Ban) (*status, error) {
+func New(next http.Handler, statusCode string, f2b *fail2ban.Fail2Ban, enableBlockLogs bool) (*status, error) {
 	codeRanges, err := NewHTTPCodeRanges(strings.Split(statusCode, ","))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP code ranges: %w", err)
 	}
 
 	return &status{
-		next:       next,
-		codeRanges: codeRanges,
-		f2b:        f2b,
+		next:            next,
+		codeRanges:      codeRanges,
+		f2b:             f2b,
+		enableBlockLogs: enableBlockLogs,
 	}, nil
 }
 
@@ -51,14 +53,17 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
-		logger.Info("Plugin: FailToBan: IP blocked",
-			logger.WithIP(data.RemoteIP),
-			logger.WithReason("status code ban"),
-			logger.WithStatusCode(catcher.getCode()),
-			logger.WithMethod(r.Method),
-			logger.WithPath(r.URL.Path),
-			logger.WithUA(r.UserAgent()),
-		)
+		if s.enableBlockLogs {
+			logger.Info("Plugin: FailToBan: IP blocked",
+				logger.WithIP(data.RemoteIP),
+				logger.WithReason("status code ban"),
+				logger.WithStatusCode(catcher.getCode()),
+				logger.WithMethod(r.Method),
+				logger.WithPath(r.URL.Path),
+				logger.WithUA(r.UserAgent()),
+			)
+		}
+
 		w.WriteHeader(http.StatusTooManyRequests)
 
 		return
