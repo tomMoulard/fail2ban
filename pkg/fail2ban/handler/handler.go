@@ -33,6 +33,7 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.S
 			logger.Info("Plugin: FailToBan: IP blocked",
 				logger.WithIP(reqData.RemoteIP),
 				logger.WithReason("banned"),
+				logger.WithStatusCode(http.StatusTooManyRequests),
 				logger.WithMethod(req.Method),
 				logger.WithPath(req.URL.Path),
 				logger.WithUA(req.UserAgent()),

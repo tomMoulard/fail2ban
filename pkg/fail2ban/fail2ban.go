@@ -120,7 +120,7 @@ func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
 	if ip.Denied {
 		if utime.Now().Before(ip.Viewed.Add(u.rules.Bantime)) {
 			u.IPs[remoteIP] = ipchecking.IPViewed{
-				Viewed: utime.Now(),
+				Viewed: ip.Viewed,
 				Count:  ip.Count + 1,
 				Denied: true,
 			}
