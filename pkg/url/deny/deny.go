@@ -53,7 +53,7 @@ func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status,
 					logger.WithReason("url rule: "+reg.String()),
 					logger.WithStatusCode(http.StatusTooManyRequests),
 					logger.WithMethod(r.Method),
-					logger.WithPath(r.URL.String()),
+					logger.WithPath(r.URL.Path),
 					logger.WithUA(r.UserAgent()),
 				)
 			}
