@@ -27,15 +27,15 @@ func New(ipList []string, enableBlockLogs bool) (*deny, error) {
 }
 
 func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status, error) {
-	data := data.GetData(r)
-	if data == nil {
+	reqData := data.GetData(r)
+	if reqData == nil {
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	if d.list.Contains(data.RemoteIP) {
+	if d.list.Contains(reqData.RemoteIP) {
 		if d.enableBlockLogs {
 			logger.Info("Plugin: FailToBan: IP blocked",
-				logger.WithIP(data.RemoteIP),
+				logger.WithIP(reqData.RemoteIP),
 				logger.WithReason("static denylist"),
 				logger.WithMethod(r.Method),
 				logger.WithPath(r.URL.Path),

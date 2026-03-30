@@ -29,7 +29,22 @@ func ServeHTTP(w http.ResponseWriter, r *http.Request, requestHeaderName string)
 	if requestHeaderName != "" {
 		headerValue := r.Header.Get(requestHeaderName)
 		if headerValue != "" {
-			remoteIP = strings.TrimSpace(strings.SplitN(headerValue, ",", 2)[0])
+			candidate := strings.TrimSpace(strings.SplitN(headerValue, ",", 2)[0])
+			if net.ParseIP(candidate) == nil {
+				ip, _, err := net.SplitHostPort(r.RemoteAddr)
+				if err != nil {
+					return nil, fmt.Errorf("failed to split remote address %q: %w", r.RemoteAddr, err)
+				}
+
+				logger.Warn("Plugin: FailToBan: invalid IP in header, falling back to RemoteAddr",
+					logger.WithHeader(requestHeaderName),
+					logger.WithFallbackIP(ip),
+				)
+
+				remoteIP = ip
+			} else {
+				remoteIP = candidate
+			}
 		} else {
 			ip, _, err := net.SplitHostPort(r.RemoteAddr)
 			if err != nil {

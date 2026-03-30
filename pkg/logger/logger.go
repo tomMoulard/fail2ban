@@ -50,7 +50,13 @@ func write(level, msg string, fields ...func(*Event)) {
 		f(e)
 	}
 
-	b, _ := json.Marshal(e)
+	b, err := json.Marshal(e)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, `{"level":"error","msg":"failed to marshal log event","error":%q,"fallback":%q}`+"\n", err.Error(), e.Msg)
+
+		return
+	}
+
 	fmt.Fprintln(os.Stdout, string(b))
 }
 

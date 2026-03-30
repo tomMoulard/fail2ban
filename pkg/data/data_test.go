@@ -41,6 +41,10 @@ func TestData(t *testing.T) {
 			requestHeaderName: "Cf-Connecting-Ip",
 			expectedData:      &Data{RemoteIP: "192.0.2.1"},
 		},
+		{
+			name:        "returns error when RemoteAddr is malformed and no header configured",
+			expectError: true,
+		},
 	}
 
 	for _, test := range tests {
@@ -52,6 +56,10 @@ func TestData(t *testing.T) {
 
 			if test.headerValue != "" {
 				req.Header.Set(test.requestHeaderName, test.headerValue)
+			}
+
+			if test.expectError {
+				req.RemoteAddr = "bad-addr-no-port"
 			}
 
 			req, err := ServeHTTP(recorder, req, test.requestHeaderName)

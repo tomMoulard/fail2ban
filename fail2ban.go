@@ -151,7 +151,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		config.SourceCriterion.RequestHeaderName,
 		denyHandler,
 		allowHandler,
-		uDeny.New(rules.URLRegexpBan, f2b),
+		uDeny.New(rules.URLRegexpBan, f2b, config.EnableBlockLogs),
 		uAllow.New(rules.URLRegexpAllow),
 		f2bHandler.New(f2b, config.EnableBlockLogs),
 	)

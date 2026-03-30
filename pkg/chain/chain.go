@@ -52,16 +52,20 @@ func (c *chain) WithStatus(status http.Handler) {
 
 // ServeHTTP chains the handlers together, and calls the final handler at the end.
 func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	r, err := data.ServeHTTP(w, r, c.requestHeaderName)
+	newReq, err := data.ServeHTTP(w, r, c.requestHeaderName)
 	if err != nil {
 		logger.Error("Plugin: FailToBan: failed to extract IP, passing through",
 			logger.WithHeader(c.requestHeaderName),
 			logger.WithErr(err.Error()),
 		)
+		// Fail-open: on IP extraction failure we pass the original request through
+		// rather than blocking, prioritising availability over strict enforcement.
 		c.final.ServeHTTP(w, r)
 
 		return
 	}
+
+	r = newReq
 
 	for _, handler := range c.handlers {
 		s, err := handler.ServeHTTP(w, r)
@@ -70,6 +74,9 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				logger.WithErr(err.Error()),
 			)
 
+			// Fail-open: handler errors are logged and the chain proceeds to the
+			// final handler rather than propagating the error, prioritising
+			// availability over strict enforcement.
 			break
 		}
 

@@ -23,15 +23,15 @@ func New(f2b *fail2ban.Fail2Ban, enableBlockLogs bool) *handler {
 // ServeHTTP iterates over every headers to match the ones specified in the
 // configuration and return nothing if regexp failed.
 func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) (*chain.Status, error) {
-	data := data.GetData(req)
-	if data == nil {
+	reqData := data.GetData(req)
+	if reqData == nil {
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	if !h.f2b.IsNotBanned(data.RemoteIP) {
+	if !h.f2b.IsNotBanned(reqData.RemoteIP) {
 		if h.enableBlockLogs {
 			logger.Info("Plugin: FailToBan: IP blocked",
-				logger.WithIP(data.RemoteIP),
+				logger.WithIP(reqData.RemoteIP),
 				logger.WithReason("banned"),
 				logger.WithMethod(req.Method),
 				logger.WithPath(req.URL.Path),
