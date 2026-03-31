@@ -423,10 +423,12 @@ func TestDeadlockWebsocket(t *testing.T) {
 func TestSourceCriterion(t *testing.T) {
 	t.Parallel()
 
-	const headerName = "Cf-Connecting-Ip"
-	const trustedProxyAddr = "10.0.0.1"
-	const realClientIP = "203.0.113.5"
-	const deniedClientIP = "203.0.113.99"
+	const (
+		headerName       = "Cf-Connecting-Ip"
+		trustedProxyAddr = "10.0.0.1"
+		realClientIP     = "203.0.113.5"
+		deniedClientIP   = "203.0.113.99"
+	)
 
 	baseConfig := func() *Config {
 		cfg := CreateConfig()
@@ -434,6 +436,7 @@ func TestSourceCriterion(t *testing.T) {
 		cfg.Rules.Findtime = "300s"
 		cfg.Rules.Maxretry = 20
 		cfg.SourceCriterion = SourceCriterion{RequestHeaderName: headerName}
+
 		return cfg
 	}
 

@@ -15,12 +15,12 @@ type Event struct {
 	Msg        string `json:"msg"`
 	IP         string `json:"ip,omitempty"`
 	Reason     string `json:"reason,omitempty"`
-	StatusCode int    `json:"status_code,omitempty"`
+	StatusCode int    `json:"statusCode,omitempty"`
 	Method     string `json:"method,omitempty"`
 	Path       string `json:"path,omitempty"`
 	UA         string `json:"ua,omitempty"`
 	Header     string `json:"header,omitempty"`
-	FallbackIP string `json:"fallback_ip,omitempty"`
+	FallbackIP string `json:"fallbackIp,omitempty"`
 	Err        string `json:"error,omitempty"`
 }
 
@@ -57,7 +57,7 @@ func write(level, msg string, fields ...func(*Event)) {
 		return
 	}
 
-	fmt.Fprintln(os.Stdout, string(b))
+	_, _ = fmt.Fprintln(os.Stdout, string(b))
 }
 
 // WithIP sets the IP field.

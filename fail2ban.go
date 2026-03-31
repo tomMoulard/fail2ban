@@ -21,7 +21,6 @@ import (
 	uDeny "github.com/tomMoulard/fail2ban/pkg/url/deny"
 )
 
-
 // List struct.
 type List struct {
 	IP    []string

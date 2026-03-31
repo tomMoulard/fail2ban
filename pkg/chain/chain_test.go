@@ -100,11 +100,11 @@ func TestChain(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-		c := New(test.finalHandler, "", test.handlers...)
-		recorder := &httptest.ResponseRecorder{}
-		req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-		req, err := data.ServeHTTP(recorder, req, "")
-		require.NoError(t, err)
+			c := New(test.finalHandler, "", test.handlers...)
+			recorder := &httptest.ResponseRecorder{}
+			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+			req, err := data.ServeHTTP(recorder, req, "")
+			require.NoError(t, err)
 
 			c.ServeHTTP(recorder, req)
 
@@ -186,8 +186,10 @@ func TestChainRequestContext(t *testing.T) {
 func TestChainRequestContextWithSourceCriterionHeader(t *testing.T) {
 	t.Parallel()
 
-	const headerName = "Cf-Connecting-Ip"
-	const clientIP = "1.2.3.4"
+	const (
+		headerName = "Cf-Connecting-Ip"
+		clientIP   = "1.2.3.4"
+	)
 
 	handler := &mockDataHandler{
 		t:          t,

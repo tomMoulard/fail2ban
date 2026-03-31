@@ -59,7 +59,7 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			logger.WithErr(err.Error()),
 		)
 		// Fail-open: on IP extraction failure we pass the original request through
-		// rather than blocking, prioritising availability over strict enforcement.
+		// rather than blocking, prioritizing availability over strict enforcement.
 		c.final.ServeHTTP(w, r)
 
 		return
@@ -75,7 +75,7 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			)
 
 			// Fail-open: handler errors are logged and the chain proceeds to the
-			// final handler rather than propagating the error, prioritising
+			// final handler rather than propagating the error, prioritizing
 			// availability over strict enforcement.
 			break
 		}
