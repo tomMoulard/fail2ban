@@ -2,9 +2,7 @@
 package fail2ban
 
 import (
-	"fmt"
 	"sync"
-	"time"
 
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
@@ -41,14 +39,11 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 
 	ip, foundIP := u.IPs[remoteIP]
 
-	// Fail2Ban
 	if !foundIP {
 		u.IPs[remoteIP] = ipchecking.IPViewed{
 			Viewed: utime.Now(),
 			Count:  1,
 		}
-
-		fmt.Printf("welcome %q", remoteIP)
 
 		return true
 	}
@@ -61,9 +56,6 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 				Denied: true,
 			}
 
-			fmt.Printf("%q is still banned since %q, %d request",
-				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
-
 			return false
 		}
 
@@ -72,8 +64,6 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 			Count:  1,
 			Denied: false,
 		}
-
-		fmt.Println(remoteIP + " is no longer banned")
 
 		return true
 	}
@@ -86,9 +76,6 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 				Denied: true,
 			}
 
-			fmt.Printf("%q is banned for %d>=%d request",
-				remoteIP, ip.Count+1, u.rules.MaxRetry)
-
 			return false
 		}
 
@@ -98,8 +85,6 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 			Denied: false,
 		}
 
-		fmt.Printf("welcome back %q for the %d time", remoteIP, ip.Count+1)
-
 		return true
 	}
 
@@ -108,8 +93,6 @@ func (u *Fail2Ban) ShouldAllow(remoteIP string) bool {
 		Count:  1,
 		Denied: false,
 	}
-
-	fmt.Printf("welcome back %q", remoteIP)
 
 	return true
 }
@@ -125,14 +108,11 @@ func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
 
 	ip, foundIP := u.IPs[remoteIP]
 
-	// Fail2Ban
 	if !foundIP {
 		u.IPs[remoteIP] = ipchecking.IPViewed{
 			Viewed: utime.Now(),
 			Count:  0,
 		}
-
-		fmt.Printf("welcome %q", remoteIP)
 
 		return true
 	}
@@ -140,13 +120,10 @@ func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
 	if ip.Denied {
 		if utime.Now().Before(ip.Viewed.Add(u.rules.Bantime)) {
 			u.IPs[remoteIP] = ipchecking.IPViewed{
-				Viewed: utime.Now(), // refresh ban time
+				Viewed: ip.Viewed,
 				Count:  ip.Count + 1,
 				Denied: true,
 			}
-
-			fmt.Printf("%q is still banned since %q, %d request",
-				remoteIP, ip.Viewed.Format(time.RFC3339), ip.Count+1)
 
 			return false
 		}
@@ -157,12 +134,8 @@ func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
 			Denied: false,
 		}
 
-		fmt.Println(remoteIP + " is no longer banned")
-
 		return true
 	}
-
-	fmt.Printf("welcome back %q", remoteIP)
 
 	return true
 }

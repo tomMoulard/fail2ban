@@ -115,12 +115,12 @@ func TestStatus(t *testing.T) {
 				Bantime:  300 * time.Second,
 			}, nil)
 			f2b.IPs = test.ips
-			d, err := New(next, test.codeRanges, f2b)
+			d, err := New(next, test.codeRanges, f2b, true)
 			require.NoError(t, err)
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err = data.ServeHTTP(recorder, req)
+			req, err = data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 
 			var b bytes.Buffer
@@ -236,11 +236,11 @@ func TestHeaderCopying(t *testing.T) {
 				f2b.IPs[ip] = viewed
 			}
 
-			statusHandler, err := New(next, test.codeRanges, f2b)
+			statusHandler, err := New(next, test.codeRanges, f2b, true)
 			require.NoError(t, err)
 
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			req, err = data.ServeHTTP(httptest.NewRecorder(), req)
+			req, err = data.ServeHTTP(httptest.NewRecorder(), req, "")
 			require.NoError(t, err)
 
 			d := data.GetData(req)

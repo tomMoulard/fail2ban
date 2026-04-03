@@ -31,7 +31,7 @@ func Example() {
 	// return an error.
 	// Create a new chain with a final h.
 	h := &Handler{}
-	c := chain.New(&PongHandler{}, h)
+	c := chain.New(&PongHandler{}, "", h)
 
 	// Create a new request.
 	req := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
@@ -44,6 +44,6 @@ func Example() {
 	fmt.Println(rec.Body.String())
 
 	// Output:
-	// data: &{RemoteIP:192.0.2.1}data: &{RemoteIP:192.0.2.1}
+	// data: &{RemoteIP:192.0.2.1}
 	// pong
 }
