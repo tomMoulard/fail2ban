@@ -162,6 +162,28 @@ func (u *Fail2Ban) IsNotBanned(remoteIP string) bool {
 		return true
 	}
 
+	if utime.Now().Before(ip.Viewed.Add(u.rules.Findtime)) {
+		if ip.Count+1 >= u.rules.MaxRetry {
+			u.IPs[remoteIP] = ipchecking.IPViewed{
+				Viewed: utime.Now(),
+				Count:  ip.Count + 1,
+				Denied: true,
+			}
+
+			fmt.Printf("%q is banned for %d>=%d request",
+				remoteIP, ip.Count+1, u.rules.MaxRetry)
+
+			return false
+		}
+
+		u.IPs[remoteIP] = ipchecking.IPViewed{
+			Viewed: ip.Viewed,
+			Count:  ip.Count + 1,
+			Denied: false,
+		}
+		return true
+	}
+
 	fmt.Printf("welcome back %q", remoteIP)
 
 	return true
