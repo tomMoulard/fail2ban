@@ -114,7 +114,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	allowHandler, err := lAllow.New(allowIPs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
+		return nil, fmt.Errorf("failed to parse allowlist IPs: %w", err)
 	}
 
 	denyIPs, err := ImportIP(config.Denylist)
@@ -135,7 +135,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	denyHandler, err := lDeny.New(denyIPs, config.EnableBlockLogs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
+		return nil, fmt.Errorf("failed to parse denylist IPs: %w", err)
 	}
 
 	rules, err := rules.TransformRule(config.Rules)
