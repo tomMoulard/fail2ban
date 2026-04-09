@@ -4,7 +4,6 @@ package fail2ban
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -15,15 +14,12 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
 	lAllow "github.com/tomMoulard/fail2ban/pkg/list/allow"
 	lDeny "github.com/tomMoulard/fail2ban/pkg/list/deny"
+	"github.com/tomMoulard/fail2ban/pkg/logger"
 	"github.com/tomMoulard/fail2ban/pkg/response/status"
 	"github.com/tomMoulard/fail2ban/pkg/rules"
 	uAllow "github.com/tomMoulard/fail2ban/pkg/url/allow"
 	uDeny "github.com/tomMoulard/fail2ban/pkg/url/deny"
 )
-
-func init() {
-	log.SetOutput(os.Stdout)
-}
 
 // List struct.
 type List struct {
@@ -31,11 +27,21 @@ type List struct {
 	Files []string
 }
 
+// SourceCriterion defines how to determine the client IP for fail2ban evaluation.
+type SourceCriterion struct {
+	// RequestHeaderName is the HTTP header from which to read the client IP.
+	// Useful when running behind a proxy/CDN (e.g. "Cf-Connecting-Ip" for Cloudflare).
+	// When empty, r.RemoteAddr is used.
+	RequestHeaderName string `yaml:"requestHeaderName"`
+}
+
 // Config struct.
 type Config struct {
-	Denylist  List        `yaml:"denylist"`
-	Allowlist List        `yaml:"allowlist"`
-	Rules     rules.Rules `yaml:"port"`
+	Denylist        List            `yaml:"denylist"`
+	Allowlist       List            `yaml:"allowlist"`
+	Rules           rules.Rules     `yaml:"port"`
+	SourceCriterion SourceCriterion `yaml:"sourceCriterion"`
+	EnableBlockLogs bool            `yaml:"enableBlockLogs"`
 
 	// deprecated
 	Blacklist List `yaml:"blacklist"`
@@ -51,6 +57,7 @@ func CreateConfig() *Config {
 			Findtime: "120s",
 			Enabled:  true,
 		},
+		EnableBlockLogs: true,
 	}
 }
 
@@ -79,7 +86,7 @@ func ImportIP(list List) ([]string, error) {
 // request.
 func New(_ context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
 	if !config.Rules.Enabled {
-		log.Println("Plugin: FailToBan is disabled")
+		logger.Info("Plugin: FailToBan is disabled")
 
 		return next, nil
 	}
@@ -90,7 +97,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 	}
 
 	if len(config.Whitelist.IP) > 0 || len(config.Whitelist.Files) > 0 {
-		log.Println("Plugin: FailToBan: 'whitelist' is deprecated, please use 'denylist' instead")
+		logger.Warn("Plugin: FailToBan: 'whitelist' is deprecated, please use 'allowlist' instead")
 
 		whiteips, err := ImportIP(config.Whitelist)
 		if err != nil {
@@ -107,7 +114,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	allowHandler, err := lAllow.New(allowIPs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse whitelist IPs: %w", err)
+		return nil, fmt.Errorf("failed to parse allowlist IPs: %w", err)
 	}
 
 	denyIPs, err := ImportIP(config.Denylist)
@@ -116,7 +123,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 	}
 
 	if len(config.Blacklist.IP) > 0 || len(config.Blacklist.Files) > 0 {
-		log.Println("Plugin: FailToBan: 'blacklist' is deprecated, please use 'denylist' instead")
+		logger.Warn("Plugin: FailToBan: 'blacklist' is deprecated, please use 'denylist' instead")
 
 		blackips, err := ImportIP(config.Blacklist)
 		if err != nil {
@@ -126,9 +133,9 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		denyIPs = append(denyIPs, blackips...)
 	}
 
-	denyHandler, err := lDeny.New(denyIPs)
+	denyHandler, err := lDeny.New(denyIPs, config.EnableBlockLogs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse blacklist IPs: %w", err)
+		return nil, fmt.Errorf("failed to parse denylist IPs: %w", err)
 	}
 
 	rules, err := rules.TransformRule(config.Rules)
@@ -136,21 +143,20 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
-	log.Println("Plugin: FailToBan is up and running")
-
 	f2b := fail2ban.New(rules, allowNetIPs)
 
 	c := chain.New(
 		next,
+		config.SourceCriterion.RequestHeaderName,
 		denyHandler,
 		allowHandler,
-		uDeny.New(rules.URLRegexpBan, f2b),
+		uDeny.New(rules.URLRegexpBan, f2b, config.EnableBlockLogs),
 		uAllow.New(rules.URLRegexpAllow),
-		f2bHandler.New(f2b),
+		f2bHandler.New(f2b, config.EnableBlockLogs),
 	)
 
 	if rules.StatusCode != "" {
-		statusCodeHandler, err := status.New(next, rules.StatusCode, f2b)
+		statusCodeHandler, err := status.New(next, rules.StatusCode, f2b, config.EnableBlockLogs)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create status handler: %w", err)
 		}

@@ -52,6 +52,50 @@ _only_ be used _concurrently_ with Fail2ban functionality (if you are looking
 for a way to allowlist or denylist IPs without using any of the Fail2ban
 logic, you might want to use a different plugin.)
 
+### Source Criterion
+
+By default, the plugin uses the connection's remote IP address (`r.RemoteAddr`)
+to identify clients. When running behind a proxy or CDN (e.g. Cloudflare), the
+real client IP is forwarded in a request header. Use `sourceCriterion` to
+tell the plugin which header to read instead:
+
+```yml
+testData:
+  sourceCriterion:
+    requestHeaderName: "Cf-Connecting-Ip"
+  rules:
+    bantime: "3h"
+    findtime: "10m"
+    maxretry: 4
+    enabled: true
+```
+
+| Field | Description |
+|---|---|
+| `requestHeaderName` | HTTP header containing the real client IP. When empty (default) `r.RemoteAddr` is used. |
+
+> **Note:** If the configured header is missing from an incoming request, the
+> plugin falls back to `r.RemoteAddr` and logs a warning.
+
+### Block Logs
+
+By default, the plugin logs a structured JSON entry every time an IP is blocked.
+If this is too noisy for your environment, you can disable it:
+
+```yml
+testData:
+  enableBlockLogs: false
+  rules:
+    bantime: "3h"
+    findtime: "10m"
+    maxretry: 4
+    enabled: true
+```
+
+| Field | Default | Description |
+|---|---|---|
+| `enableBlockLogs` | `true` | When `true`, a structured log entry is emitted each time an IP is blocked (denylist, ban, or status-code ban). Set to `false` to suppress these logs. |
+
 ### Allowlist
 You can allowlist some IP using this:
 ```yml

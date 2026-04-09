@@ -2,7 +2,6 @@
 package allow
 
 import (
-	"fmt"
 	"net/http"
 	"regexp"
 
@@ -20,13 +19,9 @@ func New(regs []*regexp.Regexp) *allow {
 func (a *allow) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status, error) {
 	for _, reg := range a.regs {
 		if reg.MatchString(r.URL.String()) {
-			fmt.Printf("url %s not allowed", r.URL.String())
-
 			return &chain.Status{Break: true}, nil
 		}
 	}
-
-	fmt.Printf("url %s not is allowed", r.URL.String())
 
 	return nil, nil
 }

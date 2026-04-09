@@ -30,15 +30,9 @@ func (a *allow) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	fmt.Printf("data: %+v", data)
-
 	if a.list.Contains(data.RemoteIP) {
-		fmt.Printf("IP %s is allowed", data.RemoteIP)
-
 		return &chain.Status{Break: true}, nil
 	}
-
-	fmt.Printf("IP %s not is allowed", data.RemoteIP)
 
 	return nil, nil
 }

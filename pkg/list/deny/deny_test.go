@@ -35,12 +35,12 @@ func TestDeny(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			d, err := New(test.ipList)
+			d, err := New(test.ipList, true)
 			require.NoError(t, err)
 
 			recorder := &httptest.ResponseRecorder{}
 			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
-			req, err = data.ServeHTTP(recorder, req)
+			req, err = data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 
 			got, err := d.ServeHTTP(recorder, req)

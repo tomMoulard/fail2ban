@@ -420,6 +420,96 @@ func TestDeadlockWebsocket(t *testing.T) {
 	assert.Equal(t, 10, int(concurentWSCount.Load()))
 }
 
+func TestSourceCriterion(t *testing.T) {
+	t.Parallel()
+
+	const (
+		headerName       = "Cf-Connecting-Ip"
+		trustedProxyAddr = "10.0.0.1"
+		realClientIP     = "203.0.113.5"
+		deniedClientIP   = "203.0.113.99"
+	)
+
+	baseConfig := func() *Config {
+		cfg := CreateConfig()
+		cfg.Rules.Bantime = "300s"
+		cfg.Rules.Findtime = "300s"
+		cfg.Rules.Maxretry = 20
+		cfg.SourceCriterion = SourceCriterion{RequestHeaderName: headerName}
+
+		return cfg
+	}
+
+	t.Run("ip from header is used instead of remote addr", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := baseConfig()
+		cfg.Denylist = List{IP: []string{deniedClientIP}}
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+
+		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = trustedProxyAddr + ":1234"
+		req.Header.Set(headerName, deniedClientIP)
+
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, req)
+
+		assert.Equal(t, http.StatusTooManyRequests, rw.Code)
+	})
+
+	t.Run("allowlisted ip via header is not blocked", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := baseConfig()
+		cfg.Denylist = List{IP: []string{trustedProxyAddr}}
+		cfg.Allowlist = List{IP: []string{realClientIP}}
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+		})
+
+		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = trustedProxyAddr + ":1234"
+		req.Header.Set(headerName, realClientIP)
+
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, req)
+
+		assert.Equal(t, http.StatusCreated, rw.Code)
+	})
+
+	t.Run("missing configured header falls back to remote addr", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := baseConfig()
+		cfg.Denylist = List{IP: []string{trustedProxyAddr}}
+
+		next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+
+		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = trustedProxyAddr + ":1234"
+
+		rw := httptest.NewRecorder()
+		handler.ServeHTTP(rw, req)
+
+		assert.Equal(t, http.StatusTooManyRequests, rw.Code)
+	})
+}
+
 func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 	t.Parallel()
 

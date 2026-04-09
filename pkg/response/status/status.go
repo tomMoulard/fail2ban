@@ -8,45 +8,40 @@ import (
 
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
+	"github.com/tomMoulard/fail2ban/pkg/logger"
 )
 
 type status struct {
-	next       http.Handler
-	codeRanges HTTPCodeRanges
-	f2b        *fail2ban.Fail2Ban
+	next            http.Handler
+	codeRanges      HTTPCodeRanges
+	f2b             *fail2ban.Fail2Ban
+	enableBlockLogs bool
 }
 
-func New(next http.Handler, statusCode string, f2b *fail2ban.Fail2Ban) (*status, error) {
+func New(next http.Handler, statusCode string, f2b *fail2ban.Fail2Ban, enableBlockLogs bool) (*status, error) {
 	codeRanges, err := NewHTTPCodeRanges(strings.Split(statusCode, ","))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP code ranges: %w", err)
 	}
 
 	return &status{
-		next:       next,
-		codeRanges: codeRanges,
-		f2b:        f2b,
+		next:            next,
+		codeRanges:      codeRanges,
+		f2b:             f2b,
+		enableBlockLogs: enableBlockLogs,
 	}, nil
 }
 
 func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Printf("status handler")
-
 	data := data.GetData(r)
 	if data == nil {
-		fmt.Print("data is nil")
-
 		return
 	}
-
-	fmt.Printf("data: %+v", data)
 
 	catcher := newCodeCatcher(w, s.codeRanges)
 	s.next.ServeHTTP(catcher, r)
 
-	fmt.Printf("catcher: %+v", *catcher)
-
-	if !catcher.isFilteredCode() { // if this is not a status code of concern: Return and do not increment fail counter.
+	if !catcher.isFilteredCode() {
 		for k, vv := range catcher.Header() {
 			w.Header().Set(k, strings.Join(vv, ", "))
 		}
@@ -58,13 +53,21 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	catcher.allowedRequest = s.f2b.ShouldAllow(data.RemoteIP)
 	if !catcher.allowedRequest {
-		fmt.Printf("IP %s is banned", data.RemoteIP)
+		if s.enableBlockLogs {
+			logger.Info("Plugin: FailToBan: IP blocked",
+				logger.WithIP(data.RemoteIP),
+				logger.WithReason("status code ban"),
+				logger.WithStatusCode(catcher.getCode()),
+				logger.WithMethod(r.Method),
+				logger.WithPath(r.URL.Path),
+				logger.WithUA(r.UserAgent()),
+			)
+		}
+
 		w.WriteHeader(http.StatusTooManyRequests)
 
 		return
 	}
-
-	fmt.Printf("IP %s is allowed", data.RemoteIP)
 
 	for k, vv := range catcher.Header() {
 		w.Header().Set(k, strings.Join(vv, ", "))
@@ -73,6 +76,8 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(catcher.getCode())
 
 	if _, err := w.Write(catcher.bytes); err != nil {
-		fmt.Printf("failed to write to response: %v", err)
+		logger.Error("Plugin: FailToBan: failed to write response",
+			logger.WithErr(err.Error()),
+		)
 	}
 }

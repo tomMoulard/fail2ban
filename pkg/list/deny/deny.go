@@ -9,36 +9,43 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/data"
 	"github.com/tomMoulard/fail2ban/pkg/ipchecking"
+	"github.com/tomMoulard/fail2ban/pkg/logger"
 )
 
 type deny struct {
-	list ipchecking.NetIPs
+	list            ipchecking.NetIPs
+	enableBlockLogs bool
 }
 
-func New(ipList []string) (*deny, error) {
+func New(ipList []string, enableBlockLogs bool) (*deny, error) {
 	list, err := ipchecking.ParseNetIPs(ipList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new net ips: %w", err)
 	}
 
-	return &deny{list: list}, nil
+	return &deny{list: list, enableBlockLogs: enableBlockLogs}, nil
 }
 
 func (d *deny) ServeHTTP(w http.ResponseWriter, r *http.Request) (*chain.Status, error) {
-	data := data.GetData(r)
-	if data == nil {
+	reqData := data.GetData(r)
+	if reqData == nil {
 		return nil, errors.New("failed to get data from request context")
 	}
 
-	fmt.Printf("data: %+v", data)
-
-	if d.list.Contains(data.RemoteIP) {
-		fmt.Printf("IP %s is denied", data.RemoteIP)
+	if d.list.Contains(reqData.RemoteIP) {
+		if d.enableBlockLogs {
+			logger.Info("Plugin: FailToBan: IP blocked",
+				logger.WithIP(reqData.RemoteIP),
+				logger.WithReason("static denylist"),
+				logger.WithStatusCode(http.StatusTooManyRequests),
+				logger.WithMethod(r.Method),
+				logger.WithPath(r.URL.Path),
+				logger.WithUA(r.UserAgent()),
+			)
+		}
 
 		return &chain.Status{Return: true}, nil
 	}
-
-	fmt.Printf("IP %s not is denied", data.RemoteIP)
 
 	return nil, nil
 }

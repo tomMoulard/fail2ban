@@ -2,10 +2,10 @@
 package chain
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/tomMoulard/fail2ban/pkg/data"
+	"github.com/tomMoulard/fail2ban/pkg/logger"
 )
 
 // Status is a status that can be returned by a handler.
@@ -30,16 +30,18 @@ type Chain interface {
 }
 
 type chain struct {
-	handlers []ChainHandler
-	final    http.Handler
-	status   *http.Handler
+	handlers          []ChainHandler
+	final             http.Handler
+	status            *http.Handler
+	requestHeaderName string
 }
 
 // New creates a new chain.
-func New(final http.Handler, handlers ...ChainHandler) Chain {
+func New(final http.Handler, requestHeaderName string, handlers ...ChainHandler) Chain {
 	return &chain{
-		handlers: handlers,
-		final:    final,
+		handlers:          handlers,
+		final:             final,
+		requestHeaderName: requestHeaderName,
 	}
 }
 
@@ -50,18 +52,31 @@ func (c *chain) WithStatus(status http.Handler) {
 
 // ServeHTTP chains the handlers together, and calls the final handler at the end.
 func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	r, err := data.ServeHTTP(w, r)
+	newReq, err := data.ServeHTTP(w, r, c.requestHeaderName)
 	if err != nil {
-		log.Printf("data.ServeHTTP error: %v", err)
+		logger.Error("Plugin: FailToBan: failed to extract IP, passing through",
+			logger.WithHeader(c.requestHeaderName),
+			logger.WithErr(err.Error()),
+		)
+		// Fail-open: on IP extraction failure we pass the original request through
+		// rather than blocking, prioritizing availability over strict enforcement.
+		c.final.ServeHTTP(w, r)
 
 		return
 	}
 
+	r = newReq
+
 	for _, handler := range c.handlers {
 		s, err := handler.ServeHTTP(w, r)
 		if err != nil {
-			log.Printf("handler.ServeHTTP error: %v", err)
+			logger.Error("Plugin: FailToBan: handler error",
+				logger.WithErr(err.Error()),
+			)
 
+			// Fail-open: handler errors are logged and the chain proceeds to the
+			// final handler rather than propagating the error, prioritizing
+			// availability over strict enforcement.
 			break
 		}
 
