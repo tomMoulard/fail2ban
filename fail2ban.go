@@ -3,11 +3,13 @@ package fail2ban
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/tomMoulard/fail2ban/pkg/chain"
 	"github.com/tomMoulard/fail2ban/pkg/fail2ban"
@@ -25,6 +27,39 @@ func init() {
 	log.SetOutput(os.Stdout)
 }
 
+var (
+	globalJails = make(map[string]*fail2ban.Fail2Ban)
+	globalMu    sync.Mutex
+)
+
+func getOrCreateSharedJail(name string, config *Config, rules rules.RulesTransformed, allowNetIPs ipchecking.NetIPs) *fail2ban.Fail2Ban {
+	jailKey := fmt.Sprintf("%s-%x", name, sha256.Sum256([]byte(fmt.Sprintf("%v", config))))
+
+	globalMu.Lock()
+	defer globalMu.Unlock()
+
+	if f2b, exists := globalJails[jailKey]; exists {
+		log.Printf("Plugin: FailToBan using existing shared jail for middleware %s", jailKey)
+
+		return f2b
+	}
+	// Keep at most one shared jail per middleware name.
+	// Old handlers keep their pointer; this only bounds registry growth.
+	prefix := name + "-"
+	for key := range globalJails {
+		if strings.HasPrefix(key, prefix) && key != jailKey {
+			delete(globalJails, key)
+		}
+	}
+
+	f2b := fail2ban.New(rules, allowNetIPs)
+	globalJails[jailKey] = f2b
+
+	log.Printf("Plugin: FailToBan created new shared jail for middleware %s", jailKey)
+
+	return f2b
+}
+
 // List struct.
 type List struct {
 	IP    []string
@@ -33,9 +68,10 @@ type List struct {
 
 // Config struct.
 type Config struct {
-	Denylist  List        `yaml:"denylist"`
-	Allowlist List        `yaml:"allowlist"`
-	Rules     rules.Rules `yaml:"port"`
+	Denylist   List        `yaml:"denylist"`
+	Allowlist  List        `yaml:"allowlist"`
+	Rules      rules.Rules `yaml:"port"`
+	SharedJail bool        `yaml:"sharedJail"`
 
 	// deprecated
 	Blacklist List `yaml:"blacklist"`
@@ -77,7 +113,7 @@ func ImportIP(list List) ([]string, error) {
 
 // New instantiates and returns the required components used to handle a HTTP
 // request.
-func New(_ context.Context, next http.Handler, config *Config, _ string) (http.Handler, error) {
+func New(_ context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	if !config.Rules.Enabled {
 		log.Println("Plugin: FailToBan is disabled")
 
@@ -136,9 +172,17 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		return nil, fmt.Errorf("error when Transforming rules: %w", err)
 	}
 
-	log.Println("Plugin: FailToBan is up and running")
+	// Get or create jail
+	var f2b *fail2ban.Fail2Ban
 
-	f2b := fail2ban.New(rules, allowNetIPs)
+	if config.SharedJail {
+		f2b = getOrCreateSharedJail(name, config, rules, allowNetIPs)
+	} else {
+		// Create individual jail
+		f2b = fail2ban.New(rules, allowNetIPs)
+
+		log.Printf("Plugin: FailToBan created individual jail for middleware %s", name)
+	}
 
 	c := chain.New(
 		next,
