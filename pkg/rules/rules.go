@@ -14,27 +14,38 @@ type Urlregexp struct {
 	Mode   string `yaml:"mode"`
 }
 
+// SourceCriterion defines how to determine the source IP.
+type SourceCriterion struct {
+	RequestHeaderName *string     `yaml:"requestHeaderName,omitempty"`
+	IPStrategy        *IPStrategy `yaml:"ipStrategy,omitempty"`
+}
+
+// IPStrategy defines how to extract the client IP from the request.
+type IPStrategy struct {
+	Depth *int `yaml:"depth,omitempty"`
+}
+
 // Rules struct fail2ban config.
 type Rules struct {
-	Bantime        string      `yaml:"bantime"`  // exprimate in a smart way: 3m
-	Enabled        bool        `yaml:"enabled"`  // enable or disable the jail
-	Findtime       string      `yaml:"findtime"` // exprimate in a smart way: 3m
-	Maxretry       int         `yaml:"maxretry"`
-	Urlregexps     []Urlregexp `yaml:"urlregexps"`
-	StatusCode     string      `yaml:"statuscode"`
-	SourceIPHeader string      `yaml:"sourceIpHeader"`
+	Bantime         string          `yaml:"bantime"`  // exprimate in a smart way: 3m
+	Enabled         bool            `yaml:"enabled"`  // enable or disable the jail
+	Findtime        string          `yaml:"findtime"` // exprimate in a smart way: 3m
+	Maxretry        int             `yaml:"maxretry"`
+	Urlregexps      []Urlregexp     `yaml:"urlregexps"`
+	StatusCode      string          `yaml:"statuscode"`
+	SourceCriterion SourceCriterion `yaml:"sourceCriterion"`
 }
 
 // RulesTransformed transformed Rules struct.
 type RulesTransformed struct {
-	Bantime        time.Duration
-	Findtime       time.Duration
-	URLRegexpAllow []*regexp.Regexp
-	URLRegexpBan   []*regexp.Regexp
-	MaxRetry       int
-	Enabled        bool
-	StatusCode     string
-	SourceIPHeader string
+	Bantime         time.Duration
+	Findtime        time.Duration
+	URLRegexpAllow  []*regexp.Regexp
+	URLRegexpBan    []*regexp.Regexp
+	MaxRetry        int
+	Enabled         bool
+	StatusCode      string
+	SourceCriterion SourceCriterion
 }
 
 // TransformRule morph a Rules object into a RulesTransformed.
@@ -70,14 +81,14 @@ func TransformRule(r Rules) (RulesTransformed, error) {
 	}
 
 	rules := RulesTransformed{
-		Bantime:        bantime,
-		Findtime:       findtime,
-		URLRegexpAllow: regexpAllow,
-		URLRegexpBan:   regexpBan,
-		MaxRetry:       r.Maxretry,
-		Enabled:        r.Enabled,
-		StatusCode:     r.StatusCode,
-		SourceIPHeader: r.SourceIPHeader,
+		Bantime:         bantime,
+		Findtime:        findtime,
+		URLRegexpAllow:  regexpAllow,
+		URLRegexpBan:    regexpBan,
+		MaxRetry:        r.Maxretry,
+		Enabled:         r.Enabled,
+		StatusCode:      r.StatusCode,
+		SourceCriterion: r.SourceCriterion,
 	}
 
 	return rules, nil

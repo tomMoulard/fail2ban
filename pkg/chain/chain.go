@@ -68,7 +68,7 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r = newReq
 
 	for _, handler := range c.handlers {
-		s, err := handler.ServeHTTP(w, r)
+		s, err := handler.ServeHTTP(w, req)
 		if err != nil {
 			logger.Error("Plugin: FailToBan: handler error",
 				logger.WithErr(err.Error()),
@@ -96,10 +96,10 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if c.status != nil {
-		(*c.status).ServeHTTP(w, r)
+		(*c.status).ServeHTTP(w, req)
 
 		return
 	}
 
-	c.final.ServeHTTP(w, r)
+	c.final.ServeHTTP(w, req)
 }
