@@ -68,7 +68,6 @@ func TestData(t *testing.T) {
 
 				return
 			}
-
 			require.NoError(t, err)
 
 			got := GetData(req)

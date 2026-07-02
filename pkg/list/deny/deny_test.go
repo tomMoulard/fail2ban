@@ -11,6 +11,8 @@ import (
 	"github.com/tomMoulard/fail2ban/pkg/data"
 )
 
+var testHeaderName = "X-Forwarded-For"
+
 func TestDeny(t *testing.T) {
 	t.Parallel()
 
