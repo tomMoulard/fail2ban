@@ -29,6 +29,7 @@ func Example() {
 	// This example shows how to chain handlers together.
 	// The final handler is called only if all the previous handlers did not
 	// return an error.
+
 	// Create a new chain with a final h.
 	h := &Handler{}
 	c := chain.New(&PongHandler{}, "", h)
