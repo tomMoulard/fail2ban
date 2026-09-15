@@ -59,8 +59,8 @@ func TestChain(t *testing.T) {
 			name:         "return",
 			finalHandler: &mockHandler{expectedCalled: 0},
 			handlers: []ChainHandler{&mockChainHandler{
-				status:      &Status{Return: true},
-				mockHandler: mockHandler{expectedCalled: 1},
+				status:         &Status{Return: true},
+				expectedCalled: 1,
 			}},
 			expectedStatus: &Status{
 				Return: true,
@@ -70,8 +70,8 @@ func TestChain(t *testing.T) {
 			name:         "break",
 			finalHandler: &mockHandler{expectedCalled: 1},
 			handlers: []ChainHandler{&mockChainHandler{
-				status:      &Status{Break: true},
-				mockHandler: mockHandler{expectedCalled: 1},
+				status:         &Status{Break: true},
+				expectedCalled: 1,
 			}},
 			expectedStatus: &Status{
 				Break: true,
@@ -81,18 +81,16 @@ func TestChain(t *testing.T) {
 			name:         "nil",
 			finalHandler: &mockHandler{expectedCalled: 1},
 			handlers: []ChainHandler{&mockChainHandler{
-				status:      nil,
-				mockHandler: mockHandler{expectedCalled: 1},
+				status:         nil,
+				expectedCalled: 1,
 			}},
 		},
 		{
 			name:         "error",
 			finalHandler: &mockHandler{expectedCalled: 1},
 			handlers: []ChainHandler{&mockChainHandler{
-				mockHandler: mockHandler{
-					err:            errors.New("error"),
-					expectedCalled: 1,
-				},
+				err:            errors.New("error"),
+				expectedCalled: 1,
 			}},
 		},
 	}
@@ -228,7 +226,7 @@ func TestChainWithStatus(t *testing.T) {
 	t.Parallel()
 
 	handler := &mockChainHandler{
-		mockHandler: mockHandler{expectedCalled: 1},
+		expectedCalled: 1,
 	}
 	final := &mockHandler{expectedCalled: 0}
 	status := &mockHandler{expectedCalled: 1}
