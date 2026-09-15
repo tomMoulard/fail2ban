@@ -39,7 +39,7 @@ func TestDeny(t *testing.T) {
 			require.NoError(t, err)
 
 			recorder := &httptest.ResponseRecorder{}
-			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 			req, err = data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 

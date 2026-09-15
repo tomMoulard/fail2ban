@@ -315,7 +315,7 @@ func TestFail2Ban(t *testing.T) {
 				url = test.url
 			}
 
-			req := httptest.NewRequest(http.MethodGet, url, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
 			req.RemoteAddr = remoteAddr + ":1234"
 
 			for range 10 {
@@ -348,7 +348,7 @@ func TestAllowlistCIDRDoesNotBan(t *testing.T) {
 	handler, err := New(t.Context(), next, cfg, "fail2ban_test")
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.RemoteAddr = remoteIP + ":1234"
 
 	for i := range 3 {
@@ -453,7 +453,7 @@ func TestSourceCriterion(t *testing.T) {
 		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
 		require.NoError(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 		req.RemoteAddr = trustedProxyAddr + ":1234"
 		req.Header.Set(headerName, deniedClientIP)
 
@@ -477,7 +477,7 @@ func TestSourceCriterion(t *testing.T) {
 		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
 		require.NoError(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 		req.RemoteAddr = trustedProxyAddr + ":1234"
 		req.Header.Set(headerName, realClientIP)
 
@@ -500,7 +500,7 @@ func TestSourceCriterion(t *testing.T) {
 		handler, err := New(t.Context(), next, cfg, "fail2ban_test")
 		require.NoError(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 		req.RemoteAddr = trustedProxyAddr + ":1234"
 
 		rw := httptest.NewRecorder()
@@ -579,7 +579,7 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 
 			handler, _ := New(t.Context(), next, test.cfg, "fail2ban_test")
 
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 			req.RemoteAddr = remoteAddr + ":1234"
 
 			for i := range test.handlerStatus {

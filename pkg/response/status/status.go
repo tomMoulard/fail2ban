@@ -75,7 +75,8 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(catcher.getCode())
 
-	if _, err := w.Write(catcher.bytes); err != nil {
+	_, err := w.Write(catcher.bytes)
+	if err != nil {
 		logger.Error("Plugin: FailToBan: failed to write response",
 			logger.WithErr(err.Error()),
 		)

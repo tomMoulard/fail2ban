@@ -39,7 +39,7 @@ func TestAllow(t *testing.T) {
 			a := New(test.regs)
 
 			recorder := &httptest.ResponseRecorder{}
-			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 			req, err := data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 

@@ -1,93 +1,107 @@
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-    - varnamelen # Not relevant
-    - lll # not relevant
-    - exhaustruct # Not relevant
+    - cyclop # duplicate of gocyclo
     - err113 # deprecated
+    - exhaustruct # Not relevant
+    - exhaustruct_v5 # Not relevant
     - gochecknoglobals
     - gochecknoinits # useless
     - ireturn # Not relevant
+    - lll # not relevant
     - nilnil # Not relevant
     - testpackage # Too strict
-    - cyclop # duplicate of gocyclo
-    - exportloopref # deprecated
-
-linters-settings:
-  misspell:
-    locale: US
-  funlen:
-    lines: -1
-    statements: 120
-  depguard:
+    - varnamelen # Not relevant
+  settings:
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/instana/testify
+              desc: not allowed
+    funlen:
+      lines: -1
+      statements: 120
+    godox:
+      keywords:
+        - FIXME
+    misspell:
+      locale: US
+    revive:
+      rules:
+        - name: struct-tag
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          disabled: true
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+          disabled: true
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+          disabled: true
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+          disabled: true
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    testpackage:
+      allow-packages:
+        - fail2ban
+  exclusions:
+    generated: lax
     rules:
-      main:
-        deny:
-          - pkg: "github.com/instana/testify"
-            desc: not allowed
-  godox:
-    keywords:
-      - FIXME
-  revive:
-    rules:
-      - name: struct-tag
-      - name: blank-imports
-      - name: context-as-argument
-      - name: context-keys-type
-      - name: dot-imports
-      - name: error-return
-      - name: error-strings
-      - name: error-naming
-      - name: exported
-        disabled: true
-      - name: if-return
-      - name: increment-decrement
-      - name: var-naming
-      - name: var-declaration
-      - name: package-comments
-        disabled: true
-      - name: range
-      - name: receiver-naming
-      - name: time-naming
-      - name: unexported-return
-        disabled: true
-      - name: indent-error-flow
-      - name: errorf
-      - name: empty-block
-      - name: superfluous-else
-      - name: unused-parameter
-        disabled: true
-      - name: unreachable-code
-      - name: redefines-builtin-id
-  testpackage:
-    allow-packages:
-      - fail2ban
-
+      - linters:
+          - funlen
+          - goconst
+        path: (.+)_test.go
+      - linters:
+          - cyclop
+        path: fail2ban.go
+        text: calculated cyclomatic complexity for function New is 13
+      - linters:
+          - gosec
+        path: fail2ban.go
+        text: 'G304: Potential file inclusion via variable'
+      - linters:
+          - forbidigo
+        text: use of `fmt.Printf` forbidden # FIXME: add revert this change ASAP
+      - linters:
+          - forbidigo
+        text: use of `fmt.Print` forbidden # FIXME: add revert this change ASAP
+      - linters:
+          - forbidigo
+        text: use of `fmt.Println` forbidden # FIXME: add revert this change ASAP
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-rules:
-    - path: '(.+)_test.go'
-      linters:
-        - funlen
-    - path: 'fail2ban.go'
-      text: 'calculated cyclomatic complexity for function New is 13'
-      linters:
-        - cyclop
-    - path: 'fail2ban.go'
-      text: 'G304: Potential file inclusion via variable'
-      linters:
-        - gosec
-    - text: 'use of `fmt.Printf` forbidden' # FIXME: add revert this change ASAP
-      linters:
-        - forbidigo
-    - text: 'use of `fmt.Print` forbidden' # FIXME: add revert this change ASAP
-      linters:
-        - forbidigo
-    - text: 'use of `fmt.Println` forbidden' # FIXME: add revert this change ASAP
-      linters:
-        - forbidigo
-
-output:
-  show-stats: true
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
