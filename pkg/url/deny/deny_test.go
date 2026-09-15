@@ -53,14 +53,14 @@ func TestDeny(t *testing.T) {
 			d := New(test.regs, f2b, true)
 
 			recorder := &httptest.ResponseRecorder{}
-			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 			req, err := data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 
 			got, err := d.ServeHTTP(recorder, req)
 			require.NoError(t, err)
 			assert.Equal(t, test.expectedStatus, got)
-			require.Equal(t, len(test.expectedIPViewed), len(f2b.IPs))
+			require.Len(t, f2b.IPs, len(test.expectedIPViewed))
 
 			// workaround for time.Now() not matching between expected and actual
 			for k, v := range test.expectedIPViewed {

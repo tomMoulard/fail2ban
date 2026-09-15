@@ -2,6 +2,7 @@ package status
 
 import (
 	"bytes"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -119,16 +120,17 @@ func TestStatus(t *testing.T) {
 			require.NoError(t, err)
 
 			recorder := &httptest.ResponseRecorder{}
-			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 			req, err = data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 
 			var b bytes.Buffer
+
 			recorder = &httptest.ResponseRecorder{Body: &b}
 			d.ServeHTTP(recorder, req)
 			t.Logf("recorder: %+v", recorder)
 
-			require.Equal(t, len(test.expectedIPViewed), len(f2b.IPs))
+			require.Len(t, f2b.IPs, len(test.expectedIPViewed))
 
 			// workaround for time.Now() not matching between expected and actual
 			for k, v := range test.expectedIPViewed {
@@ -232,14 +234,12 @@ func TestHeaderCopying(t *testing.T) {
 
 			f2b := fail2ban.New(rulesTransformed, nil)
 			// Set IP viewed state
-			for ip, viewed := range test.ips {
-				f2b.IPs[ip] = viewed
-			}
+			maps.Copy(f2b.IPs, test.ips)
 
 			statusHandler, err := New(next, test.codeRanges, f2b, true)
 			require.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 			req, err = data.ServeHTTP(httptest.NewRecorder(), req, "")
 			require.NoError(t, err)
 

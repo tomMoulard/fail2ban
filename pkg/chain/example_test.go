@@ -1,6 +1,7 @@
 package chain_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +35,7 @@ func Example() {
 	c := chain.New(&PongHandler{}, "", h)
 
 	// Create a new request.
-	req := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
 
 	// Create a new response recorder.
 	rec := httptest.NewRecorder()

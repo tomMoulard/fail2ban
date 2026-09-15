@@ -29,6 +29,7 @@ func (m *mockHandler) assert(t *testing.T) {
 
 type mockChainHandler struct {
 	mockHandler
+
 	status *Status
 }
 
@@ -102,7 +103,7 @@ func TestChain(t *testing.T) {
 
 			c := New(test.finalHandler, "", test.handlers...)
 			recorder := &httptest.ResponseRecorder{}
-			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 			req, err := data.ServeHTTP(recorder, req, "")
 			require.NoError(t, err)
 
@@ -143,7 +144,7 @@ func TestChainOrder(t *testing.T) {
 	}
 
 	ch := New(final, "", a, b, c)
-	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
 	assert.Equal(t, 0, a.status)
@@ -177,7 +178,7 @@ func TestChainRequestContext(t *testing.T) {
 	}
 
 	ch := New(final, "", handler)
-	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
 	final.assert(t)
@@ -199,7 +200,7 @@ func TestChainRequestContextWithSourceCriterionHeader(t *testing.T) {
 	final := &mockHandler{expectedCalled: 1}
 
 	ch := New(final, headerName, handler)
-	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 	r.Header.Set(headerName, clientIP)
 	ch.ServeHTTP(nil, r)
 
@@ -217,7 +218,7 @@ func TestChainMissingSourceCriterionHeader(t *testing.T) {
 	final := &mockHandler{expectedCalled: 1}
 
 	ch := New(final, "Cf-Connecting-Ip", handler)
-	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
 	final.assert(t)
@@ -235,7 +236,7 @@ func TestChainWithStatus(t *testing.T) {
 	ch := New(final, "", handler)
 	ch.WithStatus(status)
 
-	r := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 	ch.ServeHTTP(nil, r)
 
 	handler.assert(t)

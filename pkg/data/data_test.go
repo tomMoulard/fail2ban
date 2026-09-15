@@ -52,7 +52,7 @@ func TestData(t *testing.T) {
 			t.Parallel()
 
 			recorder := &httptest.ResponseRecorder{}
-			req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 
 			if test.headerValue != "" {
 				req.Header.Set(test.requestHeaderName, test.headerValue)
@@ -90,7 +90,7 @@ func TestGetData_InvalidData(t *testing.T) {
 			req: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 				req, err := ServeHTTP(nil, req, "")
 				require.NoError(t, err)
 
@@ -105,14 +105,15 @@ func TestGetData_InvalidData(t *testing.T) {
 			req: func(t *testing.T) *http.Request {
 				t.Helper()
 
-				return httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+				return httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 			},
 		},
 		{
 			name: "invalid data",
 			req: func(t *testing.T) *http.Request {
 				t.Helper()
-				req := httptest.NewRequest(http.MethodGet, "https://example.com/foo", nil)
+
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/foo", nil)
 
 				return req.WithContext(context.WithValue(req.Context(), contextDataKey, true))
 			},
