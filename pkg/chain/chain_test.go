@@ -242,3 +242,28 @@ func TestChainWithStatus(t *testing.T) {
 	final.assert(t)
 	status.assert(t)
 }
+
+func TestChainBreakBypassesStatus(t *testing.T) {
+	t.Parallel()
+
+	allowHandler := &mockChainHandler{
+		mockHandler: mockHandler{expectedCalled: 1},
+		status:      &Status{Break: true},
+	}
+	laterHandler := &mockChainHandler{
+		mockHandler: mockHandler{expectedCalled: 0},
+	}
+	final := &mockHandler{expectedCalled: 1}
+	status := &mockHandler{expectedCalled: 0}
+
+	ch := New(final, "", allowHandler, laterHandler)
+	ch.WithStatus(status)
+
+	r := httptest.NewRequest(http.MethodGet, "https://example.com/allowed", nil)
+	ch.ServeHTTP(nil, r)
+
+	allowHandler.assert(t)
+	laterHandler.assert(t)
+	final.assert(t)
+	status.assert(t)
+}

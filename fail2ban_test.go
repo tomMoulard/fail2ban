@@ -593,3 +593,54 @@ func TestFail2Ban_SuccessiveRequests(t *testing.T) {
 		})
 	}
 }
+
+func TestURLAllowlistBypassesStatusCodeBan(t *testing.T) {
+	t.Parallel()
+
+	cfg := &Config{
+		Rules: rules.Rules{
+			Enabled:    true,
+			Bantime:    "300s",
+			Findtime:   "300s",
+			Maxretry:   3,
+			StatusCode: "404",
+			Urlregexps: []rules.Urlregexp{
+				{
+					Regexp: "/allowed",
+					Mode:   "allow",
+				},
+			},
+		},
+	}
+
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+
+	handler, err := New(t.Context(), next, cfg, "fail2ban_test")
+	require.NoError(t, err)
+
+	for i := range 4 {
+		req := httptest.NewRequest(http.MethodGet, "/allowed", nil)
+		req.RemoteAddr = "10.0.0.1:1234"
+		rw := httptest.NewRecorder()
+
+		handler.ServeHTTP(rw, req)
+
+		assert.Equal(t, http.StatusNotFound, rw.Code, "allowed request %d", i+1)
+	}
+
+	for i, expectedStatus := range []int{
+		http.StatusNotFound,
+		http.StatusNotFound,
+		http.StatusTooManyRequests,
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/blocked", nil)
+		req.RemoteAddr = "10.0.0.1:1234"
+		rw := httptest.NewRecorder()
+
+		handler.ServeHTTP(rw, req)
+
+		assert.Equal(t, expectedStatus, rw.Code, "non-allowed request %d", i+1)
+	}
+}

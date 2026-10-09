@@ -91,7 +91,9 @@ func (c *chain) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if s.Break {
-			break
+			c.final.ServeHTTP(w, r)
+
+			return
 		}
 	}
 
