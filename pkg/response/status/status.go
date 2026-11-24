@@ -3,6 +3,7 @@ package status
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 
@@ -42,11 +43,10 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.next.ServeHTTP(catcher, r)
 
 	if !catcher.isFilteredCode() {
-		for k, vv := range catcher.Header() {
-			w.Header().Set(k, strings.Join(vv, ", "))
-		}
-
-		w.WriteHeader(catcher.getCode())
+		// The catcher already forwarded the headers and the status code if the
+		// backend wrote anything. Otherwise, this sends them now. Never fold the
+		// header values: Set-Cookie must stay one field per cookie (RFC 6265).
+		catcher.WriteHeader(catcher.getCode())
 
 		return
 	}
@@ -69,9 +69,7 @@ func (s *status) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for k, vv := range catcher.Header() {
-		w.Header().Set(k, strings.Join(vv, ", "))
-	}
+	maps.Copy(w.Header(), catcher.Header())
 
 	w.WriteHeader(catcher.getCode())
 

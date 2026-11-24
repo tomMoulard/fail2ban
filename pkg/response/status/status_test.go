@@ -263,3 +263,94 @@ func TestHeaderCopying(t *testing.T) {
 		})
 	}
 }
+
+// TestMultiValueHeadersAreNotFolded is the repro for
+// https://github.com/tomMoulard/fail2ban/issues/323: the statuscode handler
+// joined every response header with ", ", so several Set-Cookie fields became
+// one field. Browsers keep only the first cookie of a folded field, which
+// broke logins over HTTP/3 (RFC 6265 section 3, RFC 9110 section 5.3).
+//
+// The assertions read recorder.Header(), the live map, because an HTTP/3
+// response writer serializes that map lazily, after the handler returns.
+func TestMultiValueHeadersAreNotFolded(t *testing.T) {
+	t.Parallel()
+
+	cookies := []string{
+		"session=AAAA; Path=/; HttpOnly; SameSite=Lax",
+		"session=BBBB; Path=/; HttpOnly; SameSite=Lax",
+		"lang=fr-FR; Path=/; HttpOnly; SameSite=Lax",
+	}
+
+	tests := []struct {
+		name           string
+		respStatusCode int
+		writeHeader    bool
+		writeBody      bool
+	}{
+		{
+			name:           "non-filtered status with body",
+			respStatusCode: http.StatusOK,
+			writeHeader:    true,
+			writeBody:      true,
+		},
+		{
+			name:           "non-filtered redirect without body",
+			respStatusCode: http.StatusFound,
+			writeHeader:    true,
+		},
+		{
+			name:           "handler never calls WriteHeader nor Write",
+			respStatusCode: http.StatusOK,
+		},
+		{
+			name:           "filtered but allowed status",
+			respStatusCode: http.StatusBadRequest,
+			writeHeader:    true,
+			writeBody:      true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				for _, c := range cookies {
+					w.Header().Add("Set-Cookie", c)
+				}
+
+				if test.writeHeader {
+					w.WriteHeader(test.respStatusCode)
+				}
+
+				if test.writeBody {
+					_, err := w.Write([]byte("test body"))
+					assert.NoError(t, err)
+				}
+			})
+
+			rulesTransformed, err := rules.TransformRule(rules.Rules{
+				Maxretry:   42,
+				StatusCode: "400,402-499",
+				Bantime:    "300s",
+				Findtime:   "120s",
+				Enabled:    true,
+			})
+			require.NoError(t, err)
+
+			statusHandler, err := New(next, "400,402-499", fail2ban.New(rulesTransformed, nil), true)
+			require.NoError(t, err)
+
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+			req, err = data.ServeHTTP(httptest.NewRecorder(), req, "")
+			require.NoError(t, err)
+
+			recorder := httptest.NewRecorder()
+			statusHandler.ServeHTTP(recorder, req)
+
+			assert.Equal(t, test.respStatusCode, recorder.Code)
+			assert.Equal(t, cookies, recorder.Header().Values("Set-Cookie"))
+			assert.Equal(t, cookies, recorder.Result().Header.Values("Set-Cookie"))
+		})
+	}
+}
